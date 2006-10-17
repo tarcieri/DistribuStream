@@ -1,5 +1,5 @@
 require "netutil"
-require "eventmachine"
+require "EventMachine"
 
 class ClientInfo
 

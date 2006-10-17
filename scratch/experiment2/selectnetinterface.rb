@@ -60,7 +60,7 @@ class SelectNetInterface
 		@listener=listener
 	end
 	
-	
+
 	def run                 
 		while 1 
 			res=select(@descriptors,nil,nil,nil)
