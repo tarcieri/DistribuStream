@@ -18,7 +18,8 @@ class Server
 
 		handlers={ 
 			:askinfo=> :dispatch_askinfo,
-			:transfer_status => :dispatch_transfer_status
+			:transfer_status => :dispatch_transfer_status,
+			:request=>:dispatch_request
 		}
 
 		handler=handlers[ packet[:type] ]
@@ -30,6 +31,10 @@ class Server
 
 	def dispatch_transfer_status(address,packet)
 		return nil
+	end
+
+	def dispatch_request(address,packet)
+
 	end
 
 	def dispatch_askinfo(address,packet)

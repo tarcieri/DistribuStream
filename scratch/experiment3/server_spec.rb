@@ -48,5 +48,11 @@ context "A server with clients connected" do
 		ret=@server.dispatch(@client1,request)
 		ret.should_equal nil
 	end
+
+	specify "accepts request packet" do
+		packet={:type => :request}
+		@server.dispatch(@client,packet)
+			
+	end
 end
 

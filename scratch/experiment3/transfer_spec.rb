@@ -1,4 +1,4 @@
-
+require 'transfer'
 
 context "A new transfer" do
 	setup do
@@ -7,11 +7,15 @@ context "A new transfer" do
 
 		packet={
 			:type => :transfer,
-			:connector=> c1,
-			:listener=> c2,
+			:connector=> @client1,
+			:listener=> @client2,
 			:chunkid=> 10,
 		}
 		@transfer=Transfer.new(packet)
+	end
+
+	specify "can be created from a transfer packet" do
+
 	end	
 
 end
