@@ -32,7 +32,7 @@ class TestNetInterface
 	
 	def send(address,packet,caller=nil)
 		packets.push Packet.new([caller,address,packet])
-		address.dispatch(caller,packet) rescue nil
+		address.dispatch(caller,packet) if address.respond_to?(:dispatch)
 	end
 
 end

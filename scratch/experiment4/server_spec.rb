@@ -35,6 +35,23 @@ context "A Server with test files and a network interface" do
 		p[:status].should_equal :normal
 		p[:size].should_equal 7
 	end
-	
 
+	specify "accepts provide message" do
+		request={
+			:type=>:provide,
+			:filename=>"/bla.txt",
+			:range=>5..20
+		}
+		lambda{ @net.send(@server,request) }.should_not_raise
+	end
+
+	specify "accepts unprovide message" do
+		request={
+			:type=>:unprovide,
+			:filename=>"/bla.txt",
+			:range=>1..3
+		}
+		lambda{ @net.send(@server,request) }.should_not_raise
+	end
+	
 end
