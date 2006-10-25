@@ -1,1 +1,6 @@
 require 'rake'
+require 'spec/rake/spectask'
+
+Spec::Rake::SpecTask.new(:spec) do |task|
+    task.spec_files = FileList['**/*_spec.rb']
+end
