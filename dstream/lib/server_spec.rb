@@ -1,4 +1,5 @@
-require File.dirname(__FILE__) + '/example'
+require File.dirname(__FILE__) + '/server'
+require File.dirname(__FILE__) + '/client'
 
 context 'A server with no clients' do
     setup do
