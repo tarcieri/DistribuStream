@@ -9,7 +9,7 @@ context 'A server with no clients' do
 
     specify 'should provide chunk in one client, one chunk case' do
         response = @server.dispatch(@client, :type => :request)
-        response.should.equal { :type => :transfer, :client => @client, :peer => @file_service, :mode => :take, :chunk => 1 }
+        response.should.equal(:type => :transfer, :client => @client, :peer => @file_service, :mode => :take, :chunk => 1)
     end
 end
 
