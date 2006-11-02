@@ -1,28 +1,14 @@
 
-class Message
-  def initialize(type=nil,data=nil)
-    @type=type
-    @data=data
-  end
-
- 
-  #these are the only variables that external code should access
-  attr_accessor :type,:data
-
-  attr_accessor :sender,:handled
-end
 
 class MessageManager
-  # mode=:keep, unhandled messages stay in the queue for testing
-  # mode=:exception, unhandled messages trigger a runtime exception
 
-  #should not be used, only available to MessageClient
-  attr_accessor :queue
 
   class MessageInfo
-    attr_accessor :message,:sender,:handled
+    attr_accessor :msg,:sender,:handled
   end
-
+  
+  # mode=:keep, unhandled messages stay in the queue for testing
+  # mode=:exception, unhandled messages trigger a runtime exception
   def initialize(clients=[])
     @mode=:debug
     @clients=Array.new
@@ -39,8 +25,12 @@ class MessageManager
     end
   end
 
-  def post(message)
-    @queue.push(message)
+  def post(message,sender=nil)
+    msg=MessageInfo.new
+    msg.sender=sender
+    msg.handled=false
+    msg.msg=message
+    @queue.push(msg)
     handle_messages
   end
 
@@ -51,7 +41,7 @@ class MessageManager
       msg=@queue[0]
       msg.handled=false
       @clients.each do |c|
-        msg.handled=true if c.dispatch(msg)
+        msg.handled=true if c.dispatch(msg.msg)
       end      
       
       @debug_list.push(@queue[0]) if @mode==:debug
@@ -64,8 +54,8 @@ class MessageManager
   #the message is then deleted
   def get_message(type=nil)
     @debug_list.each_index do |i|
-      if type==nil or @debug_list[i].type==type
-        ret=@debug_list[i]
+      if type==nil or @debug_list[i].msg.class==type
+        ret=@debug_list[i].msg
         @debug_list.delete_at(i)
         return ret
       end  
@@ -84,7 +74,6 @@ class MessageClient
   end
 
   def post(message)
-    message.sender=self
     @message_manager.post(message)  
   end
 end
