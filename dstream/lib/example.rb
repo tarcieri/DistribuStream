@@ -10,7 +10,7 @@
 
 # An example class.  Here's where you'd describe it
 class Example
-    # An example instance method.  Description for RDoc goes here
+    # An example instance method.  Description for RDoc goes here (continuously regenerated)
     def example
         'Example'
     end
