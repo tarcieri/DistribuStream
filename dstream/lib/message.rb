@@ -1,4 +1,25 @@
 
+module BasicCompare
+  def ==(obj)
+    return instance_variables==obj.instance_variables
+  end
+end
+
+class RequestPacket 
+  include BasicCompare
+  def initialize(source,data)
+    @source,@data=source,data
+  end
+  attr_accessor :source,:data  
+end
+  
+class ResponsePacket 
+  include BasicCompare
+  def initialize(dest,data) 
+    @dest,@data=dest,data
+  end
+  attr_accessor :dest,:data
+end
 
 class MessageManager
 
@@ -41,7 +62,7 @@ class MessageManager
       msg=@queue[0]
       msg.handled=false
       @clients.each do |c|
-        msg.handled=true if c.dispatch(msg.msg)
+        msg.handled=true if c.dispatch_from(msg.msg,self)
       end      
       
       @debug_list.push(@queue[0]) if @mode==:debug
@@ -69,12 +90,18 @@ class MessageClient
 
   attr_accessor :message_manager  
 
+  #should be overridden by derived class
   #returns true if this is handled or false otherwise
   def dispatch(message)
   end
 
+  #more informative version of dispatch for classes that need this
+  def dispatch_from(message,src_manager)
+    dispatch(message)
+  end
+
   def post(message)
-    @message_manager.post(message)  
+    @message_manager.post(message,self)  
   end
 end
 

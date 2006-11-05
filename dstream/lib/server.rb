@@ -31,7 +31,14 @@ class Server < MessageClient
   # +path+ location of file to transfer
   # +chunkid+ integer number of the chunk to transfer 
   def start_transfer(connector,listener,mode,path,chunkid)
-  
+    data={
+      :type=>:transfer,
+      :listener=>listener,
+      :mode=>mode,
+      :path=>path,
+      :chunkid=>chunkid
+    }
+    post( ResponsePacket.new(connector,data) )
   end
 
 	def dispatch(message)
