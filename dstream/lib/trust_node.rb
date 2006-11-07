@@ -55,10 +55,8 @@ class TrustNode
         if outgoing[nextlinktarget].nil?
           if implicit[nextlinktarget].nil?
             implicit[nextlinktarget] = TrustLink.new(link.trust * nextlink.trust, nextlink.success, nextlink.transfers)
-          else
-            if implicit[nextlinktarget].trust < (link.trust * nextlink.trust)
-              implicit[nextlinktarget] = TrustLink.new(link.trust * nextlink.trust, nextlink.success, nextlink.transfers)
-            end
+          elsif implicit[nextlinktarget].trust < (link.trust * nextlink.trust)
+            implicit[nextlinktarget] = TrustLink.new(link.trust * nextlink.trust, nextlink.success, nextlink.transfers)
           end
         end
       end
@@ -69,10 +67,8 @@ class TrustNode
         if outgoing[nextlinktarget].nil?
           if implicit[nextlinktarget].nil?
             implicit[nextlinktarget] = TrustLink.new(link.trust * nextlink.trust, nextlink.success, nextlink.transfers)
-          else
-            if implicit[nextlinktarget].trust < (link.trust * nextlink.trust)
-              implicit[nextlinktarget] = TrustLink.new(link.trust * nextlink.trust, nextlink.success, nextlink.transfers)
-            end
+          elsif implicit[nextlinktarget].trust < (link.trust * nextlink.trust)
+            implicit[nextlinktarget] = TrustLink.new(link.trust * nextlink.trust, nextlink.success, nextlink.transfers)
           end          
         end      
       end
