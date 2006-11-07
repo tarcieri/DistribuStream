@@ -10,9 +10,12 @@ class TrustNode
   end
   
   def success(node)
-    @outgoing[node] = TrustLink.new; normalize if @outgoing[node].nil?
-    @outgoing[node].success += 1
-    @outgoing[node].transfers += 1
+    if @outgoing[node].nil?
+      @outgoing[node] = TrustLink.new
+    else  
+      @outgoing[node].success += 1
+      @outgoing[node].transfers += 1
+    end
     normalize
   end
   
@@ -38,7 +41,6 @@ class TrustNode
       total_transfers += link.transfers
     end
     
-    puts "len:", @ongoing.size
     @outgoing.each do |linkedge|
       link = linkedge[1]
       puts total_transfers, '/', total_transfers
