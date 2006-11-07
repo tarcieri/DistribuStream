@@ -1,7 +1,9 @@
 require File.dirname(__FILE__)+ '/message'
 #require File.dirname(__FILE__)+ '/filemanager'
 
+#A server's internal representation of the client
 class ClientData
+	# Creates the client object with a given address object
 	def initialize(address)
 		@trusts={}
     @address=address
@@ -16,7 +18,7 @@ end
 
 
 
-
+# The server object manages network state
 class Server < MessageClient
 	attr_accessor :file_manager
 	
@@ -25,11 +27,11 @@ class Server < MessageClient
 	end	
 
   #sends out a transfer packet to the connector
-  # +connector+ address of client that connects
-  # +listener+ address of listener (may be client or server)
-  # +mode+ either :give or :take.  determines the direction of transfer (relative to the connector)
-  # +path+ location of file to transfer
-  # +chunkid+ integer number of the chunk to transfer 
+  # *connector: address of client that connects
+  # *listener: address of listener (may be client or server)
+  # *mode: either :give or :take.  determines the direction of transfer (relative to the connector)
+  # *path: location of file to transfer
+  # *chunkid: integer number of the chunk to transfer 
   def start_transfer(connector,listener,mode,path,chunkid)
     data={
       :type=>:transfer,
