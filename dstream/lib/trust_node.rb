@@ -52,25 +52,25 @@ class TrustNode
       target.outgoing.each do |nextlinkedge|
         nextlinktarget = nextlinkedge[0]
         nextlink = nextlinkedge[1]
-        if outgoing[nextlinktarget].nil?
-          if implicit[nextlinktarget].nil?
+        next unless outgoing[nextlinktarget].nil?
+        
+        if implicit[nextlinktarget].nil?
+          implicit[nextlinktarget] = TrustLink.new(link.trust * nextlink.trust, nextlink.success, nextlink.transfers)
+        elsif implicit[nextlinktarget].trust < (link.trust * nextlink.trust)
             implicit[nextlinktarget] = TrustLink.new(link.trust * nextlink.trust, nextlink.success, nextlink.transfers)
-          elsif implicit[nextlinktarget].trust < (link.trust * nextlink.trust)
-            implicit[nextlinktarget] = TrustLink.new(link.trust * nextlink.trust, nextlink.success, nextlink.transfers)
-          end
         end
       end
       
       target.implicit.each do |nextlinkedge|
         nextlinktarget = nextlinkedge[0]
         nextlink = nextlinkedge[1]
-        if outgoing[nextlinktarget].nil?
-          if implicit[nextlinktarget].nil?
-            implicit[nextlinktarget] = TrustLink.new(link.trust * nextlink.trust, nextlink.success, nextlink.transfers)
-          elsif implicit[nextlinktarget].trust < (link.trust * nextlink.trust)
-            implicit[nextlinktarget] = TrustLink.new(link.trust * nextlink.trust, nextlink.success, nextlink.transfers)
-          end          
-        end      
+        next unless outgoing[nextlinktarget].nil?
+        
+        if implicit[nextlinktarget].nil?
+          implicit[nextlinktarget] = TrustLink.new(link.trust * nextlink.trust, nextlink.success, nextlink.transfers)
+        elsif implicit[nextlinktarget].trust < (link.trust * nextlink.trust)
+          implicit[nextlinktarget] = TrustLink.new(link.trust * nextlink.trust, nextlink.success, nextlink.transfers)
+        end          
       end
     end
   end
