@@ -11,14 +11,14 @@ class TrustNode
   
   def success(node)
     @outgoing[node] = TrustLink.new; normalize if @outgoing[node].nil?
-    @outgoing[node].success = @outgoing[node].success + 1
-    @outgoing[node].transfers = @outgoing[node].transfers + 1
+    @outgoing[node].success += 1
+    @outgoing[node].transfers += 1
     normalize
   end
   
   def failure(node)
     @outgoing[node] = TrustLink.new if @outgoing[node].nil?
-    @outgoing[node].transfers = @outgoing[node].transfers + 1    
+    @outgoing[node].transfers += 1    
     normalize
   end
   
