@@ -16,7 +16,7 @@ context "A MessageManager with nothing attached" do
 
   specify "returns first available message for get_message " do
     @manager.post(@m1)
-    @manager.post(@m2)    
+    @manager.post(@m2)
     @manager.get_message.should_equal @m1
     @manager.get_message.should_equal @m2
     @manager.get_message.should_equal nil
@@ -29,6 +29,6 @@ context "A MessageManager with nothing attached" do
     @manager.get_message(Fixnum).should_equal nil
     @manager.get_message(String).should_equal @m1
     @manager.get_message.should_equal nil
-  end 
-    
+  end
+
 end

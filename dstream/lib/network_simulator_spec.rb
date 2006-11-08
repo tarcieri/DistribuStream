@@ -11,7 +11,7 @@ context "A network simulator" do
   specify "Should send a packet from one mm to another" do
     pack=ResponsePacket.new(@mm2,"hello")
     @mm1.post(pack)
-    @mm2.get_message.should_equal RequestPacket.new(@mm1,"hello")    
+    @mm2.get_message.should_equal RequestPacket.new(@mm1,"hello")
 
   end
 end

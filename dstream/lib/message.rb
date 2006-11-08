@@ -5,17 +5,17 @@ module BasicCompare
   end
 end
 
-class RequestPacket 
+class RequestPacket
   include BasicCompare
   def initialize(source,data)
     @source,@data=source,data
   end
-  attr_accessor :source,:data  
+  attr_accessor :source,:data
 end
-  
-class ResponsePacket 
+
+class ResponsePacket
   include BasicCompare
-  def initialize(dest,data) 
+  def initialize(dest,data)
     @dest,@data=dest,data
   end
   attr_accessor :dest,:data
@@ -27,7 +27,7 @@ class MessageManager
   class MessageInfo
     attr_accessor :msg,:sender,:handled
   end
-  
+
   # mode=:keep, unhandled messages stay in the queue for testing
   # mode=:exception, unhandled messages trigger a runtime exception
   def initialize(clients=[])
@@ -40,7 +40,7 @@ class MessageManager
   end
 
   def attach(clients)
-    clients.each do |c| 
+    clients.each do |c|
       @clients.push(c)
       c.message_manager=self
     end
@@ -63,13 +63,13 @@ class MessageManager
       msg.handled=false
       @clients.each do |c|
         msg.handled=true if c.dispatch_from(msg.msg,self)
-      end      
-      
+      end
+
       @debug_list.push(@queue[0]) if @mode==:debug
       @queue.delete_at(0)
     end
     @handling=false
-  end 
+  end
 
   #returns the first message in the debug_list of the desired type (or the first message if type=nil)
   #the message is then deleted
@@ -79,7 +79,7 @@ class MessageManager
         ret=@debug_list[i].msg
         @debug_list.delete_at(i)
         return ret
-      end  
+      end
     end
     return nil
   end
@@ -88,7 +88,7 @@ end
 
 class MessageClient
 
-  attr_accessor :message_manager  
+  attr_accessor :message_manager
 
   #should be overridden by derived class
   #returns true if this is handled or false otherwise
@@ -101,8 +101,6 @@ class MessageClient
   end
 
   def post(message)
-    @message_manager.post(message,self)  
+    @message_manager.post(message,self)
   end
 end
-
-
