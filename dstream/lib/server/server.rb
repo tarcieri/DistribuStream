@@ -1,4 +1,4 @@
-require File.dirname(__FILE__)+ '/message'
+require File.dirname(__FILE__)+ '/../common/message'
 #require File.dirname(__FILE__)+ '/filemanager'
 
 #A server's internal representation of the client
