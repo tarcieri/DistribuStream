@@ -11,4 +11,5 @@ Rake::RDocTask.new(:rdoc) do |task|
     task.title    = 'DistribuStream'
     task.rdoc_files.include('bin/**/*.rb')
     task.rdoc_files.include('lib/**/*.rb')
+    task.rdoc_files.include('simulation/**/*.rb')
 end
