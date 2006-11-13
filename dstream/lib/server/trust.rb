@@ -1,6 +1,16 @@
 require File.dirname(__FILE__) + '/trust_link'
 
-class TrustNode
+class Trust
+  class TrustLink
+    attr_accessor :trust, :success, :transfers
+
+    def initialize(trust = 1, success = 1, transfers = 1)
+      @trust = trust
+      @success = success
+      @transfers = transfers
+    end
+  end
+
   attr_reader :outgoing, :implicit
 
   def initialize(incoming = {}, outgoing = {}, implicit = {})
@@ -25,7 +35,7 @@ class TrustNode
     normalize
   end
 
-  def trust(node)
+  def weight(node)
     return @outgoing[node].trust unless @outgoing[node].nil?
     return @implicit[node].trust unless @implicit[node].nil?
     0

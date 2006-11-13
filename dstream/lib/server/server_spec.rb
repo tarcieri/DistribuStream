@@ -20,7 +20,7 @@ end
 context "A server,FileService attached to a message manager" do
   setup do
     @server=Server.new
-    @fs=FileService.new
+    #@fs=FileService.new
     @mm=MessageManager.new( [@server,@fs] )
     @client1="client1"
   end

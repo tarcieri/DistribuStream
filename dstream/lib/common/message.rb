@@ -23,10 +23,11 @@ end
 
 class MessageManager
 
-
   class MessageInfo
     attr_accessor :msg,:sender,:handled
   end
+
+   attr_accessor :from_address
 
   # mode=:keep, unhandled messages stay in the queue for testing
   # mode=:exception, unhandled messages trigger a runtime exception
@@ -36,13 +37,15 @@ class MessageManager
     @queue=Array.new
     @debug_list=Array.new
     @handling=false
+    @from_address=self
     attach(clients)
   end
 
   def attach(clients)
     clients.each do |c|
-      @clients.push(c)
-      c.message_manager=self
+      next if c.nil?
+      @clients.push(c) 
+      c.message_manager=self 
     end
   end
 
@@ -62,7 +65,7 @@ class MessageManager
       msg=@queue[0]
       msg.handled=false
       @clients.each do |c|
-        msg.handled=true if c.dispatch_from(msg.msg,self)
+        msg.handled=true if c.dispatch_from(msg.msg,from_address)
       end
 
       @debug_list.push(@queue[0]) if @mode==:debug

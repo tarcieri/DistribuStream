@@ -1,5 +1,5 @@
 require File.dirname(__FILE__) + '/network_simulator'
-require File.dirname(__FILE__) + '/message'
+require File.dirname(__FILE__) + '/../lib/common/message'
 
 context "A network simulator" do
   setup do

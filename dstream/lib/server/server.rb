@@ -21,7 +21,9 @@ end
 class Server < MessageClient
   attr_accessor :file_manager
 
-  def initialize
+  def initialize(network_manager=nil)
+    mm=MessageManager.new
+    mm.attach [self,network_manager]
     @clients={}
   end
 
