@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + '/server'
+require File.dirname(__FILE__) + '/transfer_manager'
 #require File.dirname(__FILE__) + '/client'
 require File.dirname(__FILE__) + '/../common/message'
 #require File.dirname(__FILE__) + '/fileservice'
@@ -6,7 +6,7 @@ require File.dirname(__FILE__) + '/../common/message'
 
 PATH="/bla.txt"
 
-context 'A server with a file service' do
+context 'A transfer manager with a file service' do
   setup do
     #@file_service = { "http://example.com/video.wmv" }
     #@server = Server.new(@file_service)
@@ -17,11 +17,11 @@ context 'A server with a file service' do
   end
 end
 
-context "A server,FileService attached to a message manager" do
+context "A transfer manager,FileService attached to a message manager" do
   setup do
-    @server=Server.new
-    #@fs=FileService.new
-    @mm=MessageManager.new( [@server,@fs] )
+    @trans=TransferManager.new
+    #@fs=
+    @mm=MessageManager.new( [@trans] )
     @client1="client1"
   end
 
@@ -29,13 +29,13 @@ context "A server,FileService attached to a message manager" do
     message=RequestPacket.new(@client1, { :type=>:ask_info, :path=>PATH } )
     response=ResponsePacket.new(@client1, { :type=>:tell_info, :path=>PATH } )
     @mm.post(message)
-    @mm.get_message(ResponsePacket).should_equal response
+    @mm.get_message(ResponsePacket).should == response
   end
 
   specify "Should send transfer message when asked" do
-    @server.start_transfer(@client1,@mm,:take,PATH,0)
+    @trans.start_transfer(@client1,@mm,:take,PATH,0)
     expected=ResponsePacket.new(@client1, { :type=>:transfer, :listener=>@mm, :mode=>:take, :path=>PATH, :chunkid=>0 } )
-    @mm.get_message(ResponsePacket).should_equal expected
+    @mm.get_message(ResponsePacket).should == expected
 
   end
 

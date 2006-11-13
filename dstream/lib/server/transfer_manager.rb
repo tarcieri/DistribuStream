@@ -18,12 +18,10 @@ end
 
 
 # The server object manages network state
-class Server < MessageClient
+class TransferManager < MessageClient
   attr_accessor :file_manager
 
-  def initialize(network_manager=nil)
-    mm=MessageManager.new
-    mm.attach [self,network_manager]
+  def initialize  
     @clients={}
   end
 
