@@ -1,7 +1,7 @@
 require File.dirname(__FILE__) + '/server'
 require File.dirname(__FILE__) + '/client'
 require File.dirname(__FILE__) + '/message'
-require File.dirname(__FILE__) + '/fileservice'
+#require File.dirname(__FILE__) + '/fileservice'
 require File.dirname(__FILE__) + '/network_simulator'
 
 PATH="/bla.txt"
