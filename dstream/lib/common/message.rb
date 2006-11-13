@@ -5,7 +5,7 @@ module BasicCompare
   end
 end
 
-class RequestPacket
+class PacketIn
   include BasicCompare
   def initialize(source,data)
     @source,@data=source,data
@@ -13,7 +13,7 @@ class RequestPacket
   attr_accessor :source,:data
 end
 
-class ResponsePacket
+class PacketOut
   include BasicCompare
   def initialize(dest,data)
     @dest,@data=dest,data

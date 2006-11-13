@@ -39,14 +39,14 @@ class TransferManager < MessageClient
       :path=>path,
       :chunkid=>chunkid
     }
-    post( ResponsePacket.new(connector,data) )
+    post( PacketOut.new(connector,data) )
   end
 
   def dispatch(message)
 
 
     handlers={
-      RequestPacket=> :dispatch_packet
+      PacketIn=> :dispatch_packet
     }
 
     handler=handlers[ message.class ]
@@ -75,7 +75,7 @@ class TransferManager < MessageClient
       :type => :tell_info,
       :path => data[:path]
     }
-    post(ResponsePacket.new(client.address,ret))
+    post(PacketOut.new(client.address,ret))
   end
 
 =begin

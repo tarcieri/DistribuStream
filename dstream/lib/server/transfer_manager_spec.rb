@@ -26,16 +26,16 @@ context "A transfer manager,FileService attached to a message manager" do
   end
 
   specify "should respond to askinfo" do
-    message=RequestPacket.new(@client1, { :type=>:ask_info, :path=>PATH } )
-    response=ResponsePacket.new(@client1, { :type=>:tell_info, :path=>PATH } )
+    message=PacketIn.new(@client1, { :type=>:ask_info, :path=>PATH } )
+    response=PacketOut.new(@client1, { :type=>:tell_info, :path=>PATH } )
     @mm.post(message)
-    @mm.get_message(ResponsePacket).should == response
+    @mm.get_message(PacketOut).should == response
   end
 
   specify "Should send transfer message when asked" do
     @trans.start_transfer(@client1,@mm,:take,PATH,0)
-    expected=ResponsePacket.new(@client1, { :type=>:transfer, :listener=>@mm, :mode=>:take, :path=>PATH, :chunkid=>0 } )
-    @mm.get_message(ResponsePacket).should == expected
+    expected=PacketOut.new(@client1, { :type=>:transfer, :listener=>@mm, :mode=>:take, :path=>PATH, :chunkid=>0 } )
+    @mm.get_message(PacketOut).should == expected
 
   end
 

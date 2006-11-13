@@ -6,7 +6,7 @@ require File.dirname(__FILE__) + '/../lib/common/message'
 class NetworkSimulator < MessageClient
 
   def dispatch_from(message,from)
-    return false if message.class != ResponsePacket
-    message.dest.post(RequestPacket.new(from,message.data) )
+    return false if message.class != PacketOut
+    message.dest.post(PacketIn.new(from,message.data) )
   end
 end
