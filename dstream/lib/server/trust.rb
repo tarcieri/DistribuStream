@@ -1,7 +1,5 @@
-require File.dirname(__FILE__) + '/trust_link'
-
 class Trust
-  class TrustLink
+  class Edge
     attr_accessor :trust, :success, :transfers
 
     def initialize(trust = 1, success = 1, transfers = 1)
@@ -21,7 +19,7 @@ class Trust
 
   def success(node)
     if @outgoing[node].nil?
-      @outgoing[node] = TrustLink.new
+      @outgoing[node] = Edge.new
     else
       @outgoing[node].success += 1
       @outgoing[node].transfers += 1
@@ -30,7 +28,7 @@ class Trust
   end
 
   def failure(node)
-    @outgoing[node] = TrustLink.new if @outgoing[node].nil?
+    @outgoing[node] = Edge.new if @outgoing[node].nil?
     @outgoing[node].transfers += 1
     normalize
   end
@@ -45,16 +43,20 @@ class Trust
     total_success = 0
     total_transfers = 0
 
-    @outgoing.each do |linkedge|
+    @outgoing.each do |linkedge|    
       link = linkedge[1]
       total_success += link.success
       total_transfers += link.transfers
+      print "link.success = ", link.success, "\n"
+      print "link.transfers = ", link.transfers, "\n"
     end
+
+    print "total_transfers=", total_transfers, "\n"
 
     @outgoing.each do |linkedge|
       link = linkedge[1]
-      puts total_transfers, '/', total_transfers
       link.trust = (link.success / total_success) * (link.transfers / total_transfers)
+      print "Trust: ", total_transfers, '/', total_transfers, "=",  link.trust, "\n"
     end
 
     @outgoing.each do |linkedge|
@@ -68,7 +70,7 @@ class Trust
           next unless outgoing[nextlinktarget].nil?
 
           if implicit[nextlinktarget].nil? || implicit[nextlinktarget].trust < (link.trust * nextlink.trust)
-            implicit[nextlinktarget] = TrustLink.new(link.trust * nextlink.trust, nextlink.success, nextlink.transfers)
+            implicit[nextlinktarget] = Edge.new(link.trust * nextlink.trust, nextlink.success, nextlink.transfers)
           end
         end
       end
