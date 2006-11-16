@@ -1,5 +1,4 @@
 require File.dirname(__FILE__) + '/trust'
-require File.dirname(__FILE__) + '/trust_graph'
 
 context 'A new trust node' do
   setup do
@@ -16,12 +15,16 @@ context 'A new trust node' do
   specify 'should trust a node after a good transfer' do
     @node.success(@other)
     @node.outgoing.should_not_be_empty
-    @trust = @node.outgoing[@other].trust
   end
   
   specify 'should normalize trusts across outgoing edges' do
+    @node.success(@other)
+    trust = @node.weight(@other)
+
     @node.success(@distant)
     @node.outgoing.size.should == 2
-    (@node.weight(other) + @node.weight(@distant)).should_be_close 1.0, 0.00001
+
+    @node.weight(@other).should < trust
+    (@node.weight(@other) + @node.weight(@distant)).should_be_close 1.0, 0.00001
   end
 end

@@ -2,7 +2,7 @@ class Trust
   class Edge
     attr_accessor :trust, :success, :transfers
 
-    def initialize(trust = 1, success = 1, transfers = 1)
+    def initialize(trust = 1.0, success = 1.0, transfers = 1.0)
       @trust = trust
       @success = success
       @transfers = transfers
@@ -21,15 +21,15 @@ class Trust
     if @outgoing[node].nil?
       @outgoing[node] = Edge.new
     else
-      @outgoing[node].success += 1
-      @outgoing[node].transfers += 1
+      @outgoing[node].success += 1.0
+      @outgoing[node].transfers += 1.0
     end
     normalize
   end
 
   def failure(node)
     @outgoing[node] = Edge.new if @outgoing[node].nil?
-    @outgoing[node].transfers += 1
+    @outgoing[node].transfers += 1.0
     normalize
   end
 
@@ -47,16 +47,17 @@ class Trust
       link = linkedge[1]
       total_success += link.success
       total_transfers += link.transfers
-      print "link.success = ", link.success, "\n"
-      print "link.transfers = ", link.transfers, "\n"
+      #print "link.success = ", link.success, "\n"
+      #print "link.transfers = ", link.transfers, "\n"
     end
 
-    print "total_transfers=", total_transfers, "\n"
+    #print "total_transfers=", total_transfers, "\n"
 
     @outgoing.each do |linkedge|
       link = linkedge[1]
-      link.trust = (link.success / total_success) * (link.transfers / total_transfers)
-      print "Trust: ", total_transfers, '/', total_transfers, "=",  link.trust, "\n"
+      # link.trust = (link.success / total_success) * (link.transfers / total_transfers)
+      link.trust = link.success / total_success
+      #print "Trust: ", link.success, "/", total_success, "=",  link.trust, "\n"
     end
 
     @outgoing.each do |linkedge|
