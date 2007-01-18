@@ -35,14 +35,14 @@ class NetworkManager
 		end
 
 		def buffer_incoming_data
-			@mbuffer.append_string(socket.readpartial(1000))
+			@mbuffer.append_string(socket.readpartial(100000))
 		end
 	end
 
 	def initialize
 		@descriptors=Array.new
 		@listeners=Array.new
-		@connections=Hash.new
+		@connections=Hash.new  #list of connections, keyed by the socket
 	end
 	
 	def listen(port)
@@ -52,8 +52,8 @@ class NetworkManager
 		@descriptors.push(serverSocket)
 	end
 	
-	def connect(address)
-		newsock=TCPSocket.new(address[0],address[1])
+	def connect(address,port)
+		newsock=TCPSocket.new(address,port)
 		@descriptors.push(newsock)
 		return newsock
 	end
@@ -74,7 +74,12 @@ class NetworkManager
 					@descriptors.push(newsock)
 					name=sprintf("[%s|%s]",newsock.peeraddr[2],newsock.peeraddr[1])
 					puts "Client joined: "+name
-					#@listener.connectionEvent(sock)
+					
+					#add a new connection
+					newcon=Connection.new
+					newcon.socket=newsock 
+					@connections[newsock]=newcon
+					
 				else
 					#got something from a socket
 					if sock.eof? then
@@ -87,6 +92,12 @@ class NetworkManager
 						
 					else
 						
+						con=@connections[sock]
+						con.buffer_incoming_data
+						while ( msg=con.recv_message ) != nil 
+							
+						end
+						
 						sock.bufferIncomingData
 						@listener.connectionEvent(sock)
 					end
@@ -97,10 +108,10 @@ class NetworkManager
 		end	
 	end
 	
+	def send_msg_to_listeners(message,connection)
+		@listeners.each { |l| l.dispatch_message( message, connection ) }
+	end
+	
 end
-
-server=NetworkManager.new
-server.listen(8000)
-server.run
 
 		
