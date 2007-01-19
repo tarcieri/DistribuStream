@@ -1,0 +1,26 @@
+%class Client
+
+%start ClientChunkTransfer::Start
+%map ClientChunkTransfer
+
+%%
+
+// State		Transition				End State		Action(s)
+Start {
+				TransferTo				Connecting		    {}
+				TransferFrom			Connecting			{}
+				Take					Transferring	    {}
+				Give					Transferring	    {}
+}	
+
+Connecting {
+				Failed					Start				{}
+				Connected				Transferring		{}
+}
+
+Transferring {
+				Failed					Start				{}
+				Complete				Start				{}
+}
+
+%%
