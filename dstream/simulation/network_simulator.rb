@@ -1,32 +1,33 @@
 
-class Address
-  def initialize(address,port)
-    @address,@port=address,port
-  end
-  attr_accessor :address,:port
-end
-
-class MessageQueueItem
-  def initialize(connection,message)
-    @connection,@message=connection,message
-  end
-  attr_accessor :connection,:message
-end
+# Address= [simulator,port]
+# Queue item = [connection,message]
 
 #this class implements the NetworkManager interface well enough for it to be used in testing
 class NetworkManagerSim
 
   class Connection
-    attr_accessor :local,:remote #references to the local and remote NetworkManagerSim
-
+    #public interface
+    
     def send_message(message)
-      remote.connection.incoming_message(self,message)
-    end
+      remote[0].incoming_message(self,message)
+    end 
+    
+    def local_address; local[0].to_s; end
+    def local_port; local[1]; end   
+    def remote_address; remote[0].to_s; end
+    def remote_port; remote[1]; end
+    
+    #private, don't use outside of this module
+
+    attr_accessor :local,:remote #local and remote [simulator,port]
+
+
+    
 
   end
 
   attr_accessor :connections,:listeners #needed so we can access another NetworkManagerSim's connections
-  protected :connections,:listeners
+  #protected :connections,:listeners
 
   @@message_queue=Array.new
 
@@ -36,19 +37,19 @@ class NetworkManagerSim
     @unique_source_port=5000
   end
 
-  def connect(address)
+  def connect(address,port)
     @unique_source_port=@unique_source_port+1
 
     con=Connection.new
     con.local=[self,@unique_source_port]
-    con.remote=address
+    con.remote=[address,port]
     @connections<<con
 
     #open a connection back from the remote host
     con2=Connection.new
     con2.local=con.remote
     con2.remote=con.local
-    address[0].connections<<con
+    address.connections<<con
     
     return con
   end
@@ -70,10 +71,10 @@ class NetworkManagerSim
   def NetworkManagerSim.run
 
     while @@message_queue.size>0 do
-      puts "mq=#{@@message_queue.inspect}"
+      #puts "mq=#{@@message_queue.inspect}"
       message=@@message_queue.pop
       
-      net_sim=message[0].local
+      net_sim=message[0].local[0]
       net_sim.listeners.each { |listener| listener.dispatch_message(message[1],message[0]) }  
     end 
 
@@ -83,7 +84,8 @@ end
 
 class BasicMessageHandler 
   def dispatch_message(message,connection)
-    puts "dispatching message: #{message.inspect} from connection: #{connection.inspect}"
+    puts "dispatching message: #{message.inspect} from remote: #{connection.remote_address},#{connection.remote_port}"
+    connection.send_message ("Yo wassup?")
   end
 end
 
@@ -97,7 +99,7 @@ c1net.register_message_listener(c1)
 c2net.register_message_listener(c2)
 
 
-connection=c1net.connect([c2net,5000])
+connection=c1net.connect(c2net,5000)
 connection.send_message("This is a message.")
 NetworkManagerSim.run
 
