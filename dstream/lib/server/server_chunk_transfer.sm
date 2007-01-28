@@ -1,0 +1,27 @@
+%class ChunkTransferHandler
+
+%start ServerChunkTransfer::Start
+%map ServerChunkTransfer
+
+%%
+
+// State		Transition				End State		Action(s)
+Start {
+				Transfer				Connecting		    {connect();}
+}	
+
+Connecting {
+				Failed					Start				{}
+				Connected				Transferring		{transfer();}
+}
+
+Transferring {
+				TransferSuccess			MapTrusts			{map();}
+				TransferFailure			MapTrusts			{map();}
+}
+
+MapTrusts {
+				Finished				Start				{}
+}
+
+%%
