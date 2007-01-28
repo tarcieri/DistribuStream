@@ -29,7 +29,9 @@ class Server
   end
   
   def connection(address)
-	raise "No connection with that address" if (@connections.find { |connection| address = connection[:address] }).nil? 
+    return_connection = @connections.find { |connection| address = connection[:address] }
+	raise "No connection with that address" if return_connection.nil?
+    return return_connection	
   end
   
   def Transfer(address)
