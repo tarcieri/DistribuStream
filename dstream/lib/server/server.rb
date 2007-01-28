@@ -1,12 +1,53 @@
 require File.dirname(__FILE__) + '/transfer_manager'
 require File.dirname(__FILE__) + '/../common/message'
 
+class ChunkTransferHandler
+  def initialize(address, server)
+    @address = address
+  end
+  
+  def connect()
+  end
+  
+  def transfer()
+  end
+  
+  def map()
+  end
+end
+
 class Server
-  def initialize(network_manager)
-    @message_manager=MessageManager.new
-    @message_manager.from_address=self #allows the network simulator to know where packets come from
-    @transfer_manager=TransferManager.new
-    @message_manager.attach [ network_manager, @transfer_manager ]
+  attr_reader :connections
+  def initialize()
+    @connections = Array.new
+  end
+  
+  def add_connection(address)
+    handler = ChunkTransferHandler.new(address, self)
+	fsm = ChunkTransferHandler_sm.new(handler)
+    @connections << { :address => address, :handler => handler, :fsm => fsm } 
+  end
+  
+  def connection(address)
+	raise "No connection with that address" if (@connections.find { |connection| address = connection[:address] }).nil? 
+  end
+  
+  def Transfer(address)
+  end
+
+  def Failed(address)
+  end
+  
+  def Connected(address)
+  end
+
+  def TransferSuccess(address)
+  end  
+  
+  def TransferFailure(address)
+  end
+
+  def Finished(address)
   end
 end
     
