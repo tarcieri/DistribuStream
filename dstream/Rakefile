@@ -13,3 +13,18 @@ Rake::RDocTask.new(:rdoc) do |task|
     task.rdoc_files.include('lib/**/*.rb')
     task.rdoc_files.include('simulation/**/*.rb')
 end
+
+file "lib/server/server_chunk_transfer.sm"
+file "lib/client/client_chunk_transfer.sm"
+
+file "lib/server/server_chunk_transfer_sm.rb" => ["lib/server/server_chunk_transfer.sm"] do |t|
+  sh "java -jar lib/smc/bin/Smc.jar -ruby #{t.prerequisites[0]}"
+end
+
+file "lib/client/client_chunk_transfer_sm.rb" => ["lib/client/client_chunk_transfer.sm"] do |t|
+  sh "java -jar lib/smc/bin/Smc.jar -ruby #{t.prerequisites[0]}"
+end
+
+task :smc => ["lib/client/client_chunk_transfer_sm.rb","lib/server/server_chunk_transfer_sm.rb"]
+
+task :default => :smc
