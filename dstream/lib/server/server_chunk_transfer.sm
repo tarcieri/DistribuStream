@@ -1,4 +1,4 @@
-%class ChunkTransferHandler
+%class Transfer
 
 %start ServerChunkTransfer::Start
 %map ServerChunkTransfer
