@@ -21,10 +21,12 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
    
   def receive_line line
     begin
+      puts "line:"+line
       line.chomp!
       message=JSON.parse(line)
       receive_message(message)
     rescue Exception
+      puts "pdtp_protocol closed connection"
       close_connection #there was an error in parsing
     end
   end

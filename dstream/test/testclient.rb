@@ -8,13 +8,31 @@ client=Client.new
 client.file_service=ClientFileService.new
 ClientMessageTranslator::client=client
 
+host="localhost"
+port=6000
+url="pdtp://bla.com/test.txt"
 
 EventMachine::run {
-  host,port="localhost", 6000
-  EventMachine::connect host,port,ClientMessageTranslator
+  connection=EventMachine::connect host,port,ClientMessageTranslator
   puts "connecting with ev=#{EventMachine::VERSION}"
-  #
-  #
-  #EventMachine::add_periodic_timer(1) { PDTPProtocol::print_info }
+
+  #puts connection.inspect
+  request={
+    "type"=>"ask_info",
+    "url"=>url
+  }
+
+  state=:start
+
+  connection.send_message(request)
+
+  EventMachine::add_periodic_timer(1) do
+    #if state==:start and 
+    puts client.file_service.get_info(url).inspect
+  end
+
 }
+
+puts "outside of block"
+
 

@@ -23,6 +23,7 @@ class ServerMessageTranslator < PDTPProtocol
         raise
       end
     rescue 
+      puts "message translator closing connection"
       close_connection # protocol error
     end
   end
