@@ -15,8 +15,8 @@ class ServerFileService
 	end
 
 	def get_info(url)
-		p get_local_path(url)
-		p Pathname.new(@root) + "/bla.txt"
+		#p get_local_path(url)
+		#p Pathname.new(@root) + "/bla.txt"
 		info=FileInfo.new
 		info.streaming=false
 		info.chunk_size=512
@@ -28,6 +28,7 @@ class ServerFileService
 	
 	def get_local_path(url)
 		path=URI.split(url)[5]
+    path=path[1..path.size-1] #remove leading /
 		return (Pathname.new(@root) + path).to_s	
 	end
 	
