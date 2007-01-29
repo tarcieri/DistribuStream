@@ -1,5 +1,4 @@
-require File.dirname(__FILE__) + '/transfer_manager'
-require File.dirname(__FILE__) + '/../common/message'
+#require File.dirname(__FILE__) + '/transfer_manager'
 
 class ChunkTransferHandler
   def initialize(address, server)
@@ -18,6 +17,7 @@ end
 
 class Server
   attr_reader :connections
+  attr_accessor :file_service
   def initialize()
     @connections = Array.new
   end
@@ -51,5 +51,20 @@ class Server
 
   def Finished(address)
   end
+
+  def ask_info(connection,url)
+    info=file_service.get_info(url)
+    response={
+      "type"=>"tell_info",
+      "url"=>url,
+    }
+    unless info.nil?
+      response["size"]=info.size
+      response["chunk_size"]=info.chunk_size
+      response["streaming"]=info.streaming
+    end
+    connection.send_message(response)
+  end
+
 end
     
