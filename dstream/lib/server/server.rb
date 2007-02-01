@@ -1,4 +1,5 @@
 #require File.dirname(__FILE__) + '/transfer_manager'
+require File.dirname(__FILE__) + '/client_info'
 
 class ChunkTransferHandler
   def initialize(address, server)
@@ -52,6 +53,11 @@ class Server
   def Finished(address)
   end
 
+  # returns the ClientInfo object associated with this connection
+  def client_info(connection)
+    return connection.user_data||=ClientInfo.new
+  end
+
   def ask_info(connection,url)
     info=file_service.get_info(url)
     response={
@@ -64,6 +70,11 @@ class Server
       response["streaming"]=info.streaming
     end
     connection.send_message(response)
+  end
+
+  def request(connection,url,range)
+    client_info(connection).chunk_info.request(url,range)
+    puts "Client requested: #{url} #{range}" 
   end
 
 end

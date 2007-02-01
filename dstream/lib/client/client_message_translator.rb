@@ -1,4 +1,5 @@
 require File.dirname(__FILE__)+'/../common/pdtp_protocol'
+require File.dirname(__FILE__)+'/client_file_service'
 
 class ClientMessageTranslator < PDTPProtocol
   def initialize *args
@@ -18,7 +19,11 @@ class ClientMessageTranslator < PDTPProtocol
     begin
       case message["type"]
       when "tell_info"
-        #@@client.ask_info(self,message["url"])
+        info=FileInfo.new
+        info.size=message["size"]
+        info.chunk_size=message["chunk_size"]
+        info.streaming=message["streaming"]
+        @@client.tell_info(message["url"],info)
       else
         raise
       end

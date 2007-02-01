@@ -1,5 +1,9 @@
 class ClientInfo
   attr_accessor :chunk_info
+  
+  def initialize
+    @chunk_info=ChunkInfo.new
+  end
  
 end
 

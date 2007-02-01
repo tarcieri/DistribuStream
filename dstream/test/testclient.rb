@@ -27,8 +27,19 @@ EventMachine::run {
   connection.send_message(request)
 
   EventMachine::add_periodic_timer(1) do
-    #if state==:start and 
-    puts client.file_service.get_info(url).inspect
+    case state
+    when :start
+      if client.file_service.get_info(url) != nil then
+        state=:request_sent
+        request={
+          "type"=>"request",
+          "chunk_range"=> 1..1,
+          "url"=> url
+        }
+        connection.send_message(request)
+      end
+    end
+    #puts client.file_service.get_info(url).inspect
   end
 
 }
