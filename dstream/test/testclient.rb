@@ -6,14 +6,14 @@ require File.dirname(__FILE__)+'/../lib/client/client_file_service'
 
 client=Client.new
 client.file_service=ClientFileService.new
-ClientMessageTranslator::client=client
+PDTPProtocol::listener=client
 
 host="localhost"
 port=6000
 url="pdtp://bla.com/test.txt"
 
 EventMachine::run {
-  connection=EventMachine::connect host,port,ClientMessageTranslator
+  connection=EventMachine::connect host,port,PDTPProtocol
   puts "connecting with ev=#{EventMachine::VERSION}"
 
   #puts connection.inspect

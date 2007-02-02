@@ -23,17 +23,30 @@ end
 
 class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
   @@num_connections=0
+  @@listener=nil
 
+  def PDTPProtocol::listener= listener
+    @@listener=listener
+  end
+  
   def initialize *args
     super
     @@num_connections+=1
     user_data=nil
+    @@listener.connection_created(self) if @@listener.respond_to?(:connection_created)
   end
 
   attr_accessor :user_data #users of this class may store arbitrary data here
 
   #override this in a child class to handle messages
   def receive_message message
+    begin
+      @@listener.dispatch_message(message,self) 
+    rescue Exception=>e
+      puts "message translator closing connection for exception: #{e}"
+      puts "on line: #{e.backtrace[0]}"
+      close_connection # protocol error
+    end
   end
    
   def receive_line line
@@ -55,7 +68,9 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
   end
 
   def unbind
+    puts "unbinding connection"
     @@num_connections-=1
+    @@listener.connection_destroyed(self) if @@listener.respond_to?(:connection_destroyed)
   end
 
   def PDTPProtocol::print_info

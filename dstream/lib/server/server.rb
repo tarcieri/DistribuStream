@@ -22,6 +22,18 @@ class Server
   def initialize()
     @connections = Array.new
   end
+
+  def connection_created(connection)
+    @connections << connection
+  end  
+
+  def connection_destroyed(connection)
+    @connections.delete(connection)
+  end
+
+  def print_stats
+    puts "num_connections=#{@connections.size}"
+  end
   
   def add_connection(address)
     handler = ChunkTransferHandler.new(address, self)
@@ -58,23 +70,35 @@ class Server
     return connection.user_data||=ClientInfo.new
   end
 
-  def ask_info(connection,url)
-    info=file_service.get_info(url)
-    response={
-      "type"=>"tell_info",
-      "url"=>url,
-    }
-    unless info.nil?
-      response["size"]=info.size
-      response["chunk_size"]=info.chunk_size
-      response["streaming"]=info.streaming
-    end
-    connection.send_message(response)
+  # runs through the list of requested chunks for each client and creates as many
+  # new transfers as it can
+  def spawn_transfers
+    
   end
 
-  def request(connection,url,range)
-    client_info(connection).chunk_info.request(url,range)
-    puts "Client requested: #{url} #{range}" 
+  def dispatch_message(message,connection)
+    case message["type"]
+    
+    when "ask_info"
+      info=file_service.get_info(message["url"])
+      response={
+        "type"=>"tell_info",
+        "url"=>message["url"]
+      }
+      unless info.nil?
+        response["size"]=info.size
+        response["chunk_size"]=info.chunk_size
+        response["streaming"]=info.streaming
+      end
+      connection.send_message(response)
+
+    when "request"
+      client_info(connection).chunk_info.request(message["url"],message["chunk_range"])
+    
+    else
+      raise "Unknown message type: #{message['type']}"
+    end
+
   end
 
 end
