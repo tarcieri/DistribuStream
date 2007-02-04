@@ -10,11 +10,13 @@ PDTPProtocol::listener=client
 
 host="localhost"
 port=6000
+port=ARGV[0].to_i if ARGV[0]
 url="pdtp://bla.com/test.txt"
 
 EventMachine::run {
   connection=EventMachine::connect host,port,PDTPProtocol
   puts "connecting with ev=#{EventMachine::VERSION}"
+  puts "host= #{host}  port=#{port}"
 
   #puts connection.inspect
   request={
@@ -33,7 +35,7 @@ EventMachine::run {
         state=:request_sent
         request={
           "type"=>"request",
-          "chunk_range"=> 1..1,
+          "chunk_range"=> 0..1,
           "url"=> url
         }
         connection.send_message(request)

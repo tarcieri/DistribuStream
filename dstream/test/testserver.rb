@@ -16,8 +16,10 @@ server.file_service.root=root
 
 EventMachine::run {
   host,port="localhost", 6000
+  port= ARGV[0].to_i if ARGV[0]
   EventMachine::start_server host,port,PDTPProtocol
   puts "accepting connections with ev=#{EventMachine::VERSION}"
+  puts "host=#{host}  port=#{port}"
   EventMachine::add_periodic_timer(1) { server.print_stats }
 }
 
