@@ -1,5 +1,5 @@
-$: << File.dirname(__FILE__) + '/../common'
-require 'server_chunk_transfer_sm'
+#$: << File.dirname(__FILE__) + '/../common'
+#require 'server_chunk_transfer_sm'
 
 class Transfer
   attr_accessor :taker, :giver, :url, :chunkid
@@ -10,7 +10,7 @@ class Transfer
     #assume neither client is behind a firewall at this point
     @connector=@taker
     @acceptor=@giver
-  
+    send_transfer_message  
   end
 
   def send_transfer_message

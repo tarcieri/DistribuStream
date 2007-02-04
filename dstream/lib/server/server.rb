@@ -1,5 +1,6 @@
 #require File.dirname(__FILE__) + '/transfer_manager'
 require File.dirname(__FILE__) + '/client_info'
+require File.dirname(__FILE__) +'/transfer'
 
 class ChunkTransferHandler
   def initialize(address, server)
