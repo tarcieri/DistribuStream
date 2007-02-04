@@ -33,6 +33,14 @@ class ChunkInfo
     end  
     return nil
   end
+
+  def each_chunk_of_type(type)
+     @files.each do |name,file|
+      file.each_index do |i|
+        yield(name,i) if file[i]==type
+      end
+    end 
+  end
     
 protected
   def get(filename,chunk)

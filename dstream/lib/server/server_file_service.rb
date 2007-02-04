@@ -31,6 +31,17 @@ class ServerFileService
     path=path[1..path.size-1] #remove leading /
 		return (Pathname.new(@root) + path).to_s	
 	end
-	
+
+  def get_chunk_data(url,chunk_id)
+    begin
+      chunk_size=get_info(url).chunk_size
+      file=open( get_local_path(url) )
+      file.pos=chunk_size*chunk_id
+      buffer=file.read(chunk_size)
+    rescue
+      buffer=nil
+    end
+    return buffer
+  end	
 	
 end

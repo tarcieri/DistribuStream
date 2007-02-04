@@ -21,6 +21,7 @@ class Server
   attr_accessor :file_service
   def initialize()
     @connections = Array.new
+    @transfers = Array.new
   end
 
   def connection_created(connection)
@@ -32,7 +33,7 @@ class Server
   end
 
   def print_stats
-    puts "num_connections=#{@connections.size}"
+    puts "num_connections=#{@connections.size} num_transfers=#{@transfers.size}"
   end
   
   def add_connection(address)
@@ -73,7 +74,37 @@ class Server
   # runs through the list of requested chunks for each client and creates as many
   # new transfers as it can
   def spawn_transfers
-    
+    while spawn_single_transfer_slow==true 
+    end
+  end
+
+  def begin_transfer(taker,giver,url,chunkid)
+    puts "transfer starting: taker=#{taker} giver=#{giver} "
+    puts "  url=#{url}  chunkid=#{chunkid}"
+    client_info(taker).chunk_info.transfer(url,chunkid..chunkid)
+   
+    @transfers << Transfer.new(taker,giver,url,chunkid) 
+  end
+
+  # performs a brute force search to pair clients together, 
+  # creates a transfer if possible.
+  # returns true if a connection was created
+  def spawn_single_transfer_slow
+    connections.each do |c|
+      client=client_info(c)
+      client.chunk_info.each_chunk_of_type(:requested) do |url,chunkid|
+        #puts "#{a} : #{b}"
+        #look for another client that has this chunk
+        connections.each do |c2|
+          next if c2==c
+          if client_info(c2).chunk_info.provided?(url,chunkid) then
+            begin_transfer(c,c2,url,chunkid)
+            return true
+          end
+        end
+      end
+    end  
+    return false
   end
 
   def dispatch_message(message,connection)
@@ -94,7 +125,10 @@ class Server
 
     when "request"
       client_info(connection).chunk_info.request(message["url"],message["chunk_range"])
-    
+      spawn_transfers #this should also be called periodically, but it is called here to improve latency
+    when "provide"
+      client_info(connection).chunk_info.provide(message["url"],message["chunk_range"])
+      spawn_transfers 
     else
       raise "Unknown message type: #{message['type']}"
     end

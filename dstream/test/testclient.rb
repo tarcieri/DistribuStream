@@ -13,20 +13,34 @@ port=6000
 port=ARGV[0].to_i if ARGV[0]
 url="pdtp://bla.com/test.txt"
 
+providing= (ARGV[1] == "p" ) 
+
+
 EventMachine::run {
   connection=EventMachine::connect host,port,PDTPProtocol
   puts "connecting with ev=#{EventMachine::VERSION}"
   puts "host= #{host}  port=#{port}"
 
   #puts connection.inspect
-  request={
-    "type"=>"ask_info",
-    "url"=>url
-  }
+  if !providing then 
+    request={
+     "type"=>"ask_info",
+     "url"=>url
+    }
 
-  state=:start
+    state=:start
 
-  connection.send_message(request)
+    connection.send_message(request)
+  else
+    request={
+      "type"=>"provide",
+      "url"=>url,
+      "chunk_range"=>0..0
+    }
+    connection.send_message(request)
+    state=:nothing
+  end
+  
 
   EventMachine::add_periodic_timer(1) do
     case state

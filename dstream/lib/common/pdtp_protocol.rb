@@ -76,5 +76,16 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
   def PDTPProtocol::print_info
     puts "num_connections=#{@@num_connections}"
   end
+
+  def get_peer_info
+    port,addr= Socket.unpack_sockaddr_in(get_peername)
+    return addr,port
+  end
+
+  def to_s
+    addr,port = get_peer_info
+    return "#{addr}:#{port}"
+  end
+
 end
 

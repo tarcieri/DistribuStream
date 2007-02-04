@@ -2,15 +2,31 @@ $: << File.dirname(__FILE__) + '/../common'
 require 'server_chunk_transfer_sm'
 
 class Transfer
-  attr_reader :fsm
-  attr_accessor :peer1
-  attr_accessor :peer2
-  attr_accessor :filename
-  attr_accessor :chunk
-  attr_accessor :status
+  attr_accessor :taker, :giver, :url, :chunkid
+  
+  def initialize(taker,giver,url,chunkid)
+    @taker,@giver,@url,@chunkid=taker,giver,url,chunkid
+    
+    #assume neither client is behind a firewall at this point
+    @connector=@taker
+    @acceptor=@giver
+  
+  end
 
-  def initialize
-    @fsm = Transfer_sm.new(self)
+  def send_transfer_message
+    addr,port=@acceptor.get_peer_info 
+
+    request={
+      "type"=>"transfer",
+      "peer_addr"=>addr.to_s,
+      "peer_port"=>port.to_i,
+      "transfer_direction"=> @connector==@taker ? "in" : "out",
+      "url"=>@url,
+      "chunk_id"=>@chunkid
+    } 
+
+    @connector.send_message(request)
+    @state=:start 
   end
  
   def connect()
