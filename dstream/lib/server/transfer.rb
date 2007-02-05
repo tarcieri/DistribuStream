@@ -2,7 +2,8 @@
 #require 'server_chunk_transfer_sm'
 
 class Transfer
-  attr_accessor :taker, :giver, :url, :chunkid
+  attr_reader :taker, :giver, :url, :chunkid
+  attr_reader :connector, :acceptor
   
   def initialize(taker,giver,url,chunkid)
     @taker,@giver,@url,@chunkid=taker,giver,url,chunkid
@@ -13,13 +14,11 @@ class Transfer
     send_transfer_message  
   end
 
-  def send_transfer_message
-    addr,port=@acceptor.get_peer_info 
-
+  def send_transfer_message 
+    addr,port=@acceptor.get_peer_info
     request={
       "type"=>"transfer",
-      "peer_addr"=>addr.to_s,
-      "peer_port"=>port.to_i,
+      "peer"=>[addr,@acceptor.user_data.listen_port], # is there a better way to access this?
       "transfer_direction"=> @connector==@taker ? "in" : "out",
       "url"=>@url,
       "chunk_id"=>@chunkid

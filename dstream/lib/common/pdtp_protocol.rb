@@ -79,7 +79,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
 
   def get_peer_info
     port,addr= Socket.unpack_sockaddr_in(get_peername)
-    return addr,port
+    return addr.to_s,port.to_i
   end
 
   def to_s

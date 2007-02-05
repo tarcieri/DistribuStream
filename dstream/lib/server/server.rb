@@ -108,9 +108,27 @@ class Server
     return false
   end
 
-  def dispatch_message(message,connection)
-    case message["type"]
+  #returns true if the specified transfer exists
+  def transfer_authorized?(peer,url,chunkid)
+    #since the ask_verify message comes from the listener,
+    #we must make sure that the peer is equal to the connector in an authorized
+    #transfer
     
+    #FIXME for now, authorize everything
+    return true
+    
+    @transfers.each do |t|
+      puts "pi1: #{t.connector.get_peer_info} pi2=#{peer}"
+      if t.connector.get_peer_info==peer and t.url==url and t.chunkid==chunkid then
+        # do we need to check transfer state here??
+        return true
+      end
+    end
+    return false
+  end
+
+  def dispatch_message(message,connection)
+    case message["type"] 
     when "ask_info"
       info=file_service.get_info(message["url"])
       response={
@@ -129,7 +147,20 @@ class Server
       spawn_transfers #this should also be called periodically, but it is called here to improve latency
     when "provide"
       client_info(connection).chunk_info.provide(message["url"],message["chunk_range"])
-      spawn_transfers 
+      spawn_transfers
+    when "ask_verify"
+      ok=transfer_authorized?(message["peer"],message["url"],message["chunk_id"])
+      response={
+        "type"=>"tell_verify",
+        "peer"=>message["peer"],
+        "url"=>message["url"],
+        "chunk_id"=>message["chunk_id"],
+        "is_authorized"=>ok
+      }
+      connection.send_message(response)
+    when "change_port"
+      puts "client changed port to #{message["port"].to_i}"
+      client_info(connection).listen_port=message["port"].to_i
     else
       raise "Unknown message type: #{message['type']}"
     end

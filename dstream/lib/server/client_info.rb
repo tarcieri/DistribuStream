@@ -1,8 +1,10 @@
 class ClientInfo
   attr_accessor :chunk_info
+  attr_accessor :listen_port
   
   def initialize
     @chunk_info=ChunkInfo.new
+    @listen_port=6000 #default
   end
  
 end

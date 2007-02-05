@@ -3,9 +3,10 @@ require 'eventmachine'
 require File.dirname(__FILE__)+'/../lib/client/client_message_translator'
 require File.dirname(__FILE__)+'/../lib/client/client'
 require File.dirname(__FILE__)+'/../lib/client/client_file_service'
+require File.dirname(__FILE__)+'/../lib/server/server_file_service'
 
 client=Client.new
-client.file_service=ClientFileService.new
+cfs=client.file_service=ClientFileService.new
 PDTPProtocol::listener=client
 
 host="localhost"
@@ -18,8 +19,25 @@ providing= (ARGV[1] == "p" )
 
 EventMachine::run {
   connection=EventMachine::connect host,port,PDTPProtocol
+  client.server_connection=connection
   puts "connecting with ev=#{EventMachine::VERSION}"
   puts "host= #{host}  port=#{port}"
+
+  listen_port=8000
+  begin
+    #puts "trying port: #{listen_port}"
+    peer_connection=EventMachine::start_server host,listen_port,PDTPProtocol
+  rescue
+    listen_port+=1
+    retry
+  end
+
+  puts "listening on port #{listen_port}"
+  request={
+    "type"=>"change_port",
+    "port"=>listen_port
+  }
+  connection.send_message(request)
 
   #puts connection.inspect
   if !providing then 
@@ -32,6 +50,11 @@ EventMachine::run {
 
     connection.send_message(request)
   else
+    sfs=ServerFileService.new
+    sfs.root=File.dirname(__FILE__)+'/../../testfiles'
+    cfs.set_info(url,sfs.get_info(url))
+    cfs.set_chunk_data(url,0,sfs.get_chunk_data(url,0))
+
     request={
       "type"=>"provide",
       "url"=>url,
@@ -43,13 +66,14 @@ EventMachine::run {
   
 
   EventMachine::add_periodic_timer(1) do
+    client.print_stats
     case state
     when :start
       if client.file_service.get_info(url) != nil then
         state=:request_sent
         request={
           "type"=>"request",
-          "chunk_range"=> 0..1,
+          "chunk_range"=> 0..0,
           "url"=> url
         }
         connection.send_message(request)

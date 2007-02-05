@@ -32,5 +32,13 @@ class ClientFileService
 
   def get_chunk_data(url,chunk_id)
     return @files[url].chunks[chunk_id] rescue nil  
-  end	
+  end
+
+  def get_chunk_size(url,chunk_id)
+    info=get_info(url)
+    rem=info.size % info.chunk_size
+    num_chunks=(info.size-rem)/info.chunk_size+1
+    return rem if chunk_id==num_chunks-1
+    return info.chunk_size
+  end
 end
