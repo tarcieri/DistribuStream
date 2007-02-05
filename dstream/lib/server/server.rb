@@ -69,7 +69,6 @@ class Server
     #transfer
     
     @transfers.each do |t|
-      puts "pi1: #{t.connector.get_peer_info} pi2=#{peer}"
 			#TODO	
       #server has no idea which port the peers are communicating on, so only check the address
       #this isn't a great way to do this, come up with better ideas
@@ -115,6 +114,17 @@ class Server
     when "change_port"
       puts "client changed port to #{message["port"].to_i}"
       client_info(connection).listen_port=message["port"].to_i
+		when "completed"
+		  transfer = nil
+			@transfers.each do |t|
+				if t.taker == connection and t.url == message['url'] and t.chunkid == message['chunk_id'] then
+				 	transfer = t
+					break
+			  end
+		  end
+			puts "transfer completed: #{transfer}"
+			@transfers.delete(transfer)
+				
     else
       raise "Unknown message type: #{message['type']}"
     end

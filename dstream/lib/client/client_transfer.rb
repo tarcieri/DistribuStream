@@ -31,7 +31,7 @@ class ClientTransfer
   #called periodically to send pending data
   def update
     puts "go_ahead=#{@go_ahead} finished=#{@finished}"
-    return if @go_ahead==false or @finished==true
+    return if @go_ahead==false or @finished==true or @transfer_direction==:in
     
 
     data=@file_service.get_chunk_data(@url,@chunkid)
@@ -51,5 +51,9 @@ class ClientTransfer
     @finished=true
     
   end  
+
+	def to_s
+	  return "peer=#{@peer}, url=#{@url}, chunk_id=#{@chunkid}, transfer direction=#{@transfer_direction}, finished=#{@finished}, go ahead=#{@go_ahead}"
+	end
 
 end

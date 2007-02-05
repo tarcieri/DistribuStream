@@ -8,9 +8,14 @@ class Transfer
   def initialize(taker,giver,url,chunkid)
     @taker,@giver,@url,@chunkid=taker,giver,url,chunkid
     
-    #assume neither client is behind a firewall at this point
-    @connector=@taker
-    @acceptor=@giver
+    #if FIREWALL global is set, assume taker is behind firewall
+		if OPTIONS[:firewall] then
+    	@connector=@giver
+			@acceptor=@taker
+		else
+			@connector=@taker
+    	@acceptor=@giver
+		end
     send_transfer_message  
   end
 
@@ -27,17 +32,9 @@ class Transfer
     @connector.send_message(request)
     @state=:start 
   end
- 
-  def connect()
-  end
 
-  def transfer()
-  end
+	def to_s
+		return "taker=#{@taker}, giver=#{@giver}, connector=#{@connector}, acceptor=#{@acceptor}, url=#{@url}, chunk_id=#{@chunkid}"
+	end
 
-  def map()
-  end
-
-  def execute_transition(message)
-    @fsm.method(message).call
-  end  
 end

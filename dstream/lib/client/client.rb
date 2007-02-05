@@ -21,6 +21,11 @@ class Client
     @connections.delete(connection)
   end
   
+  def get_transfer(connection)
+	  @transfers.each do |t|
+		  return t if t.peer == connection
+		end
+	end
 
   def dispatch_message(message,connection) 
     if connection==@server_connection then
@@ -52,15 +57,16 @@ class Client
       
       @transfers << new_trans
       new_trans.send_initial_request
+
     when "tell_verify"
       @transfers.each do |t|
-
         if t.peer.get_peer_info==message["peer"] and t.url==message["url"] and t.chunkid==message["chunk_id"] then
           # if the server does not authorize the transfer, kill it and the associated connection
           if !message["is_authorized"] then
             @transfers.delete(t)
             t.peer.close_connection
           else
+						t.peer.send_message({"type"=>"go_ahead"}) if t.transfer_direction == :in
             t.go_ahead=true 
             t.update
           end
@@ -90,7 +96,29 @@ class Client
         "chunk_id"=>message["chunk_id"]
       }
       @server_connection.send_message(askverify)
-    else
+		
+		when "data"
+		  puts "Received data: #{message['data']}"
+			transfer = get_transfer(connection) 
+
+			puts "Data is associated with transfer: #{transfer}"
+
+			completed={
+				"type"=>"completed",
+				"url"=>transfer.url,
+				"chunk_id"=>transfer.chunkid
+			}
+			
+			@server_connection.send_message(completed)
+			@transfers.delete(transfer)
+			connection.close_connection
+    
+		when "go_ahead"
+			transfer = get_transfer(connection)
+			transfer.go_ahead = true
+			transfer.update
+
+		else
       raise "from peer: unknown message type: #{message['type']} "
     end
   end
@@ -98,6 +126,12 @@ class Client
   def print_stats
     puts "client: num_connections=#{@connections.size} num_transfers=#{@transfers.size}"
   end
+
+	def update_finished_transfers
+	  @transfers.each do |t|
+		  @transfers.delete(t) if t.finished
+		end
+	end
 
 end
     

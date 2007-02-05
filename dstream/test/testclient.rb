@@ -1,31 +1,60 @@
 require 'rubygems'
 require 'eventmachine'
+require 'optparse'
 require File.dirname(__FILE__)+'/../lib/client/client_message_translator'
 require File.dirname(__FILE__)+'/../lib/client/client'
 require File.dirname(__FILE__)+'/../lib/client/client_file_service'
 require File.dirname(__FILE__)+'/../lib/server/server_file_service'
 
+
 client=Client.new
 cfs=client.file_service=ClientFileService.new
 PDTPProtocol::listener=client
 
-host="localhost"
-port=6000
-port=ARGV[0].to_i if ARGV[0]
-url="pdtp://bla.com/test.txt"
-
-providing= (ARGV[1] == "p" ) 
+OPTIONS = {
+	:host => '127.0.0.1',
+	:port => 6000,
+	:url => 'pdtp://bla.com/test.txt',
+	:listen => 8000,
+	:provide => false,
+	:root => File.dirname(__FILE__)+'/../../testfiles'
+}
+OptionParser.new do |opts|
+  opts.banner = "Usage: testclient.rb [options]"
+	opts.on("--host HOST", "Connect to specified host") do |h|
+		OPTIONS[:host] = h
+	end
+	opts.on("--port PORT", "Connect to specified port") do |p|
+		OPTIONS[:port] = p.to_i
+	end
+	opts.on("--url URL","Request/Provide specified url") do |u|
+		OPTIONS[:url] = u
+	end
+	opts.on("--listen LISTENPORT","Specify first port to attempt to listen on") do |l|
+		OPTIONS[:listen] = l.to_i
+	end
+	opts.on("--file-root ROOT","Directory where files may be found") do |r|
+	  OPTIONS[:root] = r
+  end
+	opts.on_tail("-p","Provide data instead of requesting it") do |p|
+		OPTIONS[:provide] = p
+	end
+	opts.on_tail("-h","--help","Print this message") do 
+		puts opts
+		exit
+	end
+end.parse!
 
 
 EventMachine::run {
+	host,port,listen_port = OPTIONS[:host],OPTIONS[:port],OPTIONS[:listen]
+	url,providing = OPTIONS[:url], OPTIONS[:provide]
   connection=EventMachine::connect host,port,PDTPProtocol
   client.server_connection=connection
   puts "connecting with ev=#{EventMachine::VERSION}"
   puts "host= #{host}  port=#{port}"
 
-  listen_port=8000
   begin
-    #puts "trying port: #{listen_port}"
     peer_connection=EventMachine::start_server host,listen_port,PDTPProtocol
   rescue
     listen_port+=1
@@ -39,7 +68,6 @@ EventMachine::run {
   }
   connection.send_message(request)
 
-  #puts connection.inspect
   if !providing then 
     request={
      "type"=>"ask_info",
@@ -51,7 +79,7 @@ EventMachine::run {
     connection.send_message(request)
   else
     sfs=ServerFileService.new
-    sfs.root=File.dirname(__FILE__)+'/../../testfiles'
+    sfs.root=OPTIONS[:root]
     cfs.set_info(url,sfs.get_info(url))
     cfs.set_chunk_data(url,0,sfs.get_chunk_data(url,0))
 
@@ -78,12 +106,11 @@ EventMachine::run {
         }
         connection.send_message(request)
       end
+		else
+			client.update_finished_transfers
     end
-    #puts client.file_service.get_info(url).inspect
   end
-
 }
 
-puts "outside of block"
 
 
