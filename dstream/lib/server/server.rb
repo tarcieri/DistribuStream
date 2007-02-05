@@ -1,21 +1,5 @@
-#require File.dirname(__FILE__) + '/transfer_manager'
 require File.dirname(__FILE__) + '/client_info'
 require File.dirname(__FILE__) +'/transfer'
-
-class ChunkTransferHandler
-  def initialize(address, server)
-    @address = address
-  end
-  
-  def connect()
-  end
-  
-  def transfer()
-  end
-  
-  def map()
-  end
-end
 
 class Server
   attr_reader :connections
@@ -37,36 +21,6 @@ class Server
     puts "num_connections=#{@connections.size} num_transfers=#{@transfers.size}"
   end
   
-  def add_connection(address)
-    handler = ChunkTransferHandler.new(address, self)
-	fsm = ChunkTransferHandler_sm.new(handler)
-    @connections << { :address => address, :handler => handler, :fsm => fsm } 
-  end
-  
-  def connection(address)
-    return_connection = @connections.find { |connection| address = connection[:address] }
-	raise "No connection with that address" if return_connection.nil?
-    return return_connection	
-  end
-  
-  def Transfer(address)
-  end
-
-  def Failed(address)
-  end
-  
-  def Connected(address)
-  end
-
-  def TransferSuccess(address)
-  end  
-  
-  def TransferFailure(address)
-  end
-
-  def Finished(address)
-  end
-
   # returns the ClientInfo object associated with this connection
   def client_info(connection)
     return connection.user_data||=ClientInfo.new
@@ -114,12 +68,12 @@ class Server
     #we must make sure that the peer is equal to the connector in an authorized
     #transfer
     
-    #FIXME for now, authorize everything
-    return true
-    
     @transfers.each do |t|
       puts "pi1: #{t.connector.get_peer_info} pi2=#{peer}"
-      if t.connector.get_peer_info==peer and t.url==url and t.chunkid==chunkid then
+			#TODO	
+      #server has no idea which port the peers are communicating on, so only check the address
+      #this isn't a great way to do this, come up with better ideas
+			if t.connector.get_peer_info[0]==peer[0] and t.url==url and t.chunkid==chunkid then
         # do we need to check transfer state here??
         return true
       end
