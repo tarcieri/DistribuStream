@@ -14,7 +14,7 @@ PDTPProtocol::listener=client
 OPTIONS = {
 	:host => '127.0.0.1',
 	:port => 6000,
-	:url => 'pdtp://bla.com/test.txt',
+	:url => 'pdtp://bla.com/test2.txt',
 	:listen => 8000,
 	:provide => false,
 	:root => File.dirname(__FILE__)+'/../../testfiles'
@@ -80,13 +80,14 @@ EventMachine::run {
   else
     sfs=ServerFileService.new
     sfs.root=OPTIONS[:root]
-    cfs.set_info(url,sfs.get_info(url))
-    cfs.set_chunk_data(url,0,sfs.get_chunk_data(url,0))
+    #cfs.set_info(url,sfs.get_info(url))
+    #cfs.set_chunk_data(url,0,sfs.get_chunk_data(url,0))
+    client.file_service=sfs #give this client access to all data
 
     request={
       "type"=>"provide",
       "url"=>url,
-      "chunk_range"=>0..0
+      "chunk_range"=>0..2
     }
     connection.send_message(request)
     state=:nothing
@@ -101,7 +102,7 @@ EventMachine::run {
         state=:request_sent
         request={
           "type"=>"request",
-          "chunk_range"=> 0..0,
+          "chunk_range"=> 0..2,
           "url"=> url
         }
         connection.send_message(request)

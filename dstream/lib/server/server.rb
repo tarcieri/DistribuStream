@@ -38,7 +38,7 @@ class Server
     puts "  url=#{url}  chunkid=#{chunkid}"
     client_info(taker).chunk_info.transfer(url,chunkid..chunkid)
    
-    @transfers << Transfer.new(taker,giver,url,chunkid) 
+    @transfers << Transfer.new(taker,giver,url,chunkid,file_service) 
   end
 
   # performs a brute force search to pair clients together, 

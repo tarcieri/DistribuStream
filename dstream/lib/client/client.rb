@@ -108,7 +108,10 @@ class Client
 				"url"=>transfer.url,
 				"chunk_id"=>transfer.chunkid
 			}
-			
+
+      #FIXME check data hash here
+      file_service.set_chunk_data(transfer.url,transfer.chunkid,message["data"])		
+	
 			@server_connection.send_message(completed)
 			@transfers.delete(transfer)
 			connection.close_connection

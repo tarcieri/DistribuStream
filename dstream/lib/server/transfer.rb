@@ -5,8 +5,8 @@ class Transfer
   attr_reader :taker, :giver, :url, :chunkid
   attr_reader :connector, :acceptor
   
-  def initialize(taker,giver,url,chunkid)
-    @taker,@giver,@url,@chunkid=taker,giver,url,chunkid
+  def initialize(taker,giver,url,chunkid,file_service)
+    @taker,@giver,@url,@chunkid,@file_service=taker,giver,url,chunkid,file_service
     
     #if FIREWALL global is set, assume taker is behind firewall
 		if OPTIONS[:firewall] then
@@ -26,7 +26,8 @@ class Transfer
       "peer"=>[addr,@acceptor.user_data.listen_port], # is there a better way to access this?
       "transfer_direction"=> @connector==@taker ? "in" : "out",
       "url"=>@url,
-      "chunk_id"=>@chunkid
+      "chunk_id"=>@chunkid,
+      "hash"=>@file_service.get_chunk_hash(@url,@chunkid)
     } 
 
     @connector.send_message(request)
