@@ -13,12 +13,12 @@ class Client
   end
 
   def connection_created(connection)
-    @@log.debug "Connected to peer: #{connection.get_peer_info.inspect}"
+    @@log.debug("Opened connection: #{connection.get_peer_info.inspect}")
 		@connections << connection
   end
 
   def connection_destroyed(connection)
-	  @@log.debug "Disconnected from peer"
+	  @@log.debug("Disconnected from peer")
     @connections.delete(connection)
   end
   
