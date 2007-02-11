@@ -1,7 +1,6 @@
 require 'rubygems'
 require 'eventmachine'
 require 'optparse'
-require File.dirname(__FILE__)+'/../lib/client/client_message_translator'
 require File.dirname(__FILE__)+'/../lib/client/client'
 require File.dirname(__FILE__)+'/../lib/client/client_file_service'
 require File.dirname(__FILE__)+'/../lib/server/server_file_service'
@@ -99,7 +98,7 @@ EventMachine::run {
   
 
   EventMachine::add_periodic_timer(1) do
-    client.print_stats
+    #client.print_stats
     case state
     when :start
       if client.file_service.get_info(url) != nil then

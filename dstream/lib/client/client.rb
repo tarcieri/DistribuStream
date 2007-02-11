@@ -34,10 +34,10 @@ class Client
     end
   end
 
-	def transfer_matches(transfer, message)
-  	return  transfer.peer.get_peer_info == message["peer"] and 
-						transfer.url == message["url"] and 
-						transfer.chunkid == message["chunk_id"]
+	def transfer_matches?(transfer, message)
+  	return( transfer.peer.get_peer_info == message["peer"] and 
+            transfer.url == message["url"] and
+            transfer.chunkid == message["chunk_id"] )
 	end
 
   def dispatch_message_server(message,connection)
@@ -70,7 +70,7 @@ class Client
     when "tell_verify"
 			@@log.debug "Received tell_verify message"
       @transfers.each do |t|
-        if transfer_matches(t, message) then
+        if transfer_matches?(t, message) then
           # if the server does not authorize the transfer, kill it and the associated connection
           if !message["is_authorized"] then
             @transfers.delete(t)
