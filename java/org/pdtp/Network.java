@@ -18,7 +18,7 @@ import org.json.JSONObject;
 import org.json.JSONStringer;
 import org.json.JSONWriter;
 
-public class Network {
+public class Network extends Thread {
   public Network(String host, int port, Chunkset cache) throws IOException {
     this.cache = cache;
     this.hashes = new HashMap<Chunk, String>();
@@ -26,9 +26,68 @@ public class Network {
     
     this.server = InetAddress.getByName(host);
     this.port = port;
-    this.socket = new Socket(server, port);
-    this.in = socket.getInputStream();
-    this.out = socket.getOutputStream();
+  }
+  
+  @Override
+  public void run() {    
+    try {
+      this.socket = new Socket(server, port);
+      this.in = socket.getInputStream();
+      this.out = socket.getOutputStream();    
+    } catch (IOException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+    
+    boolean running = true;
+    while(running) {
+      String packet = null;
+      try {
+        packet = readPacket();
+      } catch (IOException e) {
+        e.printStackTrace();
+        running = false;
+      }
+      
+      Map<String, String> packetMap = new HashMap<String, String>();
+      JSONObject obj = null;
+      try {
+        obj = new JSONObject(packet);
+      } catch (JSONException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+        running = false;
+      }
+      
+      Iterator i = obj.keys();
+      for(Object o = i.next(); i.hasNext(); o = i.next()) {
+        try {
+          packetMap.put((String) o, (String) obj.get((String) o));
+        } catch (JSONException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        }
+      }
+
+      this.dispatch(packetMap, null);
+    }
+  }
+  
+  public String readPacket() throws IOException {
+    String str = "";
+    
+    char c = (char) in.read();
+    while(c != '{') c = (char) in.read();
+    str += c;
+    int balance = 1;
+    while(balance != 0) {
+      c = (char) in.read();
+      if(c == '{') ++balance;
+      if(c == '}') --balance;
+      str += c;
+    }
+    
+    return str;
   }
   
   public void provide(String url, ByteBuffer data) throws IOException, JSONException {   
@@ -52,6 +111,8 @@ public class Network {
   public Map<String, String> getInfo(String url) throws JSONException, IOException {
     String requestText = new JSONStringer()
       .object()
+        .key("type")
+        .value("askinfo")
         .key("url")
         .value(url)
       .endObject()
@@ -65,20 +126,15 @@ public class Network {
   }
   
   public OutputStream request(String url) throws IOException, JSONException {
+    // TODO: Write code here.
+    
+    //Map<String, String> request = new HashMap<String, String>();
+    //request.put("url", url);
     return null;
   }
   
   public void dispatch(Map<String, String> headers,
-                       ByteChannel content) {
-    /*
-    Map<String, String> mymap = new HashMap<String, String>();
-    JSONObject obj = new JSONObject(result);
-    Iterator i = obj.keys();
-    for(Object o = i.next(); i.hasNext(); o = i.next()) {
-      mymap.put((String) o, (String) obj.get((String) o));
-    }
-    */
-    
+                       ByteChannel content) {    
     if(headers.containsKey("type")) {
       if(headers.get("type").equalsIgnoreCase("tellinfo")) {
         Request<Map<String, String>> r = requests.get(headers.get("url"));
