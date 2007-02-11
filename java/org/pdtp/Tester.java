@@ -12,7 +12,7 @@ public class Tester {
   public static void main(String[] args) {
     Network N = null;
     try {
-      N = new Network("localhost", 5000, new MemoryCache());
+      N = new Network("localhost", 6000, new MemoryCache());
     } catch(IOException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
