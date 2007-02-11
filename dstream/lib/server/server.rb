@@ -101,6 +101,10 @@ class Server
     when "provide"
       client_info(connection).chunk_info.provide(message["url"],message["chunk_range"])
       spawn_transfers
+    when "unrequest"
+      client_info(connection).chunk_info.unrequest(message["url"],message["chunk_range"])
+    when "unprovide"
+      client_info(connection).chunk_info.unrpovide(message["url"],message["chunk_range"])
     when "ask_verify"
       ok=transfer_authorized?(message["peer"],message["url"],message["chunk_id"])
       response={
@@ -122,6 +126,9 @@ class Server
 					break
 			  end
 		  end
+
+      #the client now has the chunk
+      client_info(transfer.taker).chunk_info.provide(message["url"],message["chunk_id"]..message["chunk_id"])
 			puts "transfer completed: #{transfer}"
 			@transfers.delete(transfer)
 				
