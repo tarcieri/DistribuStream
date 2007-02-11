@@ -13,7 +13,7 @@ class Client
   end
 
   def connection_created(connection)
-    @@log.debug "Connected to peer"
+    @@log.debug "Connected to peer: #{connection.get_peer_info.inspect}"
 		@connections << connection
   end
 
