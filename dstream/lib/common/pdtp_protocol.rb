@@ -43,32 +43,31 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
     begin
       @@listener.dispatch_message(message,self) 
     rescue Exception=>e
-      puts "message translator closing connection for exception: #{e}"
-      puts "on line: #{e.backtrace[0]}"
+      @@log.warn("pdtp_protocol closing connection for exception: #{e}")
+      @@log.warn("on line: #{e.backtrace[0]}")
       close_connection # protocol error
     end
   end
    
   def receive_line line
     begin
-      puts "line:"+line
       line.chomp!
+      @@log.debug("recv: "+line)
       message=JSON.parse(line)
       receive_message(message)
     rescue Exception
-      puts "pdtp_protocol closed connection"
+      @@log.warn("pdtp_protocol closed connection (parse error)")
       close_connection #there was an error in parsing
     end
   end
 
   def send_message message
     outstr=JSON.unparse(message)+"\n"
-    @@log.debug( "sending: #{outstr}")
+    @@log.debug( "send: #{outstr.chomp}")
     send_data outstr  
   end
 
   def unbind
-    puts "unbinding connection"
     @@num_connections-=1
     @@listener.connection_destroyed(self) if @@listener.respond_to?(:connection_destroyed)
   end

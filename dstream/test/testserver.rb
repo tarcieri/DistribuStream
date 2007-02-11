@@ -46,8 +46,10 @@ server.file_service.root=OPTIONS[:root]
 EventMachine::run {
 	host,port=OPTIONS[:host], OPTIONS[:port]
   EventMachine::start_server host,port,PDTPProtocol
-  puts "accepting connections with ev=#{EventMachine::VERSION}"
-  puts "host=#{host}  port=#{port}"
-  EventMachine::add_periodic_timer(1) { server.print_stats }
+  @@log.info("accepting connections with ev=#{EventMachine::VERSION}")
+  @@log.info("host=#{host}  port=#{port}")
+  EventMachine::add_periodic_timer(1) {
+    #server.print_stats 
+  }
 }
 

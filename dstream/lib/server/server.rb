@@ -10,10 +10,12 @@ class Server
   end
 
   def connection_created(connection)
+    @@log.info("Client connected: #{connection.get_peer_info.inspect}")
     @connections << connection
   end  
 
   def connection_destroyed(connection)
+    @@log.info("Client disconnected ")
     @connections.delete(connection)
   end
 
@@ -40,7 +42,7 @@ class Server
       #the client now has the chunk
       client_info(transfer.taker).chunk_info.provide(transfer.url,transfer.chunkid..transfer.chunkid)
 
-      puts "transfer completed: #{transfer}"
+      @@log.debug("transfer completed: #{transfer}")
     
       c1=client_info(transfer.taker)
       c2=client_info(transfer.giver)
@@ -50,16 +52,15 @@ class Server
  
       #update trust
       c1.trust.success(c2.trust)
-      puts "trust updated"
-      puts "taker trusts giver with: #{c1.trust.weight(c2.trust)}"
-      puts "giver trusts taker with: #{c2.trust.weight(c1.trust)}"
+      
+      @@log.debug("taker trusts giver with: #{c1.trust.weight(c2.trust)}")
+      @@log.debug("giver trusts taker with: #{c2.trust.weight(c1.trust)}")
  			@transfers.delete(transfer)
 
   end
 
   def begin_transfer(taker,giver,url,chunkid)
-    puts "transfer starting: taker=#{taker} giver=#{giver} "
-    puts "  url=#{url}  chunkid=#{chunkid}"
+    @@log.debug("transfer starting: taker=#{taker} giver=#{giver} url=#{url}  chunkid=#{chunkid}")
     client_info(taker).chunk_info.transfer(url,chunkid..chunkid)
    
     @transfers << Transfer.new(taker,giver,url,chunkid,file_service) 
@@ -150,7 +151,6 @@ class Server
       }
       connection.send_message(response)
     when "change_port"
-      puts "client changed port to #{message["port"].to_i}"
       client_info(connection).listen_port=message["port"].to_i
 		when "completed"
 		  transfer = nil
