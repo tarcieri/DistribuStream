@@ -1,10 +1,14 @@
 require 'rubygems'
 require 'eventmachine'
 require 'optparse'
+require 'logger'
 require File.dirname(__FILE__)+'/../lib/server/server_message_translator'
 require File.dirname(__FILE__)+'/../lib/server/server'
 require File.dirname(__FILE__)+'/../lib/server/server_file_service'
 
+@@log=Logger.new(STDOUT)
+@@log.level=Logger::DEBUG
+@@log.datetime_format=""
 
 OPTIONS = {
 	:host => '127.0.0.1',

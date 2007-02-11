@@ -5,7 +5,11 @@ require File.dirname(__FILE__)+'/../lib/client/client_message_translator'
 require File.dirname(__FILE__)+'/../lib/client/client'
 require File.dirname(__FILE__)+'/../lib/client/client_file_service'
 require File.dirname(__FILE__)+'/../lib/server/server_file_service'
+require 'logger'
 
+@@log=Logger.new(STDOUT)
+@@log.level= Logger::DEBUG
+@@log.datetime_format=""
 
 client=Client.new
 cfs=client.file_service=ClientFileService.new
@@ -51,8 +55,8 @@ EventMachine::run {
 	url,providing = OPTIONS[:url], OPTIONS[:provide]
   connection=EventMachine::connect host,port,PDTPProtocol
   client.server_connection=connection
-  puts "connecting with ev=#{EventMachine::VERSION}"
-  puts "host= #{host}  port=#{port}"
+  @@log.info("connecting with ev=#{EventMachine::VERSION}")
+  @@log.info("host= #{host}  port=#{port}")
 
   begin
     peer_connection=EventMachine::start_server host,listen_port,PDTPProtocol
@@ -61,7 +65,7 @@ EventMachine::run {
     retry
   end
 
-  puts "listening on port #{listen_port}"
+  @@log.info("listening on port #{listen_port}")
   request={
     "type"=>"change_port",
     "port"=>listen_port

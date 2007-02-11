@@ -63,7 +63,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
 
   def send_message message
     outstr=JSON.unparse(message)+"\n"
-    puts "sending: #{outstr}"
+    @@log.debug( "sending: #{outstr}")
     send_data outstr  
   end
 

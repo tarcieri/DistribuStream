@@ -69,6 +69,7 @@ class Server
   # creates a transfer if possible.
   # returns true if a connection was created
   def spawn_single_transfer_slow
+    feasible_peers=[]
     connections.each do |c|
       client=client_info(c)
       client.chunk_info.each_chunk_of_type(:requested) do |url,chunkid|
@@ -77,12 +78,21 @@ class Server
         connections.each do |c2|
           next if c2==c
           if client_info(c2).chunk_info.provided?(url,chunkid) then
-            begin_transfer(c,c2,url,chunkid)
-            return true
+            feasible_peers << c2 
           end
         end
-      end
-    end  
+
+        # we now have a list of clients that have the requested chunk.
+        # pick one and start the transfer
+        if feasible_peers.size>0 then
+          giver=feasible_peers[rand(feasible_peers.size)]
+          begin_transfer(c,giver,url,chunkid)
+          return true
+        end
+
+      end #requested chunks
+    end #clients
+
     return false
   end
 
