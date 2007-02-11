@@ -13,10 +13,12 @@ class Client
   end
 
   def connection_created(connection)
-    @connections << connection
+    @@log.debug "Connected to peer"
+		@connections << connection
   end
 
   def connection_destroyed(connection)
+	  @@log.debug "Disconnected from peer"
     @connections.delete(connection)
   end
   
@@ -43,24 +45,21 @@ class Client
   def dispatch_message_server(message,connection)
     case message["type"]
     when "tell_info"
-		  @@log.debug "Received tell_info message"
 			info = FileInfo.new
       info.size, info.chunk_size, info.streaming = message["size"], message["chunk_size"], message["streaming"]
       @file_service.set_info(message["url"], info)
     
 		when "transfer"
-      @@log.debug "Received transfer message: #{message.inspect}"  
 			peer = message["peer"]
       new_con = EventMachine::connect(peer[0], peer[1], PDTPProtocol)
       transfer_direction = message["transfer_direction"].to_sym
       raise if transfer_direction != :out and transfer_direction != :in      
 
-      new_trans = ClientTransfer.new(
-																		 new_con,
-																		 message["url"],
-        														 message["chunk_id"],
-																		 transfer_direction,
-																		 file_service
+      new_trans = ClientTransfer.new( new_con,
+																		  message["url"],
+        														  message["chunk_id"],
+																		  transfer_direction,
+																		  file_service
 																		)
 
       new_trans.go_ahead = true if transfer_direction == :in #always ready to receive data that the server tells us to
@@ -68,7 +67,6 @@ class Client
       new_trans.send_initial_request
 
     when "tell_verify"
-			@@log.debug "Received tell_verify message"
       @transfers.each do |t|
         if transfer_matches?(t, message) then
           # if the server does not authorize the transfer, kill it and the associated connection
@@ -94,8 +92,6 @@ class Client
   def dispatch_message_peer(message,connection)
     case message["type"]
     when "give", "take"
-		  @@log.debug "Received #{message['type']} message"
-
       transfer_direction = message["type"] == "give" ? :out : :in
       new_trans=ClientTransfer.new(
 																	 connection,
@@ -116,10 +112,7 @@ class Client
       @server_connection.send_message(askverify)
 		
 		when "data"
-		  @@log.debug "Received data: #{message['data']}"
 			transfer = get_transfer(connection) 
-
-			@@log.debug "Data is associated with transfer: #{transfer}"
 
 			completed = {
 				"type" => "completed",
@@ -135,7 +128,6 @@ class Client
 			connection.close_connection
     
 		when "go_ahead"
-		  @@log.debug "Received go_ahead message"
 			transfer = get_transfer(connection)
 			transfer.go_ahead = true
 			transfer.update
@@ -156,4 +148,3 @@ class Client
 	end
 
 end
-    
