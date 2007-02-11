@@ -1,11 +1,18 @@
 package org.pdtp;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
 public class Tester {
   public static void main(String[] args) {
-    Network N = new Network(new MemoryCache());
+    Network N = null;
+    try {
+      N = new Network("localhost", 5000, new MemoryCache());
+    } catch(IOException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
   
     String[] peers = { "A", "B", "C" };
   

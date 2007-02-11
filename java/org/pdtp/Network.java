@@ -10,9 +10,11 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.ByteChannel;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 import org.json.JSONException;
+import org.json.JSONObject;
 import org.json.JSONStringer;
 import org.json.JSONWriter;
 
@@ -47,21 +49,51 @@ public class Network {
     out.write(provideBytes);
   }
   
+  public Map<String, String> getInfo(String url) throws JSONException, IOException {
+    String requestText = new JSONStringer()
+      .object()
+        .key("url")
+        .value(url)
+      .endObject()
+      .toString();
+    out.write(requestText.getBytes());
+    
+    Request<Map<String, String>> r = new Request();
+    requests.put(url, r);
+    Map<String, String> result = r.block();    
+    return result;
+  }
+  
   public OutputStream request(String url) throws IOException, JSONException {
     return null;
   }
   
   public void dispatch(Map<String, String> headers,
                        ByteChannel content) {
+    /*
+    Map<String, String> mymap = new HashMap<String, String>();
+    JSONObject obj = new JSONObject(result);
+    Iterator i = obj.keys();
+    for(Object o = i.next(); i.hasNext(); o = i.next()) {
+      mymap.put((String) o, (String) obj.get((String) o));
+    }
+    */
+    
     if(headers.containsKey("type")) {
+      if(headers.get("type").equalsIgnoreCase("tellinfo")) {
+        Request<Map<String, String>> r = requests.get(headers.get("url"));
+        if(r != null) {
+          r.transition(headers);
+        }
+      }
+      
       if(headers.get("type").equalsIgnoreCase("transfer")) {
         Chunk c = new Chunk(headers.get("url"),
             Long.parseLong(headers.get("id")));
         Transfer t = new Transfer
               (c, headers.get("from"),
                headers.get("direction").equalsIgnoreCase("out") ?
-               Transfer.Direction.OUT : Transfer.Direction.IN,
-               Transfer.State.VERIFIED);
+               Transfer.Direction.OUT : Transfer.Direction.IN);
         t.start();
         transfers.put(t.toString(), t);
       }
@@ -72,13 +104,12 @@ public class Network {
         Transfer t = new Transfer
               (c, headers.get("from"),
                headers.get("direction").equalsIgnoreCase("out") ?
-               Transfer.Direction.OUT : Transfer.Direction.IN,
-               Transfer.State.VERIFIED);
+               Transfer.Direction.OUT : Transfer.Direction.IN);
         if(!transfers.containsKey(t.toString()))
           transfers.put(t.toString(), t);
         
         t = transfers.get(t.toString());
-        t.transition(Transfer.State.VERIFIED);
+        t.transition("verified");
       }
 
       if(headers.get("type").equalsIgnoreCase("tellhash")) {
@@ -93,8 +124,7 @@ public class Network {
         Transfer t = new Transfer
               (c, headers.get("from"),
                headers.get("direction").equalsIgnoreCase("out") ?
-               Transfer.Direction.OUT : Transfer.Direction.IN,
-               Transfer.State.UNVERIFIED);
+               Transfer.Direction.OUT : Transfer.Direction.IN);
         t.start();
         transfers.put(t.toString(), t);  
       }
@@ -149,6 +179,7 @@ public class Network {
 
   private Map<Chunk, String> hashes;
   private Map<String, Transfer> transfers;
+  private Map<String, Request> requests;
   private Chunkset cache;
   
   private final InetAddress server;  
