@@ -33,6 +33,30 @@ class Server
     end
   end
 
+  # called when a transfer either finishes, successfully or not
+  def transfer_completed(transfer)
+      
+      #FIXME assumes success right now
+      #the client now has the chunk
+      client_info(transfer.taker).chunk_info.provide(transfer.url,transfer.chunkid..transfer.chunkid)
+
+      puts "transfer completed: #{transfer}"
+    
+      c1=client_info(transfer.taker)
+      c2=client_info(transfer.giver)
+ 
+      #puts "taker trusts giver with: #{c1.trust.weight(c2.trust)}"
+      #puts "giver trusts taker with: #{c2.trust.weight(c1.trust)}"
+ 
+      #update trust
+      c1.trust.success(c2.trust)
+      puts "trust updated"
+      puts "taker trusts giver with: #{c1.trust.weight(c2.trust)}"
+      puts "giver trusts taker with: #{c2.trust.weight(c1.trust)}"
+ 			@transfers.delete(transfer)
+
+  end
+
   def begin_transfer(taker,giver,url,chunkid)
     puts "transfer starting: taker=#{taker} giver=#{giver} "
     puts "  url=#{url}  chunkid=#{chunkid}"
@@ -127,10 +151,7 @@ class Server
 			  end
 		  end
 
-      #the client now has the chunk
-      client_info(transfer.taker).chunk_info.provide(message["url"],message["chunk_id"]..message["chunk_id"])
-			puts "transfer completed: #{transfer}"
-			@transfers.delete(transfer)
+      transfer_completed(transfer)
 				
     else
       raise "Unknown message type: #{message['type']}"
