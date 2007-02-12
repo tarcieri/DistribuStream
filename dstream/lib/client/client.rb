@@ -3,7 +3,13 @@ require "eventmachine"
 require File.dirname(__FILE__) + '/../common/pdtp_protocol'
 require File.dirname(__FILE__) + '/client_transfer'
 
+# This is the main driver for the client-side implementation
+# of PDTP. It maintains a single connection to a server and 
+# all the necessary connections to peers. It is responsible
+# for handling all messages corresponding to these connections.
 class Client
+
+  # Accessor for a client file service instance
   attr_accessor :file_service
   attr_accessor :server_connection
 
