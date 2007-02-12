@@ -27,7 +27,7 @@ public class Request<T> {
   }
 
   protected synchronized void transition(T s) {
-    if(!this.state.equals(s)) {
+    if(!s.equals(this.state)) {
       for(SynchronousQueue<T> q : queues) {
         try {
           q.put(s);
