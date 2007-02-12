@@ -116,7 +116,7 @@ public class Network extends Thread {
         .key("url")
         .value(url)
       .endObject()
-      .toString();
+      .toString() + "\n";
     System.out.println(requestText);
     out.write(requestText.getBytes());
     out.flush();
