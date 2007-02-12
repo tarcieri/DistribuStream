@@ -11,7 +11,7 @@ require File.dirname(__FILE__)+'/../lib/server/server_file_service'
 @@log.datetime_format=""
 
 OPTIONS = {
-	:host => '127.0.0.1',
+	:host => '0.0.0.0',
 	:port => 6000, 
 	:firewall => false,
 	:root => File.dirname(__FILE__)+'/../../testfiles'
