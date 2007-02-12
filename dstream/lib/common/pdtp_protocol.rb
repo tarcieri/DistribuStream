@@ -21,6 +21,8 @@ class Range
   end
 end
 
+DEBUG_MODE=true
+
 class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
   @@num_connections=0
   @@listener=nil
@@ -38,6 +40,18 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
 
   attr_accessor :user_data #users of this class may store arbitrary data here
 
+  def error_close_connection(error)
+    
+    if DEBUG_MODE then
+      msg={"error"=>error}
+      send_message msg 
+      close_connection(true) # close after writing
+    else
+      close_connection
+    end
+  end
+
+
   #override this in a child class to handle messages
   def receive_message message
     begin
@@ -45,7 +59,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
     rescue Exception=>e
       @@log.warn("pdtp_protocol closing connection for exception: #{e}")
       @@log.warn("on line: #{e.backtrace[0]}")
-      close_connection # protocol error
+      error_close_connection(e.to_s) # protocol error
     end
   end
    
@@ -57,7 +71,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
       receive_message(message)
     rescue Exception
       @@log.warn("pdtp_protocol closed connection (parse error)")
-      close_connection #there was an error in parsing
+      error_close_connection("JSON parse error") #there was an error in parsing
     end
   end
 
