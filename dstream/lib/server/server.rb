@@ -15,7 +15,7 @@ class Server
   end  
 
   def connection_destroyed(connection)
-    @@log.info("Client disconnected ")
+    @@log.info("Client connection closed")
     @connections.delete(connection)
   end
 
