@@ -30,6 +30,8 @@ public class Network extends Thread {
     this.socket = new Socket(server, port);
     this.in = socket.getInputStream();
     this.out = socket.getOutputStream();
+    System.out.println("in:" + this.in);
+    System.out.println("out:" + this.in);
   }
   
   @Override
