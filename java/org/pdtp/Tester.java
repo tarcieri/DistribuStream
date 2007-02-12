@@ -13,6 +13,7 @@ public class Tester {
     Network N = null;
     try {
       N = new Network("localhost", 6000, new MemoryCache());
+      N.start();
     } catch(IOException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
