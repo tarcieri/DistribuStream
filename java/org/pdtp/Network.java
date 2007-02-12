@@ -23,6 +23,7 @@ public class Network extends Thread {
     this.cache = cache;
     this.hashes = new HashMap<Chunk, String>();
     this.transfers = new HashMap<String, Transfer>();
+    this.requests = new HashMap<String, Request>();
     
     this.server = InetAddress.getByName(host);
     this.port = port;
@@ -233,9 +234,9 @@ public class Network extends Thread {
     toServer(headers);
   }
 
-  private Map<Chunk, String> hashes;
-  private Map<String, Transfer> transfers;
-  private Map<String, Request> requests;
+  private final Map<Chunk, String> hashes;
+  private final Map<String, Transfer> transfers;
+  private final Map<String, Request> requests;
   private Chunkset cache;
   
   private final InetAddress server;  
