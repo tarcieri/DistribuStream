@@ -119,6 +119,7 @@ public class Network extends Thread {
       .toString();
     System.out.println(requestText);
     out.write(requestText.getBytes());
+    out.flush();
     
     Request<Map<String, String>> r = new Request();
     requests.put(url, r);

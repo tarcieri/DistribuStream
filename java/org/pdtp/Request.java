@@ -26,7 +26,7 @@ public class Request<T> {
     return s;
   }
 
-  protected void transition(T s) {
+  protected synchronized void transition(T s) {
     if(!this.state.equals(s)) {
       for(SynchronousQueue<T> q : queues) {
         try {
@@ -36,10 +36,10 @@ public class Request<T> {
     }
   }
 
-  public Object getState() {
+  public T getState() {
     return this.state;
   }
   
   protected final Set<SynchronousQueue<T>> queues;
-  protected Object state;
+  protected T state;
 }
