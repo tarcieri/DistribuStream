@@ -48,6 +48,8 @@ public class Network extends Thread {
         running = false;
       }
       
+      System.out.println("SERVER PACKET: " + packet);
+      
       Map<String, String> packetMap = new HashMap<String, String>();
       JSONObject obj = null;
       try {
