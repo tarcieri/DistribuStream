@@ -70,6 +70,7 @@ public class Network extends Thread {
         }
       }
 
+      System.out.println("map:" + packetMap);
       this.dispatch(packetMap, null);
     }
   }
@@ -141,7 +142,7 @@ public class Network extends Thread {
   public void dispatch(Map<String, String> headers,
                        ByteChannel content) {    
     if(headers.containsKey("type")) {
-      if(headers.get("type").equalsIgnoreCase("tellinfo")) {
+      if(headers.get("type").equalsIgnoreCase("tell_info")) {
         Request<Map<String, String>> r = requests.get(headers.get("url"));
         if(r != null) {
           r.transition(headers);
