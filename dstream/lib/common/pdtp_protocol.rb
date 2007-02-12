@@ -54,7 +54,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
       line.chomp!
       @@log.debug("recv: "+line)
       message=JSON.parse(line)
-      array_to_range(message)
+      hash_to_range(message)
       receive_message(message)
     rescue Exception
       @@log.warn("pdtp_protocol closed connection (parse error)")
@@ -64,20 +64,20 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
   
   RANGENAME="chunk_range"
 
-  def range_to_array(message)
+  def range_to_hash(message)
     if message[RANGENAME] then
-      message[RANGENAME] = [ message[RANGENAME].begin, message[RANGENAME].end ]
+      message[RANGENAME] = {"min"=> message[RANGENAME].begin, "max"=> message[RANGENAME].end }
     end
   end
 
-  def array_to_range(message)
+  def hash_to_range(message)
     if message[RANGENAME] then
-      message[RANGENAME]= message[RANGENAME][0]..message[RANGENAME][1]
+      message[RANGENAME]= message[RANGENAME]["min"]..message[RANGENAME]["max"]
     end
   end
 
   def send_message message
-    range_to_array(message)
+    range_to_hash(message)
     outstr=JSON.unparse(message)+"\n"
     @@log.debug( "send: #{outstr.chomp}")
     send_data outstr  
