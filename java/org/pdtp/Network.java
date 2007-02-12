@@ -109,6 +109,7 @@ public class Network extends Thread {
   }
   
   public Map<String, String> getInfo(String url) throws JSONException, IOException {
+    System.out.println("getInfo()");
     String requestText = new JSONStringer()
       .object()
         .key("type")
@@ -117,6 +118,7 @@ public class Network extends Thread {
         .value(url)
       .endObject()
       .toString();
+    System.out.println(requestText);
     out.write(requestText.getBytes());
     
     Request<Map<String, String>> r = new Request();
