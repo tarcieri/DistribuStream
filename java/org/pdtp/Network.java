@@ -26,19 +26,14 @@ public class Network extends Thread {
     
     this.server = InetAddress.getByName(host);
     this.port = port;
+    
+    this.socket = new Socket(server, port);
+    this.in = socket.getInputStream();
+    this.out = socket.getOutputStream();
   }
   
   @Override
   public void run() {    
-    try {
-      this.socket = new Socket(server, port);
-      this.in = socket.getInputStream();
-      this.out = socket.getOutputStream();    
-    } catch (IOException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
-    
     boolean running = true;
     while(running) {
       String packet = null;
