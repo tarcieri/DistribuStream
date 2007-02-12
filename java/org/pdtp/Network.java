@@ -112,7 +112,7 @@ public class Network extends Thread {
     String requestText = new JSONStringer()
       .object()
         .key("type")
-        .value("askinfo")
+        .value("ask_info")
         .key("url")
         .value(url)
       .endObject()

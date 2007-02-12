@@ -20,7 +20,7 @@ public class Tester {
     }
   
     try {
-      out.println("info:" + N.getInfo("http://example.com/foo"));
+      out.println("info:" + N.getInfo("pdtp://bla.com/test2.txt"));
     } catch (JSONException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
