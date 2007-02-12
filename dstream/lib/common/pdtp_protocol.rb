@@ -7,20 +7,6 @@ rescue Exception
   require 'json'
 end
 
-# needed to make json able to handle the Range class appropriately
-class Range
-  def to_json(*a)
-    {
-      'json_class'   => self.class.name,
-      'data'         => [ first, last, exclude_end? ]
-    }.to_json(*a)
-  end
-
-  def self.json_create(o)
-    new(*o['data'])
-  end
-end
-
 DEBUG_MODE=true
 
 class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
@@ -68,14 +54,30 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
       line.chomp!
       @@log.debug("recv: "+line)
       message=JSON.parse(line)
+      array_to_range(message)
       receive_message(message)
     rescue Exception
       @@log.warn("pdtp_protocol closed connection (parse error)")
       error_close_connection("JSON parse error") #there was an error in parsing
     end
   end
+  
+  RANGENAME="chunk_range"
+
+  def range_to_array(message)
+    if message[RANGENAME] then
+      message[RANGENAME] = [ message[RANGENAME].begin, message[RANGENAME].end ]
+    end
+  end
+
+  def array_to_range(message)
+    if message[RANGENAME] then
+      message[RANGENAME]= message[RANGENAME][0]..message[RANGENAME][1]
+    end
+  end
 
   def send_message message
+    range_to_array(message)
     outstr=JSON.unparse(message)+"\n"
     @@log.debug( "send: #{outstr.chomp}")
     send_data outstr  
