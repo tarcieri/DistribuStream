@@ -122,7 +122,8 @@ public class Network extends Thread {
     
     Request<Map<String, String>> r = new Request();
     requests.put(url, r);
-    Map<String, String> result = r.block();    
+    Map<String, String> result = r.block();
+    System.out.println("result:" + result);
     return result;
   }
   
