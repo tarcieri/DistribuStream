@@ -61,7 +61,7 @@ public class Network extends Thread {
       Iterator i = obj.keys();
       for(Object o = i.next(); i.hasNext(); o = i.next()) {
         try {
-          packetMap.put((String) o, (String) obj.get((String) o));
+          packetMap.put(o.toString(), obj.get(o.toString()).toString());
         } catch (JSONException e) {
           // TODO Auto-generated catch block
           e.printStackTrace();
