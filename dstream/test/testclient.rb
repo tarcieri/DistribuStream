@@ -1,6 +1,7 @@
 require 'rubygems'
 require 'eventmachine'
 require 'optparse'
+require 'mongrel'
 require File.dirname(__FILE__)+'/../lib/client/client'
 require File.dirname(__FILE__)+'/../lib/client/client_file_service'
 require File.dirname(__FILE__)+'/../lib/server/server_file_service'
@@ -57,21 +58,27 @@ EventMachine::run {
   @@log.info("connecting with ev=#{EventMachine::VERSION}")
   @@log.info("host= #{host}  port=#{port}")
 
+  #start the mongrel server on the specified port.  If it isnt available, keep trying higher ports
   begin
-    peer_connection=EventMachine::start_server host,listen_port,PDTPProtocol
-  rescue
+    mongrel_server=Mongrel::HttpServer.new("0.0.0.0",listen_port)
+  rescue Exception=>e
     listen_port+=1
     retry
   end
 
   @@log.info("listening on port #{listen_port}")
+  mongrel_server.register("/",client)
+  mongrel_server.run
+
+ 
   request={
     "type"=>"change_port",
     "port"=>listen_port
   }
   connection.send_message(request)
 
-  if !providing then 
+  if !providing then
+    @@log.info("This client is requesting") 
     request={
      "type"=>"ask_info",
      "url"=>url
@@ -81,6 +88,7 @@ EventMachine::run {
 
     connection.send_message(request)
   else
+    @@log.info("This client is providing")
     sfs=ServerFileService.new
     sfs.root=OPTIONS[:root]
     #cfs.set_info(url,sfs.get_info(url))

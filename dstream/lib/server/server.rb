@@ -124,8 +124,8 @@ class Server
         "url"=>message["url"]
       }
       unless info.nil?
-        response["size"]=info.size
-        response["chunk_size"]=info.chunk_size
+        response["size"]=info.file_size
+        response["chunk_size"]=info.base_chunk_size
         response["streaming"]=info.streaming
       end
       connection.send_message(response)

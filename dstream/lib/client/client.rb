@@ -2,12 +2,15 @@ require "rubygems"
 require "eventmachine"
 require File.dirname(__FILE__) + '/../common/pdtp_protocol'
 require File.dirname(__FILE__) + '/client_transfer'
+require 'mongrel'
+require 'net/http'
+require 'thread'
 
 # This is the main driver for the client-side implementation
 # of PDTP. It maintains a single connection to a server and 
 # all the necessary connections to peers. It is responsible
 # for handling all messages corresponding to these connections.
-class Client
+class Client < Mongrel::HttpHandler
 
   # Accessor for a client file service instance
   attr_accessor :file_service
@@ -34,13 +37,36 @@ class Client
 		end
 	end
 
-  def dispatch_message(message, connection) 
-    if connection == @server_connection then
-      dispatch_message_server(message, connection)
-    else
-      dispatch_message_peer(message, connection)
-    end
+  def parse_http_range(string)
+    arr=string.split("-")
+    raise if arr.size!=2
+    return arr[0].to_i..arr[1].to_i
   end
+
+  def range_valid?(url,range)
+    info=file_service.get_info(url)
+    chunk=range.begin/info.chunk_size
+    chunk_start=chunk*info.chunk_size
+    chunk_end=chunk_start+file_service.get_chunk_size(url,chunk)-1    
+    return range.end<=chunk_end
+  end
+
+  #handler for Mongrel (called in a separate thread, one for each client)
+  def process(request,response)
+    begin
+      transfer=ClientTransferListener.new(request,response,@server_connection,@file_service)
+      @@log.debug "Created TransferListener peer=#{transfer.peer}"  
+      transfer.run
+     
+    rescue Exception=>e
+      response.start(416) do |head,out|
+        head['Content-Type'] = 'text/plain'
+        out.write(e.to_s+"\n"+e.backtrace.join("\n"))
+      end
+    end    
+
+  end
+
 
 	def transfer_matches?(transfer, message)
   	return( transfer.peer.get_peer_info == message["peer"] and 
@@ -48,30 +74,23 @@ class Client
             transfer.chunkid == message["chunk_id"] )
 	end
 
-  def dispatch_message_server(message,connection)
+  def dispatch_message(message,connection)
     case message["type"]
     when "tell_info"
 			info = FileInfo.new
-      info.size, info.chunk_size, info.streaming = message["size"], message["chunk_size"], message["streaming"]
+      info.file_size=message["size"]
+      info.base_chunk_size=message["chunk_size"]
+      info.streaming=message["streaming"]
       @file_service.set_info(message["url"], info)
     
 		when "transfer"
-			peer = message["peer"]
-      new_con = EventMachine::connect(peer[0], peer[1], PDTPProtocol)
-      transfer_direction = message["transfer_direction"].to_sym
-      raise if transfer_direction != :out and transfer_direction != :in      
+      transfer=ClientTransferConnector.new(message,@server_connection,@file_service)
 
-      new_trans = ClientTransfer.new( new_con,
-																		  message["url"],
-        														  message["chunk_id"],
-																		  transfer_direction,
-																		  file_service
-																		)
-
-      new_trans.go_ahead = true if transfer_direction == :in #always ready to receive data that the server tells us to
-      @transfers << new_trans
-      new_trans.send_initial_request
-
+      @@log.debug("TRANSFER STARTING")
+      Thread.new(transfer) do |my_transfer|
+        my_transfer.run
+      end
+     
     when "tell_verify"
       @transfers.each do |t|
         if transfer_matches?(t, message) then

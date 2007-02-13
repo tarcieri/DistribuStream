@@ -1,44 +1,41 @@
 require "uri"    
 require "pathname"
+require File.dirname(__FILE__)+'/../common/file_service_base.rb'
     
     
-class FileInfo
-	attr_accessor :size, :chunk_size, :streaming
+class ClientFileInfo < FileInfo
+	attr_accessor :data #string containing the chunk data
+
+  def chunk_data(chunkid,range=nil)
+    begin
+      range=0..chunk_size(chunkid)-1 if range==nil # full range of chunk if range isnt specified
+      return data[range]
+    rescue
+      return nil
+    end
+  end
+
+  def set_chunk_data(chunkid,data)
+    @data=data
+  end
 end
 
-class ClientFileService
-  class FileEntry
-    attr_accessor :info, :chunks
-  end
+class ClientFileService < FileServiceBase
 
 	def initialize     
 		@files = {}
 	end
 
 	def get_info(url)
-    return @files[url].info rescue nil
+    return @files[url] rescue nil
 	end	
 	
-  def set_info(url, info)
-    file=@files[url] ||= FileEntry.new
-    file.info=info
+  def set_info(url,info)
+    cinfo=ClientFileInfo.new
+    cinfo.file_size=info.file_size
+    cinfo.base_chunk_size=info.base_chunk_size
+    cinfo.streaming=info.streaming
+    @files[url]=cinfo
   end
-
-  def set_chunk_data(url,chunk_id,data)
-    file=@files[url]||=FileEntry.new
-    file.chunks||=Array.new
-    file.chunks[chunk_id]=data 
-  end
-
-  def get_chunk_data(url,chunk_id)
-    return @files[url].chunks[chunk_id] rescue nil  
-  end
-
-  def get_chunk_size(url,chunk_id)
-    info=get_info(url)
-    rem=info.size % info.chunk_size
-    num_chunks=(info.size-rem)/info.chunk_size+1
-    return rem if chunk_id==num_chunks-1
-    return info.chunk_size
-  end
+ 
 end

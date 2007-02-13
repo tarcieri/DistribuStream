@@ -1,12 +1,27 @@
 require "uri"    
 require "pathname"
-require "digest/sha1"    
+require "digest/sha1"
+require File.dirname(__FILE__)+'/../common/file_service_base.rb'    
     
-class FileInfo
-	attr_accessor :size, :chunk_size, :streaming
+class ServerFileInfo < FileInfo
+  attr_accessor :path
+
+  def chunk_data(chunkid,range=nil)
+    begin
+      range=0..chunk_size(chunkid)-1 if range==nil # full range of chunk if range isnt specified
+      raise if range.first <0 or range.last>=chunk_size(chunkid)
+      start=range.first+chunkid*@base_chunk_size 
+      size=range.last-range.first+1 
+      file=open( @path)
+      file.pos=start
+      return file.read(size)
+    rescue
+      return nil
+    end
+  end 
 end
 
-class ServerFileService
+class ServerFileService < FileServiceBase
 
 	attr_accessor :root
 
@@ -15,15 +30,16 @@ class ServerFileService
 	end
 
 	def get_info(url)
-		#p get_local_path(url)
-		#p Pathname.new(@root) + "/bla.txt"
-		info=FileInfo.new
-		info.streaming=false
-		info.chunk_size=512
-		info.size=File.size?( get_local_path(url) )
-		return nil if info.size.nil?
+		begin
+		  info=ServerFileInfo.new
+		  info.streaming=false
+		  info.base_chunk_size=512
+      info.path=get_local_path(url)
+		  info.file_size=File.size?( info.path )
+		#rescue
+    #  return nil
+    end
 		return info
-	
 	end	
 	
 	def get_local_path(url)
@@ -32,28 +48,8 @@ class ServerFileService
 		return (Pathname.new(@root) + path).to_s	
 	end
 
-  def get_chunk_data(url,chunk_id)
-    begin
-      chunk_size=get_info(url).chunk_size
-      file=open( get_local_path(url) )
-      file.pos=chunk_size*chunk_id
-      buffer=file.read(chunk_size)
-    rescue
-      buffer=nil
-    end
-    return buffer
-  end	
-
-  def get_chunk_size(url,chunk_id)
-    info=get_info(url)
-    rem=info.size % info.chunk_size
-    num_chunks=(info.size-rem)/info.chunk_size+1
-    return rem if chunk_id==num_chunks-1
-    return info.chunk_size
-  end
-  
-  def get_chunk_hash(url,chunk_id)
-    return Digest::SHA1.hexdigest(get_chunk_data(url,chunk_id)) rescue nil
-  end
+  #def get_chunk_hash(url,chunk_id)
+  #  return Digest::SHA1.hexdigest(get_chunk_data(url,chunk_id)) rescue nil
+  #end
 
 end

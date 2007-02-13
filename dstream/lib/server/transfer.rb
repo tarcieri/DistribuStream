@@ -26,8 +26,7 @@ class Transfer
       "peer"=>[addr,@acceptor.user_data.listen_port], # is there a better way to access this?
       "transfer_direction"=> @connector==@taker ? "in" : "out",
       "url"=>@url,
-      "chunk_id"=>@chunkid,
-      "hash"=>@file_service.get_chunk_hash(@url,@chunkid)
+      "chunk_id"=>@chunkid
     } 
 
     @connector.send_message(request)

@@ -1,57 +1,109 @@
 require File.dirname(__FILE__)+'/client_file_service'
+require "thread"
+require "net/http"
 
-class ClientTransfer
+class ClientTransferBase
   attr_reader :peer, :url, :chunkid, :transfer_direction, :finished
-  attr_accessor :go_ahead # if this is true, we are free to send/receive data
+  attr_reader :connection_direction
+  attr :range, :local_range
+  attr_reader :thread
 
+  attr :server_connection, :file_service
 
-  #peer is a connection to the appropriate peer
-  #transfer direction is either :in or :out
-  def initialize(peer, url, chunkid, transfer_direction, file_service)
-    @peer, @url, @chunkid = peer, url, chunkid    
-    @transfer_direction = transfer_direction
-    @go_ahead = false
-    @finished = false
-    @file_service = file_service
-
-    @bytes_transferred = 0
-    @chunk_size = file_service.get_chunk_size(@url, @chunkid)
+  def parse_http_range(string)
+    begin
+      arr=string.split("-")
+      raise if arr.size!=2
+      return arr[0].to_i..arr[1].to_i
+    rescue
+      raise "Range string: #{string} unparseable"
+    end
   end
 
-  def send_initial_request
-    message = {
-      "type" => transfer_direction==:out ? "take" : "give",
-      "url" => @url,
-      "chunk_id" => @chunkid
-    }
-    @peer.send_message(message) 
-  end  
+end
 
-  #called periodically to send pending data
-  def update
-    @@log.debug "go_ahead=#{@go_ahead} finished=#{@finished}"
-    return if @go_ahead == false or @finished == true or @transfer_direction == :in
-    
-    data = @file_service.get_chunk_data(@url,@chunkid)
-    message = {
-      "type" => "data",
-      "data" => data
-    }
-    peer.send_message(message)
-    
-    message = { 
-      "type" => "completed",
-      "url" => @url,
-      "chunk_id" => @chunkid
-    }
-    #FIXME send this to the server
-    
-    @finished = true
-    
-  end  
+class ClientTransferListener < ClientTransferBase
+  attr :request,:response
+  #called with the request and response parameters given by Mongrel
+  def initialize(request,response,server_connection,file_service)
+    @request,@response=request,response
+    @server_connection,@file_service=server_connection,file_service
 
-	def to_s
-	  return "peer=#{@peer}, url=#{@url}, chunk_id=#{@chunkid}, transfer direction=#{@transfer_direction}, finished=#{@finished}, go ahead=#{@go_ahead}"
-	end
+    #Mongrel doesn't seem to give us the remote port, but it isnt used anyway so just set to 0
+    @peer= [ @request.params["REMOTE_ADDR"] , 0 ]
+    path=@request.params["REQUEST_PATH"]
+    vserver="bla.com"
+    @url="pdtp://"+vserver+path
+    @range=parse_http_range(request.params["HTTP_RANGE"])
+    @connection_direction=:in
 
+    method=@request.params["REQUEST_METHOD"]
+    if method=="GET" then
+      @transfer_direction=:out
+    elsif method=="PUT" then
+      @transfer_direction=:in
+    else
+      raise "Invalid method: #{method}"
+    end
+
+    info=@file_service.get_info(@url)
+    @chunkid,@local_range=info.internal_range(@range)
+        
+  end
+
+  def run
+    @thread=Thread.current
+    #FIXME need to ask_auth
+    @response.start(200) do |head,out|
+      head['Content-Type'] = 'application/octet-stream'
+
+      info=@file_service.get_info(@url)
+      
+      data=info.chunk_data(@chunkid,@local_range)
+      out.write(data)
+    end
+  end
+
+end
+
+class ClientTransferConnector < ClientTransferBase
+  def initialize(message,server_connection,file_service)
+    @server_connection,@file_service=server_connection,file_service
+    @peer=message["peer"]
+    @transfer_direction = message["transfer_direction"].to_sym
+    raise if transfer_direction != :out and transfer_direction != :in
+    @chunkid=message["chunk_id"]
+    @url=message["url"]
+    
+  end
+    
+  def run
+    begin
+    @@log.debug("RUNNING")
+    @thread=Thread.current
+    uri=URI.parse(@url)
+    req = Net::HTTP::Get.new(uri.path)
+    
+    info=@file_service.get_info(@url)
+    range=info.chunk_range(chunkid)
+    @@log.debug("chunkid=#{chunkid} range=#{range}")
+   
+    req.add_field("Range", "#{range.begin}-#{range.end}")
+    res = Net::HTTP.start(peer[0], peer[1]) {|http| http.request(req) }
+    
+    if res.code=='200' then
+      info.set_chunk_data(@chunkid,res.body) # assumes we requested entire chunk
+      msg={
+        "type"=>"completed",
+        "url"=>@url,
+        "chunk_id"=>@chunkid
+      }
+      @server_connection.send_message(msg)
+    end  
+
+    @@log.debug("BODY DOWNLOADED: #{res.body}")
+    rescue Exception=>e
+      puts "Exception: #{e.to_s} line=#{e.backtrace[0]}"
+    end
+  end
 end

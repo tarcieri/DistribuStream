@@ -1,5 +1,6 @@
 require 'rubygems'
 require 'eventmachine'
+require 'thread'
 
 begin
   require 'fjson'
@@ -21,6 +22,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
     super
     @@num_connections+=1
     user_data=nil
+    @mutex=Mutex.new
     @@listener.connection_created(self) if @@listener.respond_to?(:connection_created)
   end
 
@@ -77,10 +79,12 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
   end
 
   def send_message message
-    range_to_hash(message)
-    outstr=JSON.unparse(message)+"\n"
-    @@log.debug( "send: #{outstr.chomp}")
-    send_data outstr  
+    @mutex.synchronize do
+      range_to_hash(message)
+      outstr=JSON.unparse(message)+"\n"
+      @@log.debug( "send: #{outstr.chomp}")
+      send_data outstr  
+    end
   end
 
   def unbind
