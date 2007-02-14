@@ -1,13 +1,13 @@
 package org.pdtp.wire;
 
-import org.pdtp.Chunk;
+import org.pdtp.Resource;
 
 public class Request {
   public Request() {  }
   
-  public Request(Chunk c) {
+  public Request(Resource c) {
     this.url = c.getUrl();
-    this.chunks = new Range(c.getChunkID());
+    this.chunks = c.getRange();
   }
   
   public Request(String url, Range chunks) {

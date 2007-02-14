@@ -4,31 +4,23 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.net.InetAddress;
-import java.net.Socket;
-import java.nio.ByteBuffer;
 import java.nio.channels.ByteChannel;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.json.JSONStringer;
-import org.json.JSONWriter;
 import org.pdtp.wire.AskInfo;
 import org.pdtp.wire.Request;
 import org.pdtp.wire.TellInfo;
 
 public class Network {
-  public Network(String host, int port, Chunkset cache) throws IOException {    
+  public Network(String host, int port, Library cache) throws IOException {    
     this.cache = cache;
     
     InetAddress addr = InetAddress.getByName(host);    
-    this.link = new Link(new SocketEndpoint(new JSONSerializer("org.pdtp.wire"), addr, port)); 
+    this.link = new Link(new SocketEndpoint(new JSONSerializer("org.pdtp.wire"), addr, port));
+    //link.addTransferListener(this);
     this.link.start();
   }
       
@@ -45,29 +37,32 @@ public class Network {
   }
   
   public TellInfo getInfo(String url) throws IOException {
-    return link.blockingRequest(new AskInfo(url), new InfoRequest(url));
+    if(!metadataCache.containsKey(url)) {
+      TellInfo i = link.blockingRequest(new AskInfo(url), new InfoRequest(url));
+      metadataCache.put(url, i);
+    }
+    
+    return metadataCache.get(url);    
   }
   
   public InputStream get(String url) throws IOException {
-    Transfer t = new Transfer(url);
+    Transfer t = new Transfer(url, true);
     t.start();
     return t.getInputStream();
   }
   
-  public void getChunk(Chunk chunk) throws IOException {
-    link.blockingRequest(new Request(chunk),
-        new TransferBlocker(chunk, link));
-    
-  }
-  
   private class Transfer extends Thread {
-    public Transfer(String url) {
+    public Transfer(String url, boolean download) {
       this.url = url;
+      this.download = download;
     }
     
     @Override
     public void run() {
       try {
+        if(!this.download && !metadataCache.containsKey(url))
+          return;
+        
         this.fileInfo = getInfo(url);
         
         this.numChunks = fileInfo.size / fileInfo.chunkSize;
@@ -77,7 +72,7 @@ public class Network {
         PipedOutputStream out = new PipedOutputStream(sink);
         
         for(int i = 0; i != numChunks; ++i) {
-          Chunk chunk = new Chunk(url, i);
+          Resource chunk = new Resource(url, i);
           if(cache.containsKey(chunk)) {
             DataChunk data = cache.get(chunk);
 
@@ -85,10 +80,17 @@ public class Network {
                       (int) data.getOffset(),
                       (int) data.getLength());
           } else {
-            getChunk(chunk);
-            --i;
+            if(download) {
+              link.send(new Request(chunk));
+              cache.getBlocking(chunk);
+              --i;
+            } else {
+              break;
+            }
           }
         }
+        
+        out.close();
         
       } catch (IOException e) {
         e.printStackTrace();
@@ -103,8 +105,10 @@ public class Network {
     private final String url;
     private TellInfo fileInfo;
     private long numChunks;
+    private boolean download;    
   }
   
-  private Chunkset cache;
+  private Map<String, TellInfo> metadataCache;
+  private Library cache;
   private Link link;
 }

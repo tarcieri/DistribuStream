@@ -45,6 +45,15 @@ public class Link extends Thread {
     return r;    
   }
   
+  public void send(Object packet) throws IOException {
+    endpoint.send(packet);
+  }
+  
+  public void addTransferListener(ResourceEventListener network) {
+    // TODO Auto-generated method stub
+    
+  }
+  
   private boolean running;
   private Endpoint endpoint;
   private Set<Blocker> blockers;

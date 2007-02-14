@@ -1,13 +1,15 @@
 package org.pdtp;
 
-public class Chunk {
-  public Chunk(String url, long id) {
+import org.pdtp.wire.Range;
+
+public class Resource {
+  public Resource(String url, long min, long max) {
     this.url = url;
-    this.id = id;
+    this.range = new Range(min, max);
   }
   
-  public long getChunkID() {
-    return id;
+  public Range getRange() {
+    return this.range;
   }
   
   public String getUrl() {
@@ -16,7 +18,7 @@ public class Chunk {
   
   @Override
   public String toString() {
-    return url + "#" + id;
+    return url + "::" + range.min() + '-' + range.max();
   }
   
   @Override
@@ -30,5 +32,5 @@ public class Chunk {
   }
   
   private final String url;
-  private final long id;
+  private final Range range;  
 }

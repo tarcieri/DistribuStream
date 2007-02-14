@@ -3,7 +3,7 @@ package org.pdtp;
 import org.pdtp.wire.Transfer;
 
 public class TransferBlocker extends Blocker<Object> {
-  public TransferBlocker(Chunk chunk, Link link) {
+  public TransferBlocker(Resource chunk, Link link) {
     this.chunk = chunk;
     this.link = link;
   }
@@ -19,6 +19,6 @@ public class TransferBlocker extends Blocker<Object> {
     return false;
   }
   
-  private Chunk chunk;
+  private Resource chunk;
   private Link link;  
 }
