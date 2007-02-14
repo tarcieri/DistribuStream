@@ -37,7 +37,7 @@ public class JSONSerializer implements Serializer {
       
       return o;
     } catch (Exception e) {
-      throw new IOException(e);    
+      throw new EndpointException(e);
     }
   }
 
@@ -48,7 +48,7 @@ public class JSONSerializer implements Serializer {
       System.out.println("SEND: " + json.toString());
       stream.write((json.toString() + "\n").getBytes());
     } catch (Exception e) {
-      throw new IOException(e);
+      throw new EndpointException(e);
     }
   }
 
