@@ -19,7 +19,7 @@ class Client < Mongrel::HttpHandler
   def initialize
     @transfers = Array.new
 		@mutex = Mutex.new
-end
+  end
 
   def connection_created(connection)
     #For some reason, we can't use this get_peer_info for a remote connection
@@ -32,28 +32,24 @@ end
 	  @@log.debug("Closed server connection...")
   end
   
-	def get_id(connection)
-	  return nil
-	end
 
+  #Returns a transfer object if the given connection is a peer associated with 
+	#that transfer. Otherwise returns nil
   def get_transfer(connection)
 	  @transfers.each do |t|
 		  return t if t.peer == connection
 		end
+		return nil
 	end
 
-	def finished(transfer)
-		@mutex.synchronize do
-			@transfers.delete(transfer)
-		end
-	end
 
   #handler for Mongrel (called in a separate thread, one for each client)
   def process(request,response)
-    begin
+		begin
       transfer=ClientTransferListener.new(request,response,@server_connection,@file_service,self)
       @@log.debug "Created TransferListener peer=#{transfer.peer}"  
-      
+     
+		  #Needs to be locked because multiple threads could attempt to append a transfer at once
 			@mutex.synchronize do
 				@transfers << transfer
 			end
@@ -87,13 +83,14 @@ end
       info.base_chunk_size=message["chunk_size"]
       info.streaming=message["streaming"]
       @file_service.set_info(message["url"], info)
-    
+   		
+
 		when "transfer"
       transfer=ClientTransferConnector.new(message,@server_connection,@file_service)
 
       @@log.debug("TRANSFER STARTING")
-      Thread.new(transfer) do |my_transfer|
-        my_transfer.run
+      Thread.new(transfer) do |t|
+        t.run
       end
      
     when "tell_verify"
@@ -104,79 +101,33 @@ end
             @transfers.delete(t)
             t.peer.close_connection
           else
-						#t.peer.send_message({"type"=>"go_ahead"}) if t.transfer_direction == :in
-            #t.go_ahead=true 
-            #t.update
 						@@log.debug("Restarting thread execution: thread=#{t.thread.inspect}")
 						t.thread.run
           end
- 
-          break
+				  break
         end
-
       end
-    
 		else
       raise "from server: unknown message type: #{message['type']} "
     end
   end
 
-  def dispatch_message_peer(message,connection)
-    case message["type"]
-    when "give", "take"
-      transfer_direction = message["type"] == "give" ? :out : :in
-      new_trans=ClientTransfer.new(
-																	 connection,
-																	 message["url"],
-        													 message["chunk_id"],
-																	 transfer_direction,
-																	 file_service
-																	)
-      
-      @transfers << new_trans      
-
-      askverify = {
-        "type" => "ask_verify",
-        "peer" => connection.get_peer_info,
-        "url" => message["url"],
-        "chunk_id" => message["chunk_id"]
-      }
-      @server_connection.send_message(askverify)
-		
-		when "data"
-			transfer = get_transfer(connection) 
-
-			completed = {
-				"type" => "completed",
-				"url" => transfer.url,
-				"chunk_id" => transfer.chunkid
-			}
-
-      #FIXME check data hash here
-      file_service.set_chunk_data(transfer.url, transfer.chunkid, message["data"])		
-	
-			@server_connection.send_message(completed)
-			@transfers.delete(transfer)
-			connection.close_connection
-    
-		when "go_ahead"
-			transfer = get_transfer(connection)
-			transfer.go_ahead = true
-			transfer.update
-
-		else
-      raise "from peer: unknown message type: #{message['type']} "
-    end
-  end
-
+  #Prints the number of transfers associated with this client
   def print_stats
     @@log.debug "client:  num_transfers=#{@transfers.size}"
   end
 
-	def update_finished_transfers
-	  @transfers.each do |t|
-		  @transfers.delete(t) if t.finished
+	#Provides a threadsafe mechanism for transfers to report themselves finished
+	def finished(transfer)
+		@mutex.synchronize do
+			@transfers.delete(transfer)
 		end
+	end
+	
+	#This function is provided so that messages can be identified by unique id's
+	#It is not currently implemented on the client, but may be in the future
+	def get_id(connection)
+	  return nil
 	end
 
 end

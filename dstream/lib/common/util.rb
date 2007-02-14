@@ -1,4 +1,4 @@
-
+#Util functions for PDTP
 class Util
   def obj_to_hash(obj)
     hash={}
@@ -23,12 +23,3 @@ class Bla
   attr_accessor :a,:b
 end
 
-#tmp=Bla.new
-#tmp.a=4
-#tmp.b="hello"
-
-#hash=Util.new.obj_to_hash(tmp)
-#puts hash.inspect
-
-#tmp2=Util.new.hash_to_obj(hash,Bla)
-#puts tmp2.inspect

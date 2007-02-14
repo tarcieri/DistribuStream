@@ -2,10 +2,13 @@ require "uri"
 require "pathname"
 require "digest/sha1"
 require File.dirname(__FILE__)+'/../common/file_service_base.rb'    
-    
+
+#The server specific file utilities
 class ServerFileInfo < FileInfo
   attr_accessor :path
 
+  #Return a raw string of chunk data. The range parameter is local to this chunk
+	#and zero based
   def chunk_data(chunkid,range=nil)
     begin
       range=0..chunk_size(chunkid)-1 if range==nil # full range of chunk if range isnt specified
@@ -21,6 +24,8 @@ class ServerFileInfo < FileInfo
   end 
 end
 
+
+#The file service provides utilities for determining various information about files.
 class ServerFileService < FileServiceBase
 
 	attr_accessor :root

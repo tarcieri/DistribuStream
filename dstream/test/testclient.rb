@@ -119,7 +119,7 @@ EventMachine::run {
         connection.send_message(request)
       end
 		else
-			client.update_finished_transfers
+			#client.update_finished_transfers
     end
   end
 }

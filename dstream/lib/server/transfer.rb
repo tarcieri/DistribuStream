@@ -1,15 +1,16 @@
-#$: << File.dirname(__FILE__) + '/../common'
-#require 'server_chunk_transfer_sm'
+require File.dirname(__FILE__)+'/server_config'
 
 class Transfer
   attr_reader :taker, :giver, :url, :chunkid
   attr_reader :connector, :acceptor
-  
+ 
+	@@config = ServerConfig.instance
+
   def initialize(taker,giver,url,chunkid,file_service)
     @taker,@giver,@url,@chunkid,@file_service=taker,giver,url,chunkid,file_service
     
     #if FIREWALL global is set, assume taker is behind firewall
-		if OPTIONS[:firewall] then
+		if @@config.firewall then
     	@connector=@giver
 			@acceptor=@taker
 		else

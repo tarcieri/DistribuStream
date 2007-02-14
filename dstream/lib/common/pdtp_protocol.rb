@@ -8,10 +8,9 @@ rescue Exception
   require 'json'
 end
 
-DEBUG_MODE=true
 
 class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
-  @@num_connections=0
+	@@num_connections=0
   @@listener=nil
 
   def PDTPProtocol::listener= listener
@@ -30,7 +29,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
 
   def error_close_connection(error)
     
-    if DEBUG_MODE then
+    if @@config.debug then
       msg={"error"=>error}
       send_message msg 
       close_connection(true) # close after writing
