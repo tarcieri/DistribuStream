@@ -48,7 +48,8 @@ class ClientTransferListener < ClientTransferBase
 
     info=@file_service.get_info(@url)
     @chunkid,@local_range=info.internal_range(@range)
-        
+  
+    @@log.debug("Got request, chunkid=#{@chunkid} range=#{@range}")        
   end
 
   def run

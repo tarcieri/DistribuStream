@@ -9,14 +9,15 @@ class ClientFileInfo < FileInfo
   def chunk_data(chunkid,range=nil)
     begin
       range=0..chunk_size(chunkid)-1 if range==nil # full range of chunk if range isnt specified
-      return data[range]
+      return data[chunkid][range]
     rescue
       return nil
     end
   end
 
   def set_chunk_data(chunkid,data)
-    @data=data
+    @data||=Array.new
+    @data[chunkid]=data
   end
 end
 
