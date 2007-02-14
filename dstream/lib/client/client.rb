@@ -31,6 +31,10 @@ class Client < Mongrel::HttpHandler
 	  @@log.debug("Closed server connection...")
   end
   
+	def get_id(connection)
+	  return nil
+	end
+
   def get_transfer(connection)
 	  @transfers.each do |t|
 		  return t if t.peer == connection

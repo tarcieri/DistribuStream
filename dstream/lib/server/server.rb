@@ -7,17 +7,25 @@ class Server
   def initialize()
     @connections = Array.new
     @transfers = Array.new
-  end
+  	@ids = Hash.new
+		@id = 0
+	end
 
   def connection_created(connection)
-    @@log.info("Client connected: #{connection.get_peer_info.inspect}")
+    @@log.info("#{@id} Client connected: #{connection.get_peer_info.inspect}")
     @connections << connection
+		@ids[connection] = @id
+		@id += 1
   end  
 
   def connection_destroyed(connection)
-    @@log.info("Client connection closed")
+    @@log.info("#{@ids[connection]} Client connection closed")
     @connections.delete(connection)
   end
+
+  def get_id(connection)
+	  return @ids[connection]
+	end
 
   def print_stats
     puts "num_connections=#{@connections.size} num_transfers=#{@transfers.size}"
@@ -25,7 +33,7 @@ class Server
   
   # returns the ClientInfo object associated with this connection
   def client_info(connection)
-    return connection.user_data||=ClientInfo.new
+    return connection.user_data ||= ClientInfo.new
   end
 
   # runs through the list of requested chunks for each client and creates as many
@@ -42,7 +50,7 @@ class Server
       #the client now has the chunk
       client_info(transfer.taker).chunk_info.provide(transfer.url,transfer.chunkid..transfer.chunkid)
 
-      @@log.debug("transfer completed: #{transfer}")
+      @@log.debug("#{@ids[transfer.giver]}->#{@ids[transfer.taker]} transfer completed: #{transfer}")
     
       c1=client_info(transfer.taker)
       c2=client_info(transfer.giver)
@@ -53,14 +61,14 @@ class Server
       #update trust
       c1.trust.success(c2.trust)
       
-      @@log.debug("taker trusts giver with: #{c1.trust.weight(c2.trust)}")
-      @@log.debug("giver trusts taker with: #{c2.trust.weight(c1.trust)}")
+      @@log.debug("#{@ids[transfer.taker]}->#{@ids[transfer.giver]} taker trusts giver with: #{c1.trust.weight(c2.trust)}")
+      @@log.debug("#{@ids[transfer.giver]}->#{@ids[transfer.taker]} giver trusts taker with: #{c2.trust.weight(c1.trust)}")
  			@transfers.delete(transfer)
 
   end
 
   def begin_transfer(taker,giver,url,chunkid)
-    @@log.debug("transfer starting: taker=#{taker} giver=#{giver} url=#{url}  chunkid=#{chunkid}")
+    @@log.debug("#{@ids[giver]}->#{@ids[taker]} transfer starting: taker=#{taker} giver=#{giver} url=#{url}  chunkid=#{chunkid}")
     client_info(taker).chunk_info.transfer(url,chunkid..chunkid)
    
     @transfers << Transfer.new(taker,giver,url,chunkid,file_service) 

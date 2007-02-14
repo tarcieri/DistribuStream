@@ -54,7 +54,8 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
   def receive_line line
     begin
       line.chomp!
-      @@log.debug("recv: "+line)
+			id = @@listener.get_id(self)
+      @@log.debug("#{id} recv: "+line)
       message=JSON.parse(line)
       hash_to_range(message)
       receive_message(message)
@@ -82,7 +83,8 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
     @mutex.synchronize do
       range_to_hash(message)
       outstr=JSON.unparse(message)+"\n"
-      @@log.debug( "send: #{outstr.chomp}")
+			id = @@listener.get_id(self)
+      @@log.debug( "#{id} send: #{outstr.chomp}")
       send_data outstr  
     end
   end
