@@ -36,8 +36,9 @@ class ServerFileService < FileServiceBase
 		  info.base_chunk_size=512
       info.path=get_local_path(url)
 		  info.file_size=File.size?( info.path )
-		#rescue
-    #  return nil
+      return nil if info.file_size==0 or info.file_size==nil
+		rescue
+      return nil
     end
 		return info
 	end	

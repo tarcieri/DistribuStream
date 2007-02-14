@@ -2,6 +2,15 @@ require File.dirname(__FILE__)+'/client_file_service'
 require "thread"
 require "net/http"
 
+class HTTPException < Exception
+  attr_accessor :code
+  def initialize(code,message)
+    super(message)
+    @code=code
+  end
+end
+    
+
 class ClientTransferBase
   attr_reader :peer, :url, :chunkid, :transfer_direction, :finished
   attr_reader :connection_direction
@@ -16,7 +25,7 @@ class ClientTransferBase
       raise if arr.size!=2
       return arr[0].to_i..arr[1].to_i
     rescue
-      raise "Range string: #{string} unparseable"
+      raise HTTPException.new(400,"Range string: #{string.inspect} unparseable")
     end
   end
 
@@ -29,24 +38,27 @@ class ClientTransferListener < ClientTransferBase
     @request,@response=request,response
     @server_connection,@file_service=server_connection,file_service
 
-    #Mongrel doesn't seem to give us the remote port, but it isnt used anyway so just set to 0
-    @peer= [ @request.params["REMOTE_ADDR"] , 0 ]
-    path=@request.params["REQUEST_PATH"]
-    vserver="bla.com"
-    @url="pdtp://"+vserver+path
-    @range=parse_http_range(request.params["HTTP_RANGE"])
-    @connection_direction=:in
-
     method=@request.params["REQUEST_METHOD"]
     if method=="GET" then
       @transfer_direction=:out
     elsif method=="PUT" then
       @transfer_direction=:in
     else
-      raise "Invalid method: #{method}"
+      raise HTTPException.new(400,"Invalid method: #{method}")
     end
 
+    #Mongrel doesn't seem to give us the remote port, but it isnt used anyway so just set to 0
+    @peer= [ @request.params["REMOTE_ADDR"] , 0 ]
+    path=@request.params["REQUEST_PATH"]
+    vserver="bla.com"
+    @url="pdtp://"+vserver+path
+    
     info=@file_service.get_info(@url)
+    raise HTTPException.new(404,"File #{@url} not found") if info.nil?
+    
+    @range=parse_http_range(request.params["HTTP_RANGE"])
+    @connection_direction=:in
+
     @chunkid,@local_range=info.internal_range(@range)
   
     @@log.debug("Got request, chunkid=#{@chunkid} range=#{@range}")        

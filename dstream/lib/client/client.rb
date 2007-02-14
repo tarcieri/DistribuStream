@@ -37,20 +37,6 @@ class Client < Mongrel::HttpHandler
 		end
 	end
 
-  def parse_http_range(string)
-    arr=string.split("-")
-    raise if arr.size!=2
-    return arr[0].to_i..arr[1].to_i
-  end
-
-  def range_valid?(url,range)
-    info=file_service.get_info(url)
-    chunk=range.begin/info.chunk_size
-    chunk_start=chunk*info.chunk_size
-    chunk_end=chunk_start+file_service.get_chunk_size(url,chunk)-1    
-    return range.end<=chunk_end
-  end
-
   #handler for Mongrel (called in a separate thread, one for each client)
   def process(request,response)
     begin
@@ -58,10 +44,13 @@ class Client < Mongrel::HttpHandler
       @@log.debug "Created TransferListener peer=#{transfer.peer}"  
       transfer.run
      
-    rescue Exception=>e
-      response.start(416) do |head,out|
-        head['Content-Type'] = 'text/plain'
-        out.write(e.to_s+"\n"+e.backtrace.join("\n"))
+    rescue HTTPException=>e
+      response.start(e.code) do |head,out|
+        out.write(e.to_s + "\n\n" + e.backtrace.join("\n"))
+      end
+    rescue Exception=>e 
+      response.start(500) do |head,out|
+        out.write("Server error, unknown exception\n"+e.to_s+"\n\n"+e.backtrace.join("\n"))
       end
     end    
 

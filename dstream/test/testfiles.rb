@@ -7,3 +7,5 @@ sfs.root=File.dirname(__FILE__)+'/../../testfiles'
 url="pdtp://bla.com/test2.txt"
 puts sfs.get_info(url).inspect
 puts sfs.get_info(url).chunk_data(0,0..511)
+
+puts sfs.get_info("pdtp://bla.com/kljsaefklj").inspect
