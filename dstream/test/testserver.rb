@@ -5,30 +5,29 @@ require 'logger'
 require File.dirname(__FILE__)+'/../lib/server/server'
 require File.dirname(__FILE__)+'/../lib/server/server_file_service'
 require File.dirname(__FILE__)+'/../lib/common/pdtp_protocol'
+require File.dirname(__FILE__)+'/../lib/server/server_config'
 
-@@log=Logger.new(STDOUT)
-@@log.level=Logger::DEBUG
-@@log.datetime_format=""
+@@config=ServerConfig.instance
 
-OPTIONS = {
-	:host => '0.0.0.0',
-	:port => 6000, 
-	:firewall => false,
-	:root => File.dirname(__FILE__)+'/../../testfiles'
-}
 OptionParser.new do |opts|
 	opts.banner = "Usage: testserver.rb [options]"
+	opts.on("--log LOGFILE", "Use specified logfile") do |l|
+	  @@config.log = l
+	end
 	opts.on("--host HOST", "Start server on specified host") do |h|
-		OPTIONS[:host] = h
+		@@config.host = h
 	end
 	opts.on("--port PORT", "Listen on specified port") do |q|
-	  OPTIONS[:port] = q.to_i
+	  @@config.port = q.to_i
 	end
 	opts.on("--file-root ROOT", "Directory where files may be found") do |r|
-		OPTIONS[:root] = r
+		@@config.file_root = r
 	end
-	opts.on_tail("-f","Emulate firewall") do |f|
-	  OPTIONS[:firewall] = f
+	opts.on("-d","Turn on debugging") do |d|
+	  @@config.debug = d
+	end
+	opts.on("-f","Emulate firewall") do |f|
+	  @@config.firewall = f
 	end
 	opts.on_tail("-h","--help","Print this message") do
 		puts opts
@@ -36,20 +35,22 @@ OptionParser.new do |opts|
 	end
 end.parse!
 
+@@log=Logger.new(@@config.log)
+@@log.level=Logger::DEBUG
+@@log.datetime_format=""
+
+
 server=Server.new
 server.file_service=ServerFileService.new
 PDTPProtocol::listener=server
 
 #set root directory
-server.file_service.root=OPTIONS[:root]
+server.file_service.root=@@config.file_root
 
 EventMachine::run {
-	host,port=OPTIONS[:host], OPTIONS[:port]
+	host,port=@@config.host, @@config.port
   EventMachine::start_server host,port,PDTPProtocol
   @@log.info("accepting connections with ev=#{EventMachine::VERSION}")
   @@log.info("host=#{host}  port=#{port}")
-  EventMachine::add_periodic_timer(1) {
-    #server.print_stats 
-  }
 }
 

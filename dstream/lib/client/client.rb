@@ -83,7 +83,16 @@ class Client < Mongrel::HttpHandler
       info.base_chunk_size=message["chunk_size"]
       info.streaming=message["streaming"]
       @file_service.set_info(message["url"], info)
-   		
+
+			if !@@config.provide then
+			  request={
+					"type"=>"request",
+					"chunk_range"=> 0..2,
+					"url"=> message["url"]
+				}
+				connection.send_message(request)
+			end
+
 
 		when "transfer"
       transfer=ClientTransferConnector.new(message,@server_connection,@file_service)

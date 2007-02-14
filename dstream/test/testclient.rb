@@ -6,42 +6,39 @@ require File.dirname(__FILE__)+'/../lib/client/client'
 require File.dirname(__FILE__)+'/../lib/client/client_file_service'
 require File.dirname(__FILE__)+'/../lib/server/server_file_service'
 require 'logger'
-
-@@log=Logger.new(STDOUT)
-@@log.level= Logger::DEBUG
-@@log.datetime_format=""
+require File.dirname(__FILE__)+'/../lib/client/client_config'
 
 client=Client.new
 cfs=client.file_service=ClientFileService.new
 PDTPProtocol::listener=client
 
-OPTIONS = {
-	:host => '127.0.0.1',
-	:port => 6000,
-	:url => 'pdtp://bla.com/test2.txt',
-	:listen => 8000,
-	:provide => false,
-	:root => File.dirname(__FILE__)+'/../../testfiles'
-}
+@@config=ClientConfig.instance
+
 OptionParser.new do |opts|
   opts.banner = "Usage: testclient.rb [options]"
+	opts.on("--log LOGFILE", "Use specified logfile") do |l|
+		@@config.log = l
+  end
 	opts.on("--host HOST", "Connect to specified host") do |h|
-		OPTIONS[:host] = h
+		@@config.host = h
 	end
 	opts.on("--port PORT", "Connect to specified port") do |p|
-		OPTIONS[:port] = p.to_i
+		@@config.port = p.to_i
 	end
 	opts.on("--url URL","Request/Provide specified url") do |u|
-		OPTIONS[:url] = u
+    @@config.url = u
 	end
 	opts.on("--listen LISTENPORT","Specify first port to attempt to listen on") do |l|
-		OPTIONS[:listen] = l.to_i
+		@@config.listen_port = l.to_i
 	end
 	opts.on("--file-root ROOT","Directory where files may be found") do |r|
-	  OPTIONS[:root] = r
+	  @@config.file_root = r
   end
-	opts.on_tail("-p","Provide data instead of requesting it") do |p|
-		OPTIONS[:provide] = p
+	opts.on("-p","Provide data instead of requesting it") do |p|
+		@@config.provide = p
+	end
+	opts.on("-d","Turn on debugging") do |d|
+	  @@config.debug = d
 	end
 	opts.on_tail("-h","--help","Print this message") do 
 		puts opts
@@ -49,10 +46,14 @@ OptionParser.new do |opts|
 	end
 end.parse!
 
+@@log=Logger.new(@@config.log)
+@@log.level= Logger::DEBUG
+@@log.datetime_format=""
+
 
 EventMachine::run {
-	host,port,listen_port = OPTIONS[:host],OPTIONS[:port],OPTIONS[:listen]
-	url,providing = OPTIONS[:url], OPTIONS[:provide]
+	host,port,listen_port = @@config.host,@@config.port,@@config.listen_port
+	url,providing = @@config.url, @@config.provide
   connection=EventMachine::connect host,port,PDTPProtocol
   client.server_connection=connection
   @@log.info("connecting with ev=#{EventMachine::VERSION}")
@@ -83,16 +84,12 @@ EventMachine::run {
      "type"=>"ask_info",
      "url"=>url
     }
-
-    state=:start
-
     connection.send_message(request)
-  else
+  
+	else
     @@log.info("This client is providing")
     sfs=ServerFileService.new
-    sfs.root=OPTIONS[:root]
-    #cfs.set_info(url,sfs.get_info(url))
-    #cfs.set_chunk_data(url,0,sfs.get_chunk_data(url,0))
+    sfs.root=@@config.file_root
     client.file_service=sfs #give this client access to all data
 
     request={
@@ -101,26 +98,6 @@ EventMachine::run {
       "chunk_range"=>0..2
     }
     connection.send_message(request)
-    state=:nothing
-  end
-  
-
-  EventMachine::add_periodic_timer(1) do
-    #client.print_stats
-    case state
-    when :start
-      if client.file_service.get_info(url) != nil then
-        state=:request_sent
-        request={
-          "type"=>"request",
-          "chunk_range"=> 0..2,
-          "url"=> url
-        }
-        connection.send_message(request)
-      end
-		else
-			#client.update_finished_transfers
-    end
   end
 }
 
