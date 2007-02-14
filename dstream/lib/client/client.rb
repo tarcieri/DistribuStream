@@ -17,18 +17,18 @@ class Client < Mongrel::HttpHandler
   attr_accessor :server_connection
 
   def initialize
-    @connections = Array.new
     @transfers = Array.new
   end
 
   def connection_created(connection)
-    @@log.debug("Opened connection: #{connection.get_peer_info.inspect}")
-		@connections << connection
+    #For some reason, we can't use this get_peer_info for a remote connection
+    # why?
+    #@@log.debug("Opened connection: #{connection.get_peer_info.inspect}")
+		@@log.debug("Opened connection...");
   end
 
   def connection_destroyed(connection)
-	  @@log.debug("Disconnected from peer")
-    @connections.delete(connection)
+	  @@log.debug("Closed server connection...")
   end
   
   def get_transfer(connection)
@@ -163,7 +163,7 @@ class Client < Mongrel::HttpHandler
   end
 
   def print_stats
-    @@log.debug "client: num_connections=#{@connections.size} num_transfers=#{@transfers.size}"
+    @@log.debug "client:  num_transfers=#{@transfers.size}"
   end
 
 	def update_finished_transfers
