@@ -34,8 +34,14 @@ end
 class ClientTransferListener < ClientTransferBase
   attr :request,:response
   #called with the request and response parameters given by Mongrel
-  def initialize(request,response,server_connection,file_service)
-    @request,@response=request,response
+  def initialize(request,response,server_connection,file_service,client)
+    #FIXME I included a reference to the client because it seems necessary to inform the
+		#client of a finished transfer so that it can remove that transfer from the list of
+		#transfers. This came up when requesting the same file twice from the same host with 
+		#the same peer. Basically there were two identical entries in the list, but the thread
+		#reference in one of them was invalid because it had already been killed
+		@client = client
+		@request,@response=request,response
     @server_connection,@file_service=server_connection,file_service
 
     method=@request.params["REQUEST_METHOD"]
@@ -66,8 +72,18 @@ class ClientTransferListener < ClientTransferBase
 
   def run
     @thread=Thread.current
-    #FIXME need to ask_auth
-    @response.start(200) do |head,out|
+    
+		ask_verify={
+			"type"=>"ask_verify",
+			"peer"=>@peer,
+			"url"=>@url,
+			"chunk_id"=>@chunkid
+		}
+		@@log.debug("Sending ask_verify")
+		@server_connection.send_message(ask_verify)
+		@@log.debug("Stopping thread execution: thread=#{@thread.inspect}")
+		Thread.stop
+		@response.start(200) do |head,out|
       head['Content-Type'] = 'application/octet-stream'
 
       info=@file_service.get_info(@url)
@@ -75,6 +91,8 @@ class ClientTransferListener < ClientTransferBase
       data=info.chunk_data(@chunkid,@local_range)
       out.write(data)
     end
+		@@log.debug("Removing from list of transfers")
+		@client.finished(self)
   end
 
 end

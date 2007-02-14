@@ -18,7 +18,8 @@ class Client < Mongrel::HttpHandler
 
   def initialize
     @transfers = Array.new
-  end
+		@mutex = Mutex.new
+end
 
   def connection_created(connection)
     #For some reason, we can't use this get_peer_info for a remote connection
@@ -41,12 +42,23 @@ class Client < Mongrel::HttpHandler
 		end
 	end
 
+	def finished(transfer)
+		@mutex.synchronize do
+			@transfers.delete(transfer)
+		end
+	end
+
   #handler for Mongrel (called in a separate thread, one for each client)
   def process(request,response)
     begin
-      transfer=ClientTransferListener.new(request,response,@server_connection,@file_service)
+      transfer=ClientTransferListener.new(request,response,@server_connection,@file_service,self)
       @@log.debug "Created TransferListener peer=#{transfer.peer}"  
-      transfer.run
+      
+			@mutex.synchronize do
+				@transfers << transfer
+			end
+
+			transfer.run
      
     rescue HTTPException=>e
       response.start(e.code) do |head,out|
@@ -62,13 +74,13 @@ class Client < Mongrel::HttpHandler
 
 
 	def transfer_matches?(transfer, message)
-  	return( transfer.peer.get_peer_info == message["peer"] and 
+		return( transfer.peer[0] == message["peer"][0] and 
             transfer.url == message["url"] and
             transfer.chunkid == message["chunk_id"] )
 	end
 
   def dispatch_message(message,connection)
-    case message["type"]
+		case message["type"]
     when "tell_info"
 			info = FileInfo.new
       info.file_size=message["size"]
@@ -85,16 +97,18 @@ class Client < Mongrel::HttpHandler
       end
      
     when "tell_verify"
-      @transfers.each do |t|
+			@transfers.each do |t|
         if transfer_matches?(t, message) then
           # if the server does not authorize the transfer, kill it and the associated connection
           if !message["is_authorized"] then
             @transfers.delete(t)
             t.peer.close_connection
           else
-						t.peer.send_message({"type"=>"go_ahead"}) if t.transfer_direction == :in
-            t.go_ahead=true 
-            t.update
+						#t.peer.send_message({"type"=>"go_ahead"}) if t.transfer_direction == :in
+            #t.go_ahead=true 
+            #t.update
+						@@log.debug("Restarting thread execution: thread=#{t.thread.inspect}")
+						t.thread.run
           end
  
           break
