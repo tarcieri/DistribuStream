@@ -9,7 +9,5 @@
 # See http://pdtp.org/
 #++
 
-require File.dirname(__FILE__) + '/../lib/example'
+require File.dirname(__FILE__) + '/../test/testserver'
 
-# Create a new example object and run its example instance method
-p Example.new.example

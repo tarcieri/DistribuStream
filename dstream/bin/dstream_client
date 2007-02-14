@@ -1,0 +1,13 @@
+#!/usr/bin/env ruby
+#--
+# Copyright 2006 by ClickCaster, Inc. (info@clickcaster.com)
+# All rights reserved.  See LICENSE.txt for permissions.
+# 
+# This source file is distributed as part of the 
+# DistribuStream file transfer system.
+#
+# See http://pdtp.org/
+#++
+
+require File.dirname(__FILE__) + '/../test/testclient'
+
