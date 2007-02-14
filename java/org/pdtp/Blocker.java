@@ -4,10 +4,14 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.SynchronousQueue;
 
-public class Request<T> {
-  public Request() {
+public class Blocker<T> {
+  public Blocker() {
     this.state = null;
     this.queues = new HashSet<SynchronousQueue<T>>();
+  }
+  
+  public boolean match(T o) {
+    return true;
   }
   
   public T block() {
@@ -15,9 +19,16 @@ public class Request<T> {
     synchronized(this) {
       mine = new SynchronousQueue<T>();
       queues.add(mine);
-    }    
+    }
     
-    T s = mine.poll();
+    T s = null;
+    try {
+      System.err.println("BLOCKED (" + Thread.currentThread() + ")");
+      s = mine.take();
+      System.err.println("Awake.");
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
     
     synchronized(this) {
       queues.remove(mine);

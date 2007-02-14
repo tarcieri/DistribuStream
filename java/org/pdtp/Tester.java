@@ -9,21 +9,10 @@ import static java.lang.System.out;
 import org.json.JSONException;
 
 public class Tester {
-  public static void main(String[] args) {
-    Network N = null;
+  public static void main(String[] args) {    
     try {
-      N = new Network("localhost", 6000, new MemoryCache());
-      N.start();
-    } catch(IOException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
-  
-    try {
+      Network N = new Network("catclops.clickcaster.com", 6000, new MemoryCache());
       out.println("info:" + N.getInfo("pdtp://bla.com/test2.txt"));
-    } catch (JSONException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
     } catch (IOException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
