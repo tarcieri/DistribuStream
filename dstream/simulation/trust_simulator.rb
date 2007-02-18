@@ -69,8 +69,17 @@ class TrustSimulator
     k_avg = k_total / num_samples
 
     k_variance = 0.0
+    k_min = 100;
+    k_max = -100;
     k_vals.each do |k|
       k_variance += (k - k_avg) * (k - k_avg)
+      if k > k_max
+        k_max = k
+      end
+
+      if k < k_min
+        k_min = k
+      end
     end
     k_variance = (1.0 / num_samples) * k_variance
 
@@ -78,7 +87,10 @@ class TrustSimulator
     print "num_transfers = ", num_transfers, "\n"
     print "coverage = ", coverage, "\n"
     print "k_avg = ", k_avg, "\n"
+    print "k_min = ", k_min, "\n"
+    print "k_max = ", k_max, "\n"
     print "k_variance = ", k_variance, "\n"
+    print "k_var% = ", 100.0 * (k_variance / k_avg), "\n"
     k_variance
   end
 end

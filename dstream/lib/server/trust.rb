@@ -56,7 +56,7 @@ class Trust
     @outgoing.each do |linkedge|
       link = linkedge[1]
       # link.trust = (link.success / total_success) * (link.transfers / total_transfers)
-      link.trust = link.success / total_success
+      link.trust = (link.success / total_transfers)
       #print "Trust: ", link.success, "/", total_success, "=",  link.trust, "\n"
     end
 
