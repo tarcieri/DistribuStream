@@ -6,15 +6,20 @@ import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 
 public class PDTPFetch {
-  public static void main(String[] args) throws IOException {    
-    Network N = new Network("catclops.clickcaster.com", 6000, new MemoryCache());
-    ReadableByteChannel c = N.get("http://www.feministe.us/", 1000);
-    InputStream in = Channels.newInputStream(c);
-    System.err.println("Received: ");
-    int b = in.read();
-    while(b != -1) {
-      System.err.write(b);
-      b = in.read();
+  public static void main(String[] args) throws IOException {
+    if(args.length != 4) {
+      System.err.println("PDTPFetch <url> <server> <serverport> <shareport>");
+    } else {
+      Network N = new Network(args[1], Integer.parseInt(args[2]),
+          Integer.parseInt(args[3]), new MemoryCache());
+      ReadableByteChannel c = N.get(args[0], 1000);
+      InputStream in = Channels.newInputStream(c);
+      
+      int b = in.read();
+      while(b != -1) {
+        System.out.write(b);
+        b = in.read();
+      }
     }
   }
 }

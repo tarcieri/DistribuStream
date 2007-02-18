@@ -7,20 +7,25 @@ import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.util.Properties;
 
+import org.pdtp.wire.ChangePort;
 import org.pdtp.wire.Range;
 import org.pdtp.wire.TellInfo;
 import org.pdtp.wire.Transfer;
 
 public class Link extends Thread {
-  public Link(Endpoint endpoint) {
+  public Link(Endpoint endpoint, int peerPort) {
     this.endpoint = endpoint;
     this.running = true;
-
-    try {
-      this.peerServer = new PeerServer(9999);
-    } catch (IOException e) {
-      e.printStackTrace();
-    }    
+    this.peerPort = peerPort;
+    
+    if(peerPort > 0) {
+      try {
+        this.peerServer = new PeerServer(peerPort);
+        send(new ChangePort(peerPort));
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+    }
   }
   
   @Override
@@ -38,7 +43,7 @@ public class Link extends Thread {
   }
   
   private synchronized <X> void dispatch(X c) {
-    System.out.println("Dispatching " + c);
+    // System.out.println("Dispatching " + c);
     if(handler != null) {
       if(c instanceof TellInfo) {
         TellInfo inf = (TellInfo) c;
@@ -51,7 +56,6 @@ public class Link extends Thread {
   }   
   
   public void send(Object packet) throws IOException {
-    System.out.println("Link.send(" + packet + ")");
     endpoint.send(packet);
   }
   
@@ -113,5 +117,6 @@ public class Link extends Thread {
   private boolean running;
   private Endpoint endpoint;
   private ResourceHandler handler;
+  private int peerPort;
   protected PeerServer peerServer;
 }

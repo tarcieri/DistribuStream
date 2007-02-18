@@ -21,7 +21,6 @@ public class SocketEndpoint implements Endpoint {
   
   public void send(Object packet) throws IOException {
     synchronized(out) {
-      System.out.println("SocketEndpoint.send(" + packet + ")");
       serializer.write(packet, out);
       out.flush();
     }

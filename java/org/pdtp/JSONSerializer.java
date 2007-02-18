@@ -17,7 +17,7 @@ public class JSONSerializer implements Serializer {
   public Object read(InputStream in) throws IOException {
     String json = readJSON(in);
     
-    System.out.println("READ: " + json);
+    System.err.println("READ: " + json);
     
     try {
       return parse(new JSONObject(json), null);
@@ -28,10 +28,9 @@ public class JSONSerializer implements Serializer {
 
   public void write(Object obj, OutputStream stream) throws IOException {
     try {
-      System.out.println("JSONSerializer.write(" + obj + ")");
       JSONObject json = convert(obj);
       json.put("type", camelToUnderscore(obj.getClass().getSimpleName()));      
-      System.out.println("SEND: " + json.toString());
+      System.err.println("SEND: " + json.toString());
       stream.write((json.toString() + "\n").getBytes());
     } catch (Exception e) {
       throw new EndpointException(e);
@@ -53,8 +52,6 @@ public class JSONSerializer implements Serializer {
         try {
           f.set(o, obj.get(usName));
         } catch(IllegalArgumentException ex) {
-          System.out.println(f);
-          System.out.println(obj.get(usName).getClass());
           Object val = parse(obj.getJSONObject(usName), f.getType());
           f.set(o, val);
         }

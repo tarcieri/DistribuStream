@@ -24,14 +24,15 @@ import org.pdtp.wire.TellInfo;
 import org.pdtp.wire.Transfer;
 
 public class Network implements ResourceHandler {
-  public Network(String host, int port, Library cache) throws IOException {    
+  public Network(String host, int port, int peerPort, Library cache) throws IOException {    
     this.cache = cache;
     this.metadataCache = new HashMap<String, TellInfo>();
     
     this.serverHost = host;
     
     InetAddress addr = InetAddress.getByName(host);    
-    this.link = new Link(new SocketEndpoint(new JSONSerializer("org.pdtp.wire"), addr, port));
+    this.link = new Link(new SocketEndpoint
+        (new JSONSerializer("org.pdtp.wire"), addr, port), peerPort);
     link.setResourceHandler(this);
     this.link.setDaemon(true);
     this.link.start();
@@ -54,7 +55,6 @@ public class Network implements ResourceHandler {
   }
   
   public TellInfo getInfo(String url, long timeout) throws IOException {
-    System.out.println("Getting info for " + url);
     TellInfo info = null;
     synchronized(metadataCache) {
       if(!metadataCache.containsKey(url)) {
@@ -126,17 +126,15 @@ public class Network implements ResourceHandler {
           }
         }        
         
-        System.out.println("Request range=" + requestRange);
+        System.err.println("Request Range (" + requestRange + ")");
         Set<Range> missing = cache.missing(new Resource(resource.getUrl(), requestRange));
         for(Range m : missing) {
-          System.out.println("  requesting " + m);
+          System.err.println("  Missing (" + m + ")");
           link.send(new Request(new Resource(resource.getUrl(), m)));
         }
       } catch(IOException e) {
         e.printStackTrace();                
       }
-
-      System.out.println("done with requests");
       
       if(timeout != 0) {
         try {
@@ -200,9 +198,6 @@ public class Network implements ResourceHandler {
     @Override
     public void run() {            
       try {        
-        //URL url = new URL(base,
-        //    URLEncoder.encode(resource.getUrl(), "utf-8"));
-        
         HttpURLConnection conn = (HttpURLConnection) base.openConnection();
         
         conn.setRequestMethod("GET");
@@ -215,7 +210,6 @@ public class Network implements ResourceHandler {
         conn.connect();
         ReadableByteChannel in = Channels.newChannel(conn.getInputStream());
         
-        //
         // This is all a bit complicated. We want to find out
         // what fragment of the file we're actually receiving.
         // The code below uses the following methodology:
@@ -278,7 +272,7 @@ public class Network implements ResourceHandler {
             infoReceived(inf);
           }
         } else {
-          System.out.println("Couldn't figure out how much data we got.");
+          System.err.println("ERROR: Couldn't figure out how much data we got.");
         }
       } catch (Exception e) {
         e.printStackTrace();        
