@@ -1,10 +1,15 @@
 package org.pdtp.wire;
 
 public class TellInfo {
+  public TellInfo() {
+    this.mimeType = "application/octet-stream";    
+  }
+    
   public String url;
   public long size;
   public long chunkSize;
   public boolean streamable;
+  public String mimeType;
   
   public long getChunkSize() {
     return chunkSize;

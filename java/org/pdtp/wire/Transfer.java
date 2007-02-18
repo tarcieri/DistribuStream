@@ -5,6 +5,8 @@ public class Transfer {
   
   public String url;
   public long chunkID;
-  public String peer;
-  public String transferDirection;
+  //public String peer;
+  public String method;
+  public String transferUrl;
+  public Range byteRange;
 }

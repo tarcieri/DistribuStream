@@ -3,6 +3,14 @@ package org.pdtp;
 import org.pdtp.wire.Range;
 
 public class Resource {
+  public Resource(String url, Range range) {
+    this.url = url;
+    if(range == null)
+      this.range = null;
+    else
+      this.range = new Range(range.min(), range.max());
+  }
+  
   public Resource(String url, long min, long max) {
     this.url = url;
     this.range = new Range(min, max);

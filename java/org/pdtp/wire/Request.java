@@ -7,14 +7,14 @@ public class Request {
   
   public Request(Resource c) {
     this.url = c.getUrl();
-    this.chunks = c.getRange();
+    this.chunkRange = c.getRange();
   }
   
   public Request(String url, Range chunks) {
     this.url = url;
-    this.chunks = chunks;
+    this.chunkRange = chunks;
   }
   
   public String url;
-  public Range chunks;  
+  public Range chunkRange;
 }

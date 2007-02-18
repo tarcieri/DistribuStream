@@ -1,18 +1,28 @@
 package org.pdtp;
 
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.ByteBuffer;
+import java.nio.channels.Pipe;
 import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.TreeSet;
 
 import org.pdtp.wire.Range;
+import org.pdtp.wire.Transfer;
 
 public class MemoryCache implements Library {
   public MemoryCache() {
-    catalogue = new HashMap<String, Set<MemoryCacheElement>>();
+    catalogue = new HashMap<String, SortedSet<MemoryCacheElement>>();
+  }
+  
+  public void setResourceHandler(ResourceHandler handler) {
+    this.handler = handler;
   }
   
   public ByteBuffer allocate(long size) {
@@ -31,34 +41,61 @@ public class MemoryCache implements Library {
     }
     
     Set<Range> missing = resource.getRange()
-          .less(catalogue.get(resource.getUrl()).toArray(new Range[] { }));
+          .less(catalogue.get(resource.getUrl()));
     
     return missing;
   }
   
-  public ReadableByteChannel getBlockingChannel(Resource resource) {
-    // TODO Auto-generated method stub
-    return null;
+  public ReadableByteChannel getChannel(Resource resource, boolean blocking)
+      throws IOException {
+    if(!blocking && !contains(resource))
+      return null;
+
+    CacheReader r = new CacheReader(resource);
+    r.start();
+    return r.getChannel();    
   }
 
-  public ReadableByteChannel getChannel(Resource resource) {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  public void write(Resource resource, ByteBuffer buffer) {
+  public synchronized void write(Resource resource, ByteBuffer buffer) {
     if(!catalogue.containsKey(resource.getUrl()))
       catalogue.put(resource.getUrl(),
           new TreeSet<MemoryCacheElement>()); 
     
-    Range newRange = resource.getRange();
+    Range range = resource.getRange();
+    
+    Set<Range> remainder = range.less(catalogue.get(resource.getUrl()));
+    if(!remainder.isEmpty() &&
+        remainder.iterator().next().equals(range)) {
+      MemoryCacheElement m = new MemoryCacheElement(range, buffer);
+      catalogue.get(resource.getUrl()).add(m);
+      notifyAll();
+      return;
+    }
+    
     for(MemoryCacheElement e : catalogue.get(resource.getUrl())) {
-      if(e.intersects(newRange)) {
-        e.buffer.position((int) (newRange.min() - e.min()));
-        buffer.position((int) (newRange.min() - resource.getRange().min()));
-        e.buffer.put(buffer);
+      if(e.intersects(range)) {
+        Range i = range.intersection(e);        
+        
+        synchronized(e.buffer) {
+          //e.buffer.position((int) (i.min() - e.min()));
+          buffer.position((int) (i.min() - resource.getRange().min()));
+          //e.buffer.put(buffer);
+          e.buffer.put(buffer.array(),
+              (int) (i.min() - resource.getRange().min()),
+              e.buffer.remaining());
+        }
       }
     }
+    
+    for(Range r : remainder) {
+      ByteBuffer buf = allocate(r.size());
+      buffer.position((int) r.min());
+      buf.put(buffer);
+      MemoryCacheElement m = new MemoryCacheElement(r, buf);
+      catalogue.get(resource.getUrl()).add(m);
+    }
+    
+    notifyAll();
   }
  
   private class MemoryCacheElement extends Range {
@@ -70,5 +107,69 @@ public class MemoryCache implements Library {
     public ByteBuffer buffer;
   }
   
-  private final Map<String, Set<MemoryCacheElement>> catalogue;
+  private class CacheReader extends Thread {
+    protected Resource resource;
+    protected Pipe pipe;
+    
+    public CacheReader(Resource res) throws IOException {
+      this.resource = res;
+      this.pipe = Pipe.open();
+    }
+
+    public ReadableByteChannel getChannel() {
+      return pipe.source();
+    }
+    
+    @Override
+    public void run() {
+      Range needed = resource.getRange();
+      if(needed == null)
+        needed = new Range(0, Long.MAX_VALUE);
+
+      WritableByteChannel out = pipe.sink();
+      
+      while(!catalogue.containsKey(resource.getUrl())) { }
+      
+      try {
+        boolean firstPass = true;
+        while(!needed.isEmpty()) {
+          for(MemoryCacheElement e : catalogue.get(resource.getUrl())) {
+            if(e.contains(needed.min())) {
+              Range i = needed.intersection(e);
+
+              ByteBuffer buf = allocate(i.size());
+              synchronized(e.buffer) {
+                buf.put(e.buffer.array(),
+                        (int) (i.min() - e.min()),
+                        buf.remaining());
+                buf.rewind();
+              }
+
+              out.write(buf);            
+              needed = needed.minus(e);
+            }
+          }
+          
+          if(!needed.isEmpty())
+            waitForUpdate();
+        }
+        
+        out.close();
+      } catch (IOException ex) {
+        ex.printStackTrace();
+      }
+    }
+  }
+
+  public synchronized void waitForUpdate() {
+    boolean interrupted = true;
+    while(!interrupted) {
+      try {
+        wait();
+      } catch (InterruptedException e) { }
+    }
+  }
+  
+  private final Map<String, SortedSet<MemoryCacheElement>> catalogue;
+  private ResourceHandler handler;
 }

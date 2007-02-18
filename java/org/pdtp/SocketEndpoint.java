@@ -19,13 +19,18 @@ public class SocketEndpoint implements Endpoint {
     this.serializer = serializer;
   }
   
-  public synchronized void send(Object packet) throws IOException {
-    serializer.write(packet, out);
-    out.flush();
+  public void send(Object packet) throws IOException {
+    synchronized(out) {
+      System.out.println("SocketEndpoint.send(" + packet + ")");
+      serializer.write(packet, out);
+      out.flush();
+    }
   }
 
-  public synchronized Object take() throws IOException {
-    return serializer.read(in);
+  public Object take() throws IOException {
+    synchronized(in) {
+      return serializer.read(in);
+    }
   }
   
   private final Serializer serializer;

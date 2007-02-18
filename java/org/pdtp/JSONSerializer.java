@@ -8,7 +8,10 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 
+import org.json.JSONException;
 import org.json.JSONObject;
+import org.json.JSONStringer;
+import org.json.JSONWriter;
 
 public class JSONSerializer implements Serializer {
   public JSONSerializer(String basePackage) {
@@ -20,22 +23,8 @@ public class JSONSerializer implements Serializer {
     
     System.out.println("READ: " + json);
     
-    JSONObject obj = null;
     try {
-      obj = new JSONObject(json);    
-      String className = underscoreToCamel(obj.get("type").toString(), true);
-      className = basePackage + "." + className;
-      Class c = Class.forName(className);
-      Object o = c.newInstance();
-      for(Field f : c.getFields()) {
-        String usName = camelToUnderscore(f.getName());
-        
-        if(obj.has(usName)) {
-          f.set(o, obj.get(usName));
-        }
-      }
-      
-      return o;
+      return parse(new JSONObject(json), null);
     } catch (Exception e) {
       throw new EndpointException(e);
     }
@@ -43,8 +32,9 @@ public class JSONSerializer implements Serializer {
 
   public void write(Object obj, OutputStream stream) throws IOException {
     try {
-      JSONObject json = new JSONObject(mapify(obj));
-      json.put("type", camelToUnderscore(obj.getClass().getSimpleName()));
+      System.out.println("JSONSerializer.write(" + obj + ")");
+      JSONObject json = convert(obj);
+      json.put("type", camelToUnderscore(obj.getClass().getSimpleName()));      
       System.out.println("SEND: " + json.toString());
       stream.write((json.toString() + "\n").getBytes());
     } catch (Exception e) {
@@ -52,13 +42,39 @@ public class JSONSerializer implements Serializer {
     }
   }
 
-  public Map<String, Object> mapify(Object obj) throws IllegalArgumentException, IllegalAccessException {
-    Class c = obj.getClass();
-    HashMap<String, Object> map = new HashMap<String, Object>();
-    
-    for(Field f : c.getFields()) {
+  public Object parse(JSONObject obj, Class<?> klass) throws JSONException, ClassNotFoundException, InstantiationException, IllegalAccessException {    
+    if(klass == null) {
+      String className = underscoreToCamel(obj.get("type").toString(), true);
+      className = basePackage + "." + className;
+      klass = Class.forName(className);  
+    }
+        
+    Object o = klass.newInstance();
+    for(Field f : klass.getFields()) {
       String usName = camelToUnderscore(f.getName());
       
+      if(obj.has(usName)) {
+        try {
+          f.set(o, obj.get(usName));
+        } catch(IllegalArgumentException ex) {
+          System.out.println(f);
+          System.out.println(obj.get(usName).getClass());
+          Object val = parse(obj.getJSONObject(usName), f.getType());
+          f.set(o, val);
+        }
+      }
+    }
+    
+    return o;
+  }
+  
+  public JSONObject convert(Object obj) throws JSONException, IllegalArgumentException, IllegalAccessException {
+    Class c = obj.getClass();
+    
+    JSONObject result = new JSONObject();
+    for(Field f : c.getFields()) {
+      String usName = camelToUnderscore(f.getName());
+
       Object val = f.get(obj);
       if(val instanceof Boolean ||
          val instanceof Double ||
@@ -66,14 +82,15 @@ public class JSONSerializer implements Serializer {
          val instanceof String ||
          val instanceof Float ||
          val instanceof Short ||
+         val instanceof Long ||
          val instanceof Character) {
-        map.put(usName, val);
+        result.put(usName, val);
       } else {
-        map.put(usName, mapify(val));
+        result.put(usName, convert(val));
       }
     }
     
-    return map;
+    return result;
   }
   
   private String readJSON(InputStream in) throws IOException {
