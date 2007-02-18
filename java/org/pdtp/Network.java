@@ -3,16 +3,10 @@ package org.pdtp;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
-import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLConnection;
-import java.net.URLEncoder;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ByteChannel;
@@ -35,15 +29,12 @@ public class Network implements ResourceHandler {
     this.metadataCache = new HashMap<String, TellInfo>();
     
     this.serverHost = host;
-    this.serverPort = port;
     
     InetAddress addr = InetAddress.getByName(host);    
     this.link = new Link(new SocketEndpoint(new JSONSerializer("org.pdtp.wire"), addr, port));
     link.setResourceHandler(this);
     this.link.setDaemon(true);
     this.link.start();
-    
-    this.cache.setResourceHandler(this);
   }
       
   protected ByteChannel getChannel(Object address) {
@@ -221,8 +212,7 @@ public class Network implements ResourceHandler {
               + resource.getRange().max());
         }
         
-        conn.connect();        
-        InputStream ins = conn.getInputStream();
+        conn.connect();
         ReadableByteChannel in = Channels.newChannel(conn.getInputStream());
         
         //
@@ -249,13 +239,13 @@ public class Network implements ResourceHandler {
         //
         
         Range actualRange = resource.getRange();
-        if(conn.getResponseCode() == conn.HTTP_PARTIAL) {
+        if(conn.getResponseCode() == HttpURLConnection.HTTP_PARTIAL) {
           actualRange = Range.parseHTTPRange(conn.getHeaderField("Content-Range"));           
 
           if(actualRange == null) {
             actualRange = resource.getRange();
           }
-        } else if(conn.getResponseCode() == conn.HTTP_OK) {
+        } else if(conn.getResponseCode() == HttpURLConnection.HTTP_OK) {
           if(conn.getContentLength() != -1) {
             actualRange = new Range(0, conn.getContentLength());            
           }
@@ -326,5 +316,4 @@ public class Network implements ResourceHandler {
   }
   
   private String serverHost;
-  private int serverPort;
 }

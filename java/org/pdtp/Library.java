@@ -14,5 +14,4 @@ public interface Library {
   public void write(Resource resource, ByteBuffer buffer);
   
   public ReadableByteChannel getChannel(Resource resource, boolean blocking) throws IOException;
-  public void setResourceHandler(ResourceHandler network);
 }

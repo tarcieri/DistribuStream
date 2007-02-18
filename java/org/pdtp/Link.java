@@ -113,5 +113,5 @@ public class Link extends Thread {
   private boolean running;
   private Endpoint endpoint;
   private ResourceHandler handler;
-  private PeerServer peerServer;
+  protected PeerServer peerServer;
 }

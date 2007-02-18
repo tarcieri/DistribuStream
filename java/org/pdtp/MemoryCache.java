@@ -1,8 +1,6 @@
 package org.pdtp;
 
 import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.channels.Pipe;
 import java.nio.channels.ReadableByteChannel;
@@ -14,15 +12,10 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 import org.pdtp.wire.Range;
-import org.pdtp.wire.Transfer;
 
 public class MemoryCache implements Library {
   public MemoryCache() {
     catalogue = new HashMap<String, SortedSet<MemoryCacheElement>>();
-  }
-  
-  public void setResourceHandler(ResourceHandler handler) {
-    this.handler = handler;
   }
   
   public ByteBuffer allocate(long size) {
@@ -131,7 +124,6 @@ public class MemoryCache implements Library {
       while(!catalogue.containsKey(resource.getUrl())) { }
       
       try {
-        boolean firstPass = true;
         while(!needed.isEmpty()) {
           for(MemoryCacheElement e : catalogue.get(resource.getUrl())) {
             if(e.contains(needed.min())) {
@@ -171,5 +163,4 @@ public class MemoryCache implements Library {
   }
   
   private final Map<String, SortedSet<MemoryCacheElement>> catalogue;
-  private ResourceHandler handler;
 }

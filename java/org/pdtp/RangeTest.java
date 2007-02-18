@@ -1,7 +1,5 @@
 package org.pdtp;
 
-import java.nio.ByteBuffer;
-
 import org.pdtp.wire.Range;
 
 public class RangeTest {
@@ -18,8 +16,5 @@ public class RangeTest {
     System.out.println("===" + r1.less(r4, r5, r6));
     
     System.out.println("---" + r2.intersections(r1, r6));
-    
-    MemoryCache C = new MemoryCache();
-    ByteBuffer a = C.allocate(50);        
   }
 }
