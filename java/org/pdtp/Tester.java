@@ -1,29 +1,20 @@
 package org.pdtp;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 import java.io.InputStream;
-
-import static java.lang.System.out;
-
-import org.json.JSONException;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
 
 public class Tester {
-  public static void main(String[] args) {    
-    try {
-      Network N = new Network("catclops.clickcaster.com", 6000, new MemoryCache());
-      out.println("info:" + N.getInfo("pdtp://bla.com/test2.txt"));
-      InputStream i = N.get("pdtp://bla.com/test2.txt");
-      
-      int b = i.read();
-      while(b != -1) {
-        System.out.print(b);
-        b = i.read();
-      } 
-    } catch (IOException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
+  public static void main(String[] args) throws IOException {    
+    Network N = new Network("catclops.clickcaster.com", 6000, new MemoryCache());
+    ReadableByteChannel c = N.get("http://www.feministe.us/", 1000);
+    InputStream in = Channels.newInputStream(c);
+    System.err.println("Received: ");
+    int b = in.read();
+    while(b != -1) {
+      System.err.write(b);
+      b = in.read();
     }
   }
 }
