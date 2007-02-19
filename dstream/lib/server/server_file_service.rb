@@ -1,6 +1,6 @@
 require "uri"    
 require "pathname"
-require "digest/sha1"
+require "digest/sha2"
 require File.dirname(__FILE__)+'/../common/file_service_base.rb'    
 
 #The server specific file utilities
@@ -55,7 +55,6 @@ class ServerFileService < FileServiceBase
 	end
 
   #def get_chunk_hash(url,chunk_id)
-  #  return Digest::SHA1.hexdigest(get_chunk_data(url,chunk_id)) rescue nil
+  #  return Digest::SHA256.hexdigest(get_chunk_data(url,chunk_id)) rescue nil
   #end
-
 end
