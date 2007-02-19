@@ -8,6 +8,7 @@ import java.util.LinkedList;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.pdtp.wire.Range;
 
 public class JSONSerializer implements Serializer {
   public JSONSerializer(String basePackage) {
@@ -58,10 +59,20 @@ public class JSONSerializer implements Serializer {
       }
     }
     
+    if(o instanceof Range) {
+      Range r = (Range) o;
+      o = new Range(r.min(), r.max() - 1);
+    }
+    
     return o;
   }
   
   public JSONObject convert(Object obj) throws JSONException, IllegalArgumentException, IllegalAccessException {
+    if(obj instanceof Range) {
+      Range r = (Range) obj;
+      obj = new Range(r.min(), r.max() + 1);
+    }    
+    
     Class c = obj.getClass();
     
     JSONObject result = new JSONObject();
@@ -79,7 +90,8 @@ public class JSONSerializer implements Serializer {
          val instanceof Character) {
         result.put(usName, val);
       } else {
-        result.put(usName, convert(val));
+        if(val != null)
+          result.put(usName, convert(val));
       }
     }
     

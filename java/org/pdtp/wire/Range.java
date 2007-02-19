@@ -169,7 +169,7 @@ public class Range implements Comparable<Range> {
     if(!intersects(other)) return new Range(0, 0);
     
     return new Range(this.min() >= other.min() ? this.min() : other.min(),
-                     this.max() <= other.max() ? this.max() : other.max);
+                     this.max() <= other.max() ? this.max() : other.max());
   }
   
   public SortedSet<Range> intersections(Range... others) {

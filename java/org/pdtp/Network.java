@@ -3,6 +3,7 @@ package org.pdtp;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
@@ -12,9 +13,12 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ByteChannel;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.Vector;
 
 import org.pdtp.wire.AskInfo;
 import org.pdtp.wire.Provide;
@@ -22,6 +26,7 @@ import org.pdtp.wire.Range;
 import org.pdtp.wire.Request;
 import org.pdtp.wire.TellInfo;
 import org.pdtp.wire.Transfer;
+import org.pdtp.wire.TransferComplete;
 
 public class Network implements ResourceHandler {
   public Network(String host, int port, int peerPort, Library cache) throws IOException {    
@@ -44,7 +49,6 @@ public class Network implements ResourceHandler {
       FileInputStream F = new FileInputStream(f);
       return F.getChannel();
     } catch (IOException e) {
-      // TODO Auto-generated catch block
       e.printStackTrace();
       return null;
     }
@@ -118,19 +122,23 @@ public class Network implements ResourceHandler {
       try {       
         if(requestRange == null) {
           TellInfo info = getInfo(resource.getUrl(), timeout);
-          if(info != null) {
+          if(info == null) {
             requestRange = new Range(0, info.size);
           } else {
             makeRawRequest(resource);
             return;
           }
-        }        
+        }
         
-        System.err.println("Request Range (" + requestRange + ")");
-        Set<Range> missing = cache.missing(new Resource(resource.getUrl(), requestRange));
-        for(Range m : missing) {
-          System.err.println("  Missing (" + m + ")");
-          link.send(new Request(new Resource(resource.getUrl(), m)));
+        if(requestRange == null || requestRange.isEmpty()) {
+          link.send(new Request(new Resource(resource.getUrl(), null)));
+        } else {        
+          System.err.println("Request Range (" + requestRange + ")");
+          Set<Range> missing = cache.missing(new Resource(resource.getUrl(), requestRange));
+          for(Range m : missing) {
+            System.err.println("  Missing (" + m + ")");
+            link.send(new Request(new Resource(resource.getUrl(), m)));
+          }
         }
       } catch(IOException e) {
         e.printStackTrace();                
@@ -141,22 +149,32 @@ public class Network implements ResourceHandler {
           Thread.sleep(timeout);
         } catch (InterruptedException e) { }
         
-        
-        Set<Range> missing = cache.missing(new Resource(resource.getUrl(), requestRange));
-        for(Range m : missing) {
-          Resource res = new Resource(resource.getUrl(), m);
-          makeRawRequest(res);
-        }        
+        if(requestRange != null && !requestRange.isEmpty()) {
+          Set<Range> missing = cache.missing(new Resource(resource.getUrl(), requestRange));
+          for(Range m : missing) {
+            Resource res = new Resource(resource.getUrl(), m);
+            makeRawRequest(res);
+          }
+        } else {
+          makeRawRequest(new Resource(resource.getUrl(), null));
+        }
       }
     }
     
     public void makeRawRequest(Resource part) {      
       Transfer t = new Transfer();
-      t.byteRange = part.getRange();
-      t.method = "get";
-      t.transferUrl = part.getUrl();
-      t.url = part.getUrl();
-      transferCommand(t);      
+      try {
+        URL url = new URL(part.getUrl());
+        t.byteRange = part.getRange();
+        t.method = "get";
+        //t.transferUrl = part.getUrl();        
+        t.url = part.getUrl();
+        t.host = url.getHost();
+        t.port = url.getPort() != -1 ? url.getPort() : url.getDefaultPort();        
+        transferCommand(t);
+      } catch (MalformedURLException e) {
+        e.printStackTrace();
+      }      
     }
   }
   
@@ -172,9 +190,27 @@ public class Network implements ResourceHandler {
     }
   }
 
-  public void postComplete(ByteBuffer b, Resource r) {
-    // TODO: Notify the server of the successful transfer.
-    // TODO: Verify the hash of this segment before writing it.    
+  public void postComplete(ByteBuffer b, Resource r, String host, int port) {
+    try {
+      MessageDigest digest = MessageDigest.getInstance("MD5");
+      b.rewind();
+      digest.update(b);
+      byte[] hashBytes = digest.digest();
+      String hashStr = "";
+      for(byte hb : hashBytes) {
+        hashStr += hb + ":";
+      }
+      hashStr = hashStr.substring(0, hashStr.length() - 1);
+      
+      TransferComplete tc = new TransferComplete(r.getUrl(), host, port, hashStr);
+      link.send(tc);
+    } catch (NoSuchAlgorithmException e1) {
+      e1.printStackTrace();
+    } catch (IOException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+        
     cache.write(r, b);
     
     try {
@@ -190,15 +226,20 @@ public class Network implements ResourceHandler {
   }
 
   private class Fetcher extends Thread {
-    public Fetcher(Resource r, URL base) {
+    private String vhost;
+    
+    public Fetcher(Resource r, URL base, String vhost) {
       this.resource = r;
       this.base = base;
+      this.vhost = vhost;
     }
     
     @Override
     public void run() {            
       try {        
         HttpURLConnection conn = (HttpURLConnection) base.openConnection();
+        System.out.println("Host: " + vhost);
+        conn.setRequestProperty("Host", vhost);
         
         conn.setRequestMethod("GET");
         if(resource.getRange() != null) {
@@ -254,8 +295,30 @@ public class Network implements ResourceHandler {
               in.read(buf);
             }
           
-            postComplete(buf, actualResource);
+            postComplete(buf, actualResource, base.getHost(), base.getPort());
+          }
+        } else {
+          InputStream ins = Channels.newInputStream(in);
+          Vector<Byte> byteStream = new Vector<Byte>();
+          int b = ins.read();
+          while(b != -1) {            
+            byteStream.add((byte) b);
+            b = ins.read();
+          }
           
+          byte bytes[] = new byte[byteStream.size()];
+          int i = 0;
+          for(Byte x : byteStream) {
+            bytes[i++] = x.byteValue();
+          }
+          
+          actualRange = new Range(0, bytes.length);
+          Resource actualResource = new Resource(resource.getUrl(), actualRange);                    
+          
+          if(!cache.contains(actualResource)) {
+            postComplete(ByteBuffer.wrap(bytes), actualResource, base.getHost(),
+                base.getPort());
+
             // Update the mime type and entity size information, possibly.
             TellInfo inf = getInfoCached(resource.getUrl());
             if(inf != null) {
@@ -271,9 +334,7 @@ public class Network implements ResourceHandler {
             }
             infoReceived(inf);
           }
-        } else {
-          System.err.println("ERROR: Couldn't figure out how much data we got.");
-        }
+        }        
       } catch (Exception e) {
         e.printStackTrace();        
       }
@@ -285,19 +346,32 @@ public class Network implements ResourceHandler {
   
   public void transferCommand(Transfer t) {
     try {
-      URL u = new URL(t.transferUrl);
-      InetAddress addr = InetAddress.getByName(u.getHost());
+      //URL u = new URL(t.transferUrl);
+      
+      String myurl = t.url;
+      if(myurl.startsWith("pdtp")) {
+        myurl = myurl.replaceFirst("pdtp", "http");
+      }
+      
+      String peerHost = t.host;
+      InetAddress addr = InetAddress.getByName(peerHost);
       if(addr.isLoopbackAddress()) {
         // Silly server. Loopbacks are for extremely flexible kids.
-        t.transferUrl = t.transferUrl.replace(u.getHost(), serverHost);
-        u = new URL(t.transferUrl);
+        peerHost = serverHost;
       }
-
+      
+      URL src = new URL(myurl);      
+      URL u = new URL("http://" + t.host + ":" + t.port + src.getPath());            
+      
       Resource r = new Resource(t.url, t.byteRange);
       //System.out.println("Told to " + t.method + " " + r + " at " + u);
       
       if(!cache.contains(r)) {
-        Fetcher f = new Fetcher(r, u);
+        Fetcher f = new Fetcher(r, u, src.getHost()
+            + (src.getPort() > 0
+                && src.getPort() != src.getDefaultPort()
+                ? ":" + src.getPort()
+                : ""));
         f.start();
       }
     } catch (MalformedURLException e) {
