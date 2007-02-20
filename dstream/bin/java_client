@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env ruby
 
-cd ../../java
-java org.pdtp.PDTPFetch
+Dir.chdir( File.dirname(__FILE__)+"/../../java")
+exec("java","org.pdtp.PDTPFetch",*ARGV)
+
