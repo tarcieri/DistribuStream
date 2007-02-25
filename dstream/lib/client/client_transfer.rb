@@ -2,6 +2,8 @@ require File.dirname(__FILE__)+'/client_file_service'
 require "thread"
 require "net/http"
 
+
+
 class HTTPException < Exception
   attr_accessor :code
   def initialize(code,message)
@@ -12,6 +14,9 @@ end
     
 
 class ClientTransferBase
+  attr :peer #has the form[peer_address,peer_port]
+  attr :url, :byte_range
+
   attr_reader :peer, :url, :chunkid, :transfer_direction, :finished
   attr_reader :connection_direction
   attr :range, :local_range
@@ -44,34 +49,27 @@ class ClientTransferListener < ClientTransferBase
 		@client = client
 		@request,@response=request,response
     @server_connection,@file_service=server_connection,file_service
+    @connection_direction=:in
     
     method=@request.params["REQUEST_METHOD"]
-    if method=="GET" then
-      @transfer_direction=:out
-    elsif method=="PUT" then
-      @transfer_direction=:in
-    else
-      raise HTTPException.new(400,"Invalid method: #{method}")
-    end
+    @transfer_direction={"GET"=>:out, "PUT"=>:in}[method]
+    raise HTTPException.new(400,"Invalid method: #{method.inspect}") if @transfer_direction.nil?
+    
 
     #Mongrel doesn't seem to give us the remote port, but it isnt used anyway so just set to 0
     @peer= [ @request.params["REMOTE_ADDR"] , 0 ]
     path=@request.params["REQUEST_PATH"]
     
-		#FIXME get these values in some real way
-		vserver="bla.com"
-    @url="pdtp://"+vserver+path
+		vhost=@request.params["HTTP_HOST"]
+    @url="pdtp://"+vhost+path
+    puts "params=#{@request.params.inspect}"
     
     info=@file_service.get_info(@url)
     raise HTTPException.new(404,"File #{@url} not found") if (info.nil? and transfer_direction == :out)
     
     @range=parse_http_range(request.params["HTTP_RANGE"])
-    @connection_direction=:in
-
-    #Takes a range of bytes in a file and converts to the correct chunk and range local to that chunk
-    @chunkid,@local_range=info.internal_range(@range)
   
-    @@log.debug("Got request, chunkid=#{@chunkid} range=#{@range}")        
+    @@log.debug("Got request,  range=#{@range}")        
   end
 
   def run

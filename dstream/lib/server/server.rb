@@ -139,15 +139,20 @@ class Server
       connection.send_message(response)
 
     when "request"
-      client_info(connection).chunk_info.request(message["url"],message["chunk_range"])
+      chunk_range=@file_service.get_info(message["url"]).chunk_range_from_byte_range(message["range"],false)
+      client_info(connection).chunk_info.request(message["url"],chunk_range)
       spawn_transfers #this should also be called periodically, but it is called here to improve latency
     when "provide"
-      client_info(connection).chunk_info.provide(message["url"],message["chunk_range"])
+      #puts message.inspect
+      chunk_range=@file_service.get_info(message["url"]).chunk_range_from_byte_range(message["range"],true)  
+      client_info(connection).chunk_info.provide(message["url"],chunk_range)
       spawn_transfers
     when "unrequest"
-      client_info(connection).chunk_info.unrequest(message["url"],message["chunk_range"])
+      chunk_range=@file_service.get_info(message["url"]).chunk_range_from_byte_range(message["range"],false)
+      client_info(connection).chunk_info.unrequest(message["url"],chunk_range)
     when "unprovide"
-      client_info(connection).chunk_info.unrpovide(message["url"],message["chunk_range"])
+      chunk_range=@file_service.get_info(message["url"]).chunk_range_from_byte_range(message["range"],false)
+      client_info(connection).chunk_info.unprovide(message["url"],chunk_range)
     when "ask_verify"
       ok=transfer_authorized?(message["peer"],message["url"],message["chunk_id"])
       response={

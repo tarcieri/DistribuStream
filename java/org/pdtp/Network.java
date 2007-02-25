@@ -122,8 +122,8 @@ public class Network implements ResourceHandler {
       try {       
         if(requestRange == null) {
           TellInfo info = getInfo(resource.getUrl(), timeout);
-          if(info == null) {
-            requestRange = new Range(0, info.size);
+          if(info != null) {
+             requestRange = new Range(0, info.size);
           } else {
             makeRawRequest(resource);
             return;

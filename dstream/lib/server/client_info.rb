@@ -48,6 +48,7 @@ class ChunkInfo
   end
     
 protected
+
   def get(filename,chunk)
     return @files[filename][chunk] rescue :neither
   end
@@ -56,4 +57,5 @@ protected
     chunks=@files[filename]||=Array.new
     range.each { |i| chunks[i]=state }
   end
+
 end

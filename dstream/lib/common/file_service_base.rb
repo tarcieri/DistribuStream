@@ -28,6 +28,17 @@ class FileInfo
     return offset/@base_chunk_size
   end
 
+  def chunk_range_from_byte_range(byte_range,exclude_partial=true)
+    min=chunk_from_offset(byte_range.first)
+    min+=1 if exclude_partial and byte_range.first > min*@base_chunk_size 
+   
+    max_byte=byte_range.last
+    max_byte=@file_size-1 if max_byte==-1 or max_byte>=@file_size 
+    max=chunk_from_offset(max_byte)
+    max-=1 if exclude_partial
+    return min..max
+  end
+
   #returns a range of bytes local to a chunk given a range of bytes in the file
   # returns [chunk,internal_range]
   def internal_range(range)

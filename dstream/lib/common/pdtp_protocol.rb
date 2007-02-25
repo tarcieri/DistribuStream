@@ -60,27 +60,49 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
       receive_message(message)
     rescue Exception
       @@log.warn("pdtp_protocol closed connection (parse error)")
-      error_close_connection("JSON parse error") #there was an error in parsing
+      error_close_connection("JSON parse error: #{line.inspect}") #there was an error in parsing
     end
   end
   
-  RANGENAME="chunk_range"
+  RANGENAMES=["chunk_range","range","byte_range"]
 
+  # 0..-1 => nil  (entire file)
+  # 10..-1 => {"min"=>10} (contents of file >= 10)
+  # 
   def range_to_hash(message)
-    if message[RANGENAME] then
-      message[RANGENAME] = {"min"=> message[RANGENAME].begin, "max"=> message[RANGENAME].end }
+    message.each do |key,value|
+      if value.class==Range then
+        if value==(0..-1) then
+          message.delete(key)
+        elsif value.last==-1 then
+          message[key]={"min"=>value.first}
+        else
+          message[key]={"min"=>value.first,"max"=>value.last}
+        end
+      end   
     end
   end
 
   def hash_to_range(message)
-    if message[RANGENAME] then
-      message[RANGENAME]= message[RANGENAME]["min"]..message[RANGENAME]["max"]
+    key="range"
+    auto_types=["provide","request"] #these types assume a range if it isnt specified
+    auto_types.each do |type|
+      if message["type"]==type and message[key]==nil then
+        message[key]={} # assume entire file if not specified
+      end
+    end
+  
+    if message[key] then
+      raise if message[key].class!=Hash
+      min=message[key]["min"] 
+      max=message[key]["max"]
+      message[key]= (min ? min : 0)..(max ? max : -1)
     end
   end
 
   def send_message message
     @mutex.synchronize do
-      range_to_hash(message)
+      #range_to_hash(message)
       outstr=JSON.unparse(message)+"\n"
 			id = @@listener.get_id(self)
       @@log.debug( "#{id} send: #{outstr.chomp}")
