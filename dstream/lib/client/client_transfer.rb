@@ -1,7 +1,7 @@
 require File.dirname(__FILE__)+'/client_file_service'
 require "thread"
 require "net/http"
-
+require "uri"
 
 
 class HTTPException < Exception
@@ -14,12 +14,11 @@ end
     
 
 class ClientTransferBase
-  attr :peer #has the form[peer_address,peer_port]
-  attr :url, :byte_range
+  attr :peer, :port
+  attr_reader :url, :byte_range
 
-  attr_reader :peer, :url, :chunkid, :transfer_direction, :finished
-  attr_reader :connection_direction
-  attr :range, :local_range
+  attr_reader  :finished
+ 
   attr_reader :thread
 
   attr :server_connection, :file_service
@@ -30,7 +29,7 @@ class ClientTransferBase
       raise if arr.size!=2
       return arr[0].to_i..arr[1].to_i
     rescue
-      raise HTTPException.new(400,"Range string: #{string.inspect} unparseable")
+      return nil
     end
   end
 
@@ -39,6 +38,7 @@ end
 #This class implements the listening end of a peer to peer http connection
 class ClientTransferListener < ClientTransferBase
   attr :request,:response
+  attr_accessor :authorized
   #called with the request and response parameters given by Mongrel
   def initialize(request,response,server_connection,file_service,client)
     #FIXME I included a reference to the client because it seems necessary to inform the
@@ -49,27 +49,24 @@ class ClientTransferListener < ClientTransferBase
 		@client = client
 		@request,@response=request,response
     @server_connection,@file_service=server_connection,file_service
-    @connection_direction=:in
-    
-    method=@request.params["REQUEST_METHOD"]
-    @transfer_direction={"GET"=>:out, "PUT"=>:in}[method]
-    raise HTTPException.new(400,"Invalid method: #{method.inspect}") if @transfer_direction.nil?
-    
+    @authorized=false  
+
+    puts "params=#{@request.params.inspect}"    
+    @method=@request.params["REQUEST_METHOD"].downcase   
 
     #Mongrel doesn't seem to give us the remote port, but it isnt used anyway so just set to 0
-    @peer= [ @request.params["REMOTE_ADDR"] , 0 ]
+    @peer=@request.params["REMOTE_ADDR"]
+
+    #here we construct the GUID for this file
+    #note that Galen and James are both unhappy about different respects of this operation
+    #this is very hackish and evil and we will all go to hell because of it
     path=@request.params["REQUEST_PATH"]
-    
 		vhost=@request.params["HTTP_HOST"]
     @url="pdtp://"+vhost+path
-    puts "params=#{@request.params.inspect}"
     
-    info=@file_service.get_info(@url)
-    raise HTTPException.new(404,"File #{@url} not found") if (info.nil? and transfer_direction == :out)
-    
-    @range=parse_http_range(request.params["HTTP_RANGE"])
+    @byte_range=parse_http_range(request.params["HTTP_RANGE"])
   
-    @@log.debug("Got request,  range=#{@range}")        
+    @@log.debug("Got request,  range=#{@byte_range.inspect}")        
   end
 
   def run
@@ -79,7 +76,7 @@ class ClientTransferListener < ClientTransferBase
 			"type"=>"ask_verify",
 			"peer"=>@peer,
 			"url"=>@url,
-			"chunk_id"=>@chunkid
+			"range"=>@byte_range
 		}
 		@@log.debug("Sending ask_verify")
 		@server_connection.send_message(ask_verify)
@@ -89,23 +86,38 @@ class ClientTransferListener < ClientTransferBase
 		@@log.debug("Stopping thread execution: thread=#{@thread.inspect}")
 		Thread.stop
 
+    #check if the server authorized us
+    if @authorized==false then
+      raise HTTPException.new(403,"Forbidden: the server did not authorize this transfer")  
+    end
+
 	  info = @file_service.get_info(@url)
-		
-		if @transfer_direction == :in then
+    if @method == "put" then
 		  #Request was a PUT, so now we just have to read the body of the request
 			@@log.debug("BODY DOWNLOADED: #{@request.body.read}")
-			info.set_chunk_data(@chunkid, @request.body.read)
+      
+      @file_service.set_info(FileInfo.new) if info.nil? #we don't know that info exists before the transfer begins
+			info.write(@byte_range.first, @request.body.read)
 			@response.start(200) do |head,out| 
 			end
-		else 
-		  #Request was GET, so now we need to send the data
-			@response.start(200) do |head,out|
-      	head['Content-Type'] = 'application/octet-stream'
+		elsif @method=="get" then
+      raise HTTPException.new(404,"File not found: #{@url}") if info.nil?
+      puts "RIGHT BEFORE READING!!!!"
+      data=info.read(@byte_range)
+      raise HTTPException.new(416,"Invalid range: #{@byte_range.inspect}") if data.nil?		
 
-      	data=info.chunk_data(@chunkid,@local_range)
+
+		  #Request was GET, so now we need to send the data
+			@response.start(206) do |head,out|
+      	head['Content-Type'] = 'application/octet-stream'
+        head['Content-Range'] = "#{@byte_range.first}-#{@byte_range.last}"
+        #FIXME must include a DATE header according to http
+
       	out.write(data)
     	end
-		end
+		else
+      raise HTTPException.new(405,"Invalid method: #{@method}")
+    end
 
     #Make sure this transfer is considered completed from our standpoint
 		@@log.debug("Removing from list of transfers")
@@ -118,47 +130,55 @@ end
 class ClientTransferConnector < ClientTransferBase
   def initialize(message,server_connection,file_service)
     @server_connection,@file_service=server_connection,file_service
-    @peer=message["peer"]
-    @transfer_direction = message["transfer_direction"].to_sym
-    raise if transfer_direction != :out and transfer_direction != :in
-    @chunkid=message["chunk_id"]
+    @peer,@port=message["host"],message["port"]
+    @method = message["method"]
     @url=message["url"]
+    @byte_range=message["range"]
     
   end
     
   def run
     begin
-    @@log.debug("RUNNING - transfer_direction: #{@transfer_direction}")
+    @@log.debug("RUNNING - method: #{@method}")
     @thread=Thread.current
-    uri=URI.parse(@url)
+    
     info=@file_service.get_info(@url)
-		range=info.chunk_range(@chunkid)
     
-		if @transfer_direction == :in then
-		  req = Net::HTTP::Get.new(uri.path)
+    #compute the vhost and path
+    #FIXME work with ports
+    uri=URI.split(@url)
+    path=uri[5]
+    vhost=uri[2]   
+ 
+		if @method == "get" then
+		  req = Net::HTTP::Get.new(path)
 			body = nil
-		else 
-		  req = Net::HTTP::Put.new(uri.path)
-			#Assumes the entre chunk
-			body = info.chunk_data(@chunkid)
-		end
+		elsif @method == "put" then 
+		  req = Net::HTTP::Put.new(path)
+			body = info.read(@byte_range)
+		else
+      raise HTTPException.new(405,"Invalid method: #{@method}")
+    end
     
-    req.add_field("Range", "#{range.begin}-#{range.end}")
-		res = Net::HTTP.start(peer[0], peer[1]) {|http| http.request(req,body) }
+    req.add_field("Range", "#{@byte_range.begin}-#{@byte_range.end}")
+    req.add_field("Host",vhost)
+		res = Net::HTTP.start(@peer,@port) {|http| http.request(req,body) }
     
-    if res.code=='200' and @transfer_direction == :in then
+    if res.code=='206' and @method=="get" then
       @@log.debug("BODY DOWNLOADED: #{res.body}")
-      info.set_chunk_data(@chunkid,res.body) # assumes we requested entire chunk
+      info.write(@byte_range.first,res.body)
       msg={
         "type"=>"completed",
         "url"=>@url,
-        "chunk_id"=>@chunkid
+        "range"=>@byte_range
       }
       @server_connection.send_message(msg)
+    else
+      puts "HTTP RESPONSE: code=#{res.code} body=#{res.body}"
     end  
 
     rescue Exception=>e
-      puts "Exception: #{e.to_s} line=#{e.backtrace[0]}"
+      puts "Exception: #{e.to_s} trace=\n#{e.backtrace.join("\n")}"
     end
   end
 end

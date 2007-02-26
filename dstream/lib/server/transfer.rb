@@ -2,7 +2,7 @@ require File.dirname(__FILE__)+'/server_config'
 
 class Transfer
   attr_reader :taker, :giver, :url, :chunkid
-  attr_reader :connector, :acceptor
+  attr_reader :connector, :acceptor, :byte_range
  
 	@@config = ServerConfig.instance
 
@@ -24,7 +24,7 @@ class Transfer
     addr,port=@acceptor.get_peer_info
 
     # We're going to send byte ranges along with chunk ids.
-    range = @file_service.get_info(@url).chunk_range(@chunkid)
+    @byte_range = @file_service.get_info(@url).chunk_range(@chunkid)
 
     request={
       "type"=>"transfer",
@@ -32,7 +32,7 @@ class Transfer
       "port"=>@acceptor.user_data.listen_port,
       "method"=> @connector == @taker ? "get" : "put",
       "url"=>@url,
-      "range"=> { "min"=> range.first, "max"=> range.last } 
+      "range"=> @byte_range
     } 
 
     @connector.send_message(request)

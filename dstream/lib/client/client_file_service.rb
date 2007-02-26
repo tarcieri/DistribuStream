@@ -1,31 +1,25 @@
 require "uri"    
 require "pathname"
 require File.dirname(__FILE__) + '/../common/file_service_base.rb'
-    
+require File.dirname(__FILE__) + '/memory_buffer.rb'    
     
 #The client specific file utilities.
 class ClientFileInfo < FileInfo
-	#string containing the chunk data
-	attr_accessor :data
 
-  #Return a raw string of chunk data. The range parameter is local
-	#to this chunk and is 0 based. That is, the first byte of every chunk
-	#is represented by 0.
-  def chunk_data(chunkid,range=nil)
+  def write(start_pos,data)
+    @buffer||=MemoryBuffer.new
+    @buffer.write(start_pos,data)
+  end
+
+  def read(range)
     begin
-		  # full range of chunk if range isnt specifiedn
-      range=0..chunk_size(chunkid)-1 if range==nil
-      return data[chunkid][range]
+      @buffer||=MemoryBuffer.new
+      return @buffer.read(range)
     rescue
       return nil
     end
   end
-
-  #Set a raw string of chunk data. Data is assumed to take up the entire chunk
-  def set_chunk_data(chunkid,data)
-    @data ||= Array.new
-    @data[chunkid] = data
-  end
+  
 end
 
 

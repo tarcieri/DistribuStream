@@ -94,8 +94,7 @@ EventMachine::run {
 
     request={
       "type"=>"provide",
-      "url"=>url,
-      "chunk_range"=>0..2
+      "url"=>url
     }
     connection.send_message(request)
   end

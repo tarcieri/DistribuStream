@@ -42,12 +42,16 @@ class Client < Mongrel::HttpHandler
 		return nil
 	end
 
+  def request_uri
+
+  end
 
   #handler for Mongrel (called in a separate thread, one for each client)
   def process(request,response)
 		begin
+      @@log.debug "Creating TransferListener"
       transfer=ClientTransferListener.new(request,response,@server_connection,@file_service,self)
-      @@log.debug "Created TransferListener peer=#{transfer.peer}"  
+       
      
 		  #Needs to be locked because multiple threads could attempt to append a transfer at once
 			@mutex.synchronize do
@@ -70,9 +74,9 @@ class Client < Mongrel::HttpHandler
 
 
 	def transfer_matches?(transfer, message)
-		return( transfer.peer[0] == message["peer"][0] and 
+		return( transfer.peer == message["peer"] and 
             transfer.url == message["url"] and
-            transfer.chunkid == message["chunk_id"] )
+            transfer.byte_range == message["range"] )
 	end
 
   def dispatch_message(message,connection)
@@ -87,7 +91,6 @@ class Client < Mongrel::HttpHandler
 			if !@@config.provide then
 			  request={
 					"type"=>"request",
-					"chunk_range"=> 0..2,
 					"url"=> message["url"]
 				}
 				connection.send_message(request)
@@ -105,14 +108,9 @@ class Client < Mongrel::HttpHandler
     when "tell_verify"
 			@transfers.each do |t|
         if transfer_matches?(t, message) then
-          # if the server does not authorize the transfer, kill it and the associated connection
-          if !message["is_authorized"] then
-            @transfers.delete(t)
-            t.peer.close_connection
-          else
-						@@log.debug("Restarting thread execution: thread=#{t.thread.inspect}")
-						t.thread.run
-          end
+          t.authorized=true if message["is_authorized"]
+				  @@log.debug("Restarting thread execution: thread=#{t.thread.inspect}")
+					t.thread.run
 				  break
         end
       end

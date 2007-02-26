@@ -35,7 +35,7 @@ class FileInfo
     max_byte=byte_range.last
     max_byte=@file_size-1 if max_byte==-1 or max_byte>=@file_size 
     max=chunk_from_offset(max_byte)
-    max-=1 if exclude_partial
+    max-=1 if exclude_partial and max_byte<chunk_range(max).last
     return min..max
   end
 

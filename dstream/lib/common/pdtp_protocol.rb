@@ -60,7 +60,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
       receive_message(message)
     rescue Exception
       @@log.warn("pdtp_protocol closed connection (parse error)")
-      error_close_connection("JSON parse error: #{line.inspect}") #there was an error in parsing
+      error_close_connection("JSON parse error: #{line}") #there was an error in parsing
     end
   end
   
@@ -102,7 +102,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
 
   def send_message message
     @mutex.synchronize do
-      #range_to_hash(message)
+      range_to_hash(message)
       outstr=JSON.unparse(message)+"\n"
 			id = @@listener.get_id(self)
       @@log.debug( "#{id} send: #{outstr.chomp}")

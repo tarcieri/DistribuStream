@@ -106,16 +106,15 @@ class Server
   end
 
   #returns true if the specified transfer exists
-  def transfer_authorized?(peer,url,chunkid)
-    #since the ask_verify message comes from the listener,
-    #we must make sure that the peer is equal to the connector in an authorized
-    #transfer
+  def transfer_authorized?(peer,url,range)
     
     @transfers.each do |t|
 			#TODO	
       #server has no idea which port the peers are communicating on, so only check the address
       #this isn't a great way to do this, come up with better ideas
-			if t.connector.get_peer_info[0]==peer[0] and t.url==url and t.chunkid==chunkid then
+      puts "#{peer},#{url},#{range}"
+      puts "#{t.connector.get_peer_info[0]}, #{t.url}, #{t.byte_range}"
+			if t.connector.get_peer_info[0]==peer and t.url==url and t.byte_range==range then
         # do we need to check transfer state here??
         return true
       end
@@ -145,6 +144,7 @@ class Server
     when "provide"
       #puts message.inspect
       chunk_range=@file_service.get_info(message["url"]).chunk_range_from_byte_range(message["range"],true)  
+      puts "PROVIDING CHUNK RANGE:: #{chunk_range} range=#{message["range"]}"
       client_info(connection).chunk_info.provide(message["url"],chunk_range)
       spawn_transfers
     when "unrequest"
@@ -154,12 +154,12 @@ class Server
       chunk_range=@file_service.get_info(message["url"]).chunk_range_from_byte_range(message["range"],false)
       client_info(connection).chunk_info.unprovide(message["url"],chunk_range)
     when "ask_verify"
-      ok=transfer_authorized?(message["peer"],message["url"],message["chunk_id"])
+      ok=transfer_authorized?(message["peer"],message["url"],message["range"])
       response={
         "type"=>"tell_verify",
         "peer"=>message["peer"],
         "url"=>message["url"],
-        "chunk_id"=>message["chunk_id"],
+        "range"=>message["range"],
         "is_authorized"=>ok
       }
       connection.send_message(response)
@@ -168,13 +168,17 @@ class Server
 		when "completed"
 		  transfer = nil
 			@transfers.each do |t|
-				if t.taker == connection and t.url == message['url'] and t.chunkid == message['chunk_id'] then
+				if t.taker == connection and t.url == message['url'] and t.byte_range == message['range'] then
 				 	transfer = t
 					break
 			  end
 		  end
 
-      transfer_completed(transfer)
+      if transfer then
+        transfer_completed(transfer)
+      else
+        @@log.warn("Got completed message for unknown transfer: #{message.inspect}")
+      end
 				
     else
       raise "Unknown message type: #{message['type']}"

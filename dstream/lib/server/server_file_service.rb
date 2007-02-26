@@ -21,6 +21,18 @@ class ServerFileInfo < FileInfo
     rescue
       return nil
     end
+  end
+
+  def read(range)
+    #puts "READING: range=#{range}"
+    begin
+      file=open(@path)
+      file.pos=range.first
+      return file.read(range.last-range.first+1)
+    rescue Exception=>e
+      #puts "e=#{e}"
+      return nil
+    end
   end 
 end
 
