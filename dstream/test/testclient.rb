@@ -16,6 +16,12 @@ PDTPProtocol::listener=client
 
 OptionParser.new do |opts|
   opts.banner = "Usage: testclient.rb [options]"
+	opts.on("--bytestart BYTE", "Use specified starting byte") do |cs|
+    @@config.byte_start = cs.to_i
+	end
+	opts.on("--byteend BYTE", "Use specified ending byte") do |ce|
+	  @@config.byte_end = ce.to_i
+	end
 	opts.on("--log LOGFILE", "Use specified logfile") do |l|
 		@@config.log = l
   end

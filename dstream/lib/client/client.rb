@@ -91,7 +91,8 @@ class Client < Mongrel::HttpHandler
 			if !@@config.provide then
 			  request={
 					"type"=>"request",
-					"url"=> message["url"]
+					"url"=> message["url"],
+					"range"=> @@config.byte_start..@@config.byte_end
 				}
 				connection.send_message(request)
 			end

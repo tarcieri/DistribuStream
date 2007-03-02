@@ -112,8 +112,8 @@ class Server
 			#TODO	
       #server has no idea which port the peers are communicating on, so only check the address
       #this isn't a great way to do this, come up with better ideas
-      puts "#{peer},#{url},#{range}"
-      puts "#{t.connector.get_peer_info[0]}, #{t.url}, #{t.byte_range}"
+      #puts "#{peer},#{url},#{range}"
+      #puts "#{t.connector.get_peer_info[0]}, #{t.url}, #{t.byte_range}"
 			if t.connector.get_peer_info[0]==peer and t.url==url and t.byte_range==range then
         # do we need to check transfer state here??
         return true
