@@ -11,6 +11,9 @@ require File.dirname(__FILE__)+'/../lib/server/server_config'
 
 OptionParser.new do |opts|
 	opts.banner = "Usage: testserver.rb [options]"
+	opts.on("--chunksize CHUNKSIZE", "Use specified chunk size") do |c|
+	  @@config.chunk_size = c.to_i
+	end
 	opts.on("--log LOGFILE", "Use specified logfile") do |l|
 	  @@config.log = l
 	end
@@ -46,7 +49,7 @@ PDTPProtocol::listener=server
 
 #set root directory
 server.file_service.root=@@config.file_root
-
+server.file_service.default_chunk_size = @@config.chunk_size
 EventMachine::run {
 	host,port=@@config.host, @@config.port
   EventMachine::start_server host,port,PDTPProtocol

@@ -7,6 +7,7 @@ require File.dirname(__FILE__)+'/../common/file_service_base.rb'
 class ServerFileInfo < FileInfo
   attr_accessor :path
 
+ 
   #Return a raw string of chunk data. The range parameter is local to this chunk
 	#and zero based
   def chunk_data(chunkid,range=nil)
@@ -40,17 +41,18 @@ end
 #The file service provides utilities for determining various information about files.
 class ServerFileService < FileServiceBase
 
-	attr_accessor :root
+	attr_accessor :root,:default_chunk_size
 
 	def initialize     
 		@root=""
+		@default_chunk_size = 512
 	end
 
 	def get_info(url)
 		begin
 		  info=ServerFileInfo.new
 		  info.streaming=false
-		  info.base_chunk_size=512
+		  info.base_chunk_size=@default_chunk_size
       info.path=get_local_path(url)
 		  info.file_size=File.size?( info.path )
       return nil if info.file_size==0 or info.file_size==nil

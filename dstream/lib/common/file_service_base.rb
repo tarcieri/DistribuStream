@@ -25,7 +25,7 @@ class FileInfo
   #returns the chunkid that contains the requested byte offset
   def chunk_from_offset(offset)
     raise "Invalid offset #{offset}" if offset<0 or offset>=@file_size
-    return offset/@base_chunk_size
+    return offset / @base_chunk_size
   end
 
   def chunk_range_from_byte_range(byte_range,exclude_partial=true)
