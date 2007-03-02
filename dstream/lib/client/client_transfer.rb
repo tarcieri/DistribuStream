@@ -94,15 +94,15 @@ class ClientTransferListener < ClientTransferBase
 	  info = @file_service.get_info(@url)
     if @method == "put" then
 		  #Request was a PUT, so now we just have to read the body of the request
-			@@log.debug("BODY DOWNLOADED: #{@request.body.read}")
-      
+			#@@log.debug("BODY DOWNLOADED: #{@request.body.read}")
+      @@log.debug("Body Downloaded: url=#{@url} range=#{@byte_range} peer=#{@peer}")      
+
       @file_service.set_info(FileInfo.new) if info.nil? #we don't know that info exists before the transfer begins
 			info.write(@byte_range.first, @request.body.read)
 			@response.start(200) do |head,out| 
 			end
 		elsif @method=="get" then
       raise HTTPException.new(404,"File not found: #{@url}") if info.nil?
-      puts "RIGHT BEFORE READING!!!!"
       data=info.read(@byte_range)
       raise HTTPException.new(416,"Invalid range: #{@byte_range.inspect}") if data.nil?		
 
@@ -165,7 +165,8 @@ class ClientTransferConnector < ClientTransferBase
 		res = Net::HTTP.start(@peer,@port) {|http| http.request(req,body) }
     
     if res.code=='206' and @method=="get" then
-      @@log.debug("BODY DOWNLOADED: #{res.body}")
+      #@@log.debug("BODY DOWNLOADED: #{res.body.inspect}")
+      @@log.debug("Body Downloaded: url=#{@url} range=#{@byte_range} peer=#{@peer}:#{@port}")
       info.write(@byte_range.first,res.body)
       msg={
         "type"=>"completed",
