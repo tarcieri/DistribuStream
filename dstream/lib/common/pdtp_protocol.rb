@@ -30,7 +30,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
   def error_close_connection(error)
     
     if @@config.debug then
-      msg={"error"=>error}
+      msg={"type"=>"protocol_error","message"=>error}
       send_message msg 
       close_connection(true) # close after writing
     else
