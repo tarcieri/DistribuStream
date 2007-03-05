@@ -2,6 +2,7 @@ package org.pdtp;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 
@@ -12,14 +13,21 @@ public class PDTPFetch {
     } else {
       Network N = new Network(args[1], Integer.parseInt(args[2]),
           Integer.parseInt(args[3]), new MemoryCache());
-      ReadableByteChannel c = N.get(args[0], 1000);
-      InputStream in = Channels.newInputStream(c);
+      ReadableByteChannel c = N.get(args[0]);
+
+      ByteBuffer buf = ByteBuffer.allocate(512);
+      int bytes = c.read(buf);
       
-      int b = in.read();
-      while(b != -1) {
-        System.out.write(b);
-        b = in.read();
+      while(bytes != -1) {
+        for(int i = 0; i != buf.position(); ++i) {
+          System.out.write(buf.get(i));
+        }
+        
+        buf.rewind();
+        bytes = c.read(buf);
       }
+      
+      System.err.println("Done.");
     }
   }
 }

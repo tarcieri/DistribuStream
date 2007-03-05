@@ -16,6 +16,7 @@ import java.nio.channels.ReadableByteChannel;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
@@ -26,7 +27,7 @@ import org.pdtp.wire.Range;
 import org.pdtp.wire.Request;
 import org.pdtp.wire.TellInfo;
 import org.pdtp.wire.Transfer;
-import org.pdtp.wire.TransferComplete;
+import org.pdtp.wire.Completed;
 
 public class Network implements ResourceHandler {
   public Network(String host, int port, int peerPort, Library cache) throws IOException {    
@@ -63,18 +64,19 @@ public class Network implements ResourceHandler {
     synchronized(metadataCache) {
       if(!metadataCache.containsKey(url)) {
         link.send(new AskInfo(url));
+      
+        boolean loop = true;
+        while(loop) {
+          try {
+            metadataCache.wait(timeout);
+            loop = !metadataCache.containsKey(url) && timeout == 0;
+          } catch (InterruptedException e) { }
+        }
       }
       
-      boolean loop = true;
-      while(loop) {
-        try {
-          metadataCache.wait(timeout);
-          loop = !metadataCache.containsKey(url) && timeout == 0;
-        } catch (InterruptedException e) { }
-      }
       info = metadataCache.get(url);
     }
-
+    
     return info;
   }
   
@@ -101,8 +103,15 @@ public class Network implements ResourceHandler {
   }
   
   public ReadableByteChannel get(Resource res, long timeout) throws IOException {
+    TellInfo info = getInfo(res.getUrl(), timeout);
+    
     Requester req = new Requester(res, timeout);
-    req.start();
+    req.start();        
+    
+    if(info != null && info.size != 0) {
+      res = new Resource(res.getUrl(), new Range(0, info.size));
+    }      
+    
     return cache.getChannel(res, true);  
   }    
   
@@ -121,10 +130,12 @@ public class Network implements ResourceHandler {
       
       try {       
         if(requestRange == null) {
+          System.err.println("Getting info...");
           TellInfo info = getInfo(resource.getUrl(), timeout);
           if(info != null) {
              requestRange = new Range(0, info.size);
           } else {
+            System.err.println("NO INFO, Raw request.");
             makeRawRequest(resource);
             return;
           }
@@ -153,9 +164,11 @@ public class Network implements ResourceHandler {
           Set<Range> missing = cache.missing(new Resource(resource.getUrl(), requestRange));
           for(Range m : missing) {
             Resource res = new Resource(resource.getUrl(), m);
+            System.err.println("Partial time out, raw request.");
             makeRawRequest(res);
           }
         } else {
+          System.err.println("Timed out, raw request.");
           makeRawRequest(new Resource(resource.getUrl(), null));
         }
       }
@@ -164,8 +177,13 @@ public class Network implements ResourceHandler {
     public void makeRawRequest(Resource part) {      
       Transfer t = new Transfer();
       try {
-        URL url = new URL(part.getUrl());
-        t.byteRange = part.getRange();
+        String myurl = part.getUrl();
+        if(myurl.startsWith("pdtp")) {
+          myurl = myurl.replaceFirst("pdtp", "http");
+        }
+
+        URL url = new URL(myurl);
+        t.range = part.getRange();
         t.method = "get";
         //t.transferUrl = part.getUrl();        
         t.url = part.getUrl();
@@ -202,7 +220,7 @@ public class Network implements ResourceHandler {
       }
       hashStr = hashStr.substring(0, hashStr.length() - 1);
       
-      TransferComplete tc = new TransferComplete(r.getUrl(), host, port, hashStr);
+      Completed tc = new Completed(r.getUrl(), host, port, hashStr);
       link.send(tc);
     } catch (NoSuchAlgorithmException e1) {
       e1.printStackTrace();
@@ -238,14 +256,23 @@ public class Network implements ResourceHandler {
     public void run() {            
       try {        
         HttpURLConnection conn = (HttpURLConnection) base.openConnection();
-        System.out.println("Host: " + vhost);
         conn.setRequestProperty("Host", vhost);
         
         conn.setRequestMethod("GET");
-        if(resource.getRange() != null) {
+        if(resource.getRange() != null) {          
           conn.setRequestProperty("Range",
               "bytes=" + resource.getRange().min() + "-"
-              + resource.getRange().max());
+              + (resource.getRange().max() - 1));
+        }
+        
+        System.err.println("  <" + Thread.currentThread().getName() + ">  " + conn.getRequestMethod() + " " + conn.getURL().getPath());
+        for(Map.Entry<String, List<String>> e 
+            : conn.getRequestProperties().entrySet()) {
+          System.err.print("  <" + Thread.currentThread().getName() + ">  " + e.getKey() + ": ");
+          for(String v : e.getValue()) {
+            System.err.print(v + " ");
+          }
+          System.err.print("\n");
         }
         
         conn.connect();
@@ -275,6 +302,7 @@ public class Network implements ResourceHandler {
         
         Range actualRange = resource.getRange();
         if(conn.getResponseCode() == HttpURLConnection.HTTP_PARTIAL) {
+          System.err.println("RANGE: " + conn.getHeaderField("Content-Range"));
           actualRange = Range.parseHTTPRange(conn.getHeaderField("Content-Range"));           
 
           if(actualRange == null) {
@@ -361,10 +389,10 @@ public class Network implements ResourceHandler {
       }
       
       URL src = new URL(myurl);      
-      URL u = new URL("http://" + t.host + ":" + t.port + src.getPath());            
+      URL u = new URL("http://" + peerHost + ":" + t.port + src.getPath());            
       
-      Resource r = new Resource(t.url, t.byteRange);
-      //System.out.println("Told to " + t.method + " " + r + " at " + u);
+      Resource r = new Resource(t.url, t.range);
+      System.err.println("Told to " + t.method + " " + r + " at " + u);
       
       if(!cache.contains(r)) {
         Fetcher f = new Fetcher(r, u, src.getHost()

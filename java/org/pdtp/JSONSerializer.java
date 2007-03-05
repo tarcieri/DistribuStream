@@ -61,7 +61,7 @@ public class JSONSerializer implements Serializer {
     
     if(o instanceof Range) {
       Range r = (Range) o;
-      o = new Range(r.min(), r.max() - 1);
+      o = new Range(r.min(), r.max() + 1);
     }
     
     return o;
@@ -70,7 +70,7 @@ public class JSONSerializer implements Serializer {
   public JSONObject convert(Object obj) throws JSONException, IllegalArgumentException, IllegalAccessException {
     if(obj instanceof Range) {
       Range r = (Range) obj;
-      obj = new Range(r.min(), r.max() + 1);
+      obj = new Range(r.min(), r.max() - 1);
     }    
     
     Class c = obj.getClass();

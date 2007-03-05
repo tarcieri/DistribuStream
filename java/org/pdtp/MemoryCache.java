@@ -13,9 +13,12 @@ import java.util.TreeSet;
 
 import org.pdtp.wire.Range;
 
+import static java.util.Collections.synchronizedMap;
+import static java.util.Collections.synchronizedSortedSet;
+
 public class MemoryCache implements Library {
   public MemoryCache() {
-    catalogue = new HashMap<String, SortedSet<MemoryCacheElement>>();
+    catalogue = synchronizedMap(new HashMap<String, SortedSet<MemoryCacheElement>>());
   }
   
   public ByteBuffer allocate(long size) {
@@ -44,15 +47,17 @@ public class MemoryCache implements Library {
     if(!blocking && !contains(resource))
       return null;
 
-    CacheReader r = new CacheReader(resource);
+    CacheReader r = new CacheReader(resource, this);
     r.start();
     return r.getChannel();    
   }
 
   public synchronized void write(Resource resource, ByteBuffer buffer) {
+    System.err.println(" >>>>>>>>>> WRITE " + resource);
+    
     if(!catalogue.containsKey(resource.getUrl()))
       catalogue.put(resource.getUrl(),
-          new TreeSet<MemoryCacheElement>()); 
+          synchronizedSortedSet(new TreeSet<MemoryCacheElement>())); 
     
     Range range = resource.getRange();
     
@@ -103,10 +108,12 @@ public class MemoryCache implements Library {
   private class CacheReader extends Thread {
     protected Resource resource;
     protected Pipe pipe;
+    protected MemoryCache cache;
     
-    public CacheReader(Resource res) throws IOException {
+    public CacheReader(Resource res, MemoryCache cache) throws IOException {
       this.resource = res;
       this.pipe = Pipe.open();
+      this.cache = cache;
     }
 
     public ReadableByteChannel getChannel() {
@@ -121,14 +128,28 @@ public class MemoryCache implements Library {
 
       WritableByteChannel out = pipe.sink();
       
-      while(!catalogue.containsKey(resource.getUrl())) { }
+      synchronized(cache) {      
+        while(!catalogue.containsKey(resource.getUrl())) {
+          try {
+            cache.wait();
+          } catch (InterruptedException e) {
+            e.printStackTrace();
+          }
+        }
+      }
       
       try {
         while(!needed.isEmpty()) {
-          for(MemoryCacheElement e : catalogue.get(resource.getUrl())) {
+          MemoryCacheElement chain[]
+            = catalogue.get(resource.getUrl()).toArray(new MemoryCacheElement[0]);
+                   
+          for(MemoryCacheElement e : chain) {
+            System.err.println(">>>>> I NEED " + needed);
             if(e.contains(needed.min())) {
+              
               Range i = needed.intersection(e);
-
+              System.err.println("<<<< FOUND " + e + "[" + i + "]");
+              
               ByteBuffer buf = allocate(i.size());
               synchronized(e.buffer) {
                 buf.put(e.buffer.array(),
@@ -136,14 +157,27 @@ public class MemoryCache implements Library {
                         buf.remaining());
                 buf.rewind();
               }
-
-              out.write(buf);            
+              
+              //for(int z = 0; z < buf.capacity(); ++z) {
+              //  System.err.println(" ==== " + (char) buf.get(z));
+              //}
+              
+              while(buf.remaining() != 0)
+                out.write(buf);              
               needed = needed.minus(e);
             }
           }
           
-          if(!needed.isEmpty())
-            waitForUpdate();
+          synchronized(cache) {
+            if(!needed.isEmpty()) {
+              try {
+                System.err.println(">>>>> I NEED " + needed + "::");
+                cache.wait();
+              } catch (InterruptedException e1) {
+                e1.printStackTrace();
+              }
+            }
+          }
         }
         
         out.close();
@@ -153,14 +187,5 @@ public class MemoryCache implements Library {
     }
   }
 
-  public synchronized void waitForUpdate() {
-    boolean interrupted = true;
-    while(!interrupted) {
-      try {
-        wait();
-      } catch (InterruptedException e) { }
-    }
-  }
-  
   private final Map<String, SortedSet<MemoryCacheElement>> catalogue;
 }

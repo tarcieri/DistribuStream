@@ -1,9 +1,9 @@
 package org.pdtp.wire;
 
-public class TransferComplete {
-  public TransferComplete() { }
+public class Completed {
+  public Completed() { }
   
-  public TransferComplete(String url, String host, int port, String hash) {
+  public Completed(String url, String host, int port, String hash) {
     this.url = url;
     this.host = host;
     this.port = port;
