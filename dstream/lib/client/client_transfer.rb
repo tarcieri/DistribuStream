@@ -25,9 +25,9 @@ class ClientTransferBase
 
   def parse_http_range(string)
     begin
-      arr=string.split("-")
-      raise if arr.size!=2
-      return arr[0].to_i..arr[1].to_i
+      raise "Can't parse range string: #{string}" unless string =~ /bytes=([0-9]+)-([0-9]+)/
+      #puts "parsed= #{$1}   #{$2}"
+      return (($1).to_i)..(($2).to_i)
     rescue
       return nil
     end
@@ -110,7 +110,7 @@ class ClientTransferListener < ClientTransferBase
 		  #Request was GET, so now we need to send the data
 			@response.start(206) do |head,out|
       	head['Content-Type'] = 'application/octet-stream'
-        head['Content-Range'] = "#{@byte_range.first}-#{@byte_range.last}"
+        head['Content-Range'] = "bytes #{@byte_range.first}-#{@byte_range.last}/*"
         #FIXME must include a DATE header according to http
 
       	out.write(data)
@@ -160,7 +160,7 @@ class ClientTransferConnector < ClientTransferBase
       raise HTTPException.new(405,"Invalid method: #{@method}")
     end
     
-    req.add_field("Range", "#{@byte_range.begin}-#{@byte_range.end}")
+    req.add_field("Range", "bytes=#{@byte_range.begin}-#{@byte_range.end}")
     req.add_field("Host",vhost)
 		res = Net::HTTP.start(@peer,@port) {|http| http.request(req,body) }
     
