@@ -19,9 +19,12 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
   
   def initialize *args
     super
-    @@num_connections+=1
     user_data=nil
     @mutex=Mutex.new
+  end
+
+  def post_init
+    @@num_connections+=1
     @@listener.connection_created(self) if @@listener.respond_to?(:connection_created)
   end
 
@@ -120,6 +123,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
   end
 
   def get_peer_info
+    #puts "GETPEERNAME:#{ get_peername.inspect}"
     port,addr= Socket.unpack_sockaddr_in(get_peername)
     return addr.to_s,port.to_i
   end
