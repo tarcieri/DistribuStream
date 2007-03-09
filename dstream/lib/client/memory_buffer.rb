@@ -66,6 +66,14 @@ class MemoryBuffer
     return Entry.new(start,data)    
   end
 
+  def bytes_stored
+    bytes=0
+    entries.each do |e|
+      bytes=bytes+e.data.size
+    end  
+    return bytes
+  end
+
   class Entry
     def initialize(start_pos,data)
       @start_pos,@data=start_pos,data

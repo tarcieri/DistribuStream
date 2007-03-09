@@ -19,6 +19,11 @@ class ClientFileInfo < FileInfo
       return nil
     end
   end
+
+  def bytes_downloaded
+    @buffer||=MemoryBuffer.new
+    return @buffer.bytes_stored
+  end
   
 end
 

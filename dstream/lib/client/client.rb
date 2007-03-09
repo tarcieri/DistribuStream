@@ -115,8 +115,10 @@ class Client < Mongrel::HttpHandler
 				  break
         end
       end
+    when "hash_verify"
+      @@log.debug("Hash verified for url=#{message["url"]} range=#{message["range"]} hash_ok=#{message["hash_ok"]}")
 		else
-      raise "from server: unknown message type: #{message['type']} "
+      raise "Server sent an unknown message type: #{message['type']} "
     end
   end
 

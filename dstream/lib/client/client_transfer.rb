@@ -2,6 +2,7 @@ require File.dirname(__FILE__)+'/client_file_service'
 require "thread"
 require "net/http"
 require "uri"
+require "digest/sha2"
 
 
 class HTTPException < Exception
@@ -168,10 +169,14 @@ class ClientTransferConnector < ClientTransferBase
       #@@log.debug("BODY DOWNLOADED: #{res.body.inspect}")
       @@log.debug("Body Downloaded: url=#{@url} range=#{@byte_range} peer=#{@peer}:#{@port}")
       info.write(@byte_range.first,res.body)
+      hash=Digest::SHA256.hexdigest(res.body) rescue nil
+
       msg={
         "type"=>"completed",
         "url"=>@url,
-        "range"=>@byte_range
+        "range"=>@byte_range,
+        "hash"=>hash,
+        "peer"=>@peer
       }
       @server_connection.send_message(msg)
     else

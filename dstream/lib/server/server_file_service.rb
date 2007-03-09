@@ -68,7 +68,7 @@ class ServerFileService < FileServiceBase
 		return (Pathname.new(@root) + path).to_s	
 	end
 
-  #def get_chunk_hash(url,chunk_id)
-  #  return Digest::SHA256.hexdigest(get_chunk_data(url,chunk_id)) rescue nil
-  #end
+  def get_chunk_hash(url,chunk_id)
+    return Digest::SHA256.hexdigest( get_info(url).chunk_data(chunk_id) ) rescue nil
+  end
 end

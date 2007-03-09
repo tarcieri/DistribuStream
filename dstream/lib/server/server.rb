@@ -6,7 +6,7 @@ class Server
   attr_accessor :file_service
   def initialize()
     @connections = Array.new
-    @transfers = Array.new
+    #@transfers = Hash.new #keyed on Transfer::hash
   	@ids = Hash.new
 		@id = 0
 	end
@@ -44,26 +44,49 @@ class Server
   end
 
   # called when a transfer either finishes, successfully or not
-  def transfer_completed(transfer)
-      
-      #FIXME assumes success right now
-      #the client now has the chunk
-      client_info(transfer.taker).chunk_info.provide(transfer.url,transfer.chunkid..transfer.chunkid)
+  def transfer_completed(transfer,chunk_hash)      
 
-      @@log.debug("#{@ids[transfer.giver]}->#{@ids[transfer.taker]} transfer completed: #{transfer}")
-    
+      # did the transfer complete successfully?
+      local_hash=@file_service.get_chunk_hash(transfer.url,transfer.chunkid)
+
+      if chunk_hash==nil then
+        success=true
+        send_response=false
+      else
+        success= local_hash==chunk_hash 
+        send_response=true
+      end
+      
       c1=client_info(transfer.taker)
       c2=client_info(transfer.giver)
- 
-      #puts "taker trusts giver with: #{c1.trust.weight(c2.trust)}"
-      #puts "giver trusts taker with: #{c2.trust.weight(c1.trust)}"
- 
-      #update trust
-      c1.trust.success(c2.trust)
-      
-      @@log.debug("#{@ids[transfer.taker]}->#{@ids[transfer.giver]} taker trusts giver with: #{c1.trust.weight(c2.trust)}")
-      @@log.debug("#{@ids[transfer.giver]}->#{@ids[transfer.taker]} giver trusts taker with: #{c2.trust.weight(c1.trust)}")
- 			@transfers.delete(transfer)
+
+      if success then
+        client_info(transfer.taker).chunk_info.provide(transfer.url,transfer.chunkid..transfer.chunkid)
+        c1.trust.success(c2.trust)
+      else
+        client_info(transfer.taker).chunk_info.unprovide(transfer.url,transfer.chunkid..transfer.chunkid)
+        c1.trust.failure(c2.trust)
+      end  
+
+      outstr="#{@ids[transfer.giver]}->#{@ids[transfer.taker]} transfer completed: #{transfer}"
+      outstr=outstr+" t->g=#{c1.trust.weight(c2.trust)} g->t=#{c2.trust.weight(c1.trust)}" 
+      @@log.debug(outstr)
+    
+      if send_response then
+        msg={
+          "type"=>"hash_verify",
+          "url"=>transfer.url,
+          "range"=>transfer.byte_range,
+          "hash_ok"=>success
+        }
+        transfer.taker.send_message(msg)
+      end
+
+ 			client_info(transfer.taker).transfers.delete(transfer.hash)
+      client_info(transfer.giver).transfers.delete(transfer.hash)
+
+      spawn_transfers_for_client(transfer.taker)
+      spawn_transfers_for_client(transfer.giver)
 
   end
 
@@ -71,7 +94,10 @@ class Server
     @@log.debug("#{@ids[giver]}->#{@ids[taker]} transfer starting: taker=#{taker} giver=#{giver} url=#{url}  chunkid=#{chunkid}")
     client_info(taker).chunk_info.transfer(url,chunkid..chunkid)
    
-    @transfers << Transfer.new(taker,giver,url,chunkid,file_service) 
+    t=Transfer.new(taker,giver,url,chunkid,file_service)
+    #@transfers[t.hash] = t
+    client_info(taker).transfers[t.hash]=t
+    client_info(giver).transfers[t.hash]=t
   end
 
   # performs a brute force search to pair clients together, 
@@ -105,20 +131,69 @@ class Server
     return false
   end
 
-  #returns true if the specified transfer exists
-  def transfer_authorized?(peer,url,range)
+  #spawns uploads and downloads for this client.
+  #should be called every time there is a change that would affect 
+  #what this client has or wants
+  def spawn_transfers_for_client(client_connection)
+    info=client_info(client_connection)
+
+    while info.wants_download? do
+      break if spawn_download_for_client(client_connection) == false
+    end
+
+    while info.wants_upload? do
+      break if spawn_upload_for_client(client_connection) == false
+    end
+  end
+
+  def spawn_download_for_client(client_connection)
+    feasible_peers=[]
+
+    c1info=client_info(client_connection)
+    begin
+      url,chunkid=c1info.chunk_info.high_priority_chunk
+    rescue
+      return false
+    end
+
+    connections.each do |c2|
+      next if client_connection==c2
+      if client_info(c2).chunk_info.provided?(url,chunkid) then
+        #FIXME check if this client wants to upload
+        feasible_peers << c2
+      end
+    end
+
+    # we now have a list of clients that have the requested chunk.
+    # pick one and start the transfer
+    if feasible_peers.size>0 then
+      #FIXME base this on the trust model
+      giver=feasible_peers[rand(feasible_peers.size)]
+      begin_transfer(client_connection,giver,url,chunkid)
+      return true
+    end
+
+    return false
+  end
+
+  def spawn_upload_for_client(client_connection)
+    c1info=client_info(client_connection)
+
+    connections.each do |c2|
+      next if client_connection==c2
     
-    @transfers.each do |t|
-			#TODO	
-      #server has no idea which port the peers are communicating on, so only check the address
-      #this isn't a great way to do this, come up with better ideas
-      #puts "#{peer},#{url},#{range}"
-      #puts "#{t.connector.get_peer_info[0]}, #{t.url}, #{t.byte_range}"
-			if t.connector.get_peer_info[0]==peer and t.url==url and t.byte_range==range then
-        # do we need to check transfer state here??
+      begin
+        url,chunkid=client_info(c2).chunk_info.high_priority_chunk
+      rescue
+        return false
+      end
+
+      if c1info.chunk_info.provided?(url,chunkid) then
+        begin_transfer(c2,client_connection,url,chunkid)
         return true
       end
     end
+
     return false
   end
 
@@ -140,21 +215,24 @@ class Server
     when "request"
       chunk_range=@file_service.get_info(message["url"]).chunk_range_from_byte_range(message["range"],false)
       client_info(connection).chunk_info.request(message["url"],chunk_range)
-      spawn_transfers #this should also be called periodically, but it is called here to improve latency
+      spawn_transfers_for_client(connection)
     when "provide"
       #puts message.inspect
       chunk_range=@file_service.get_info(message["url"]).chunk_range_from_byte_range(message["range"],true)  
       puts "PROVIDING CHUNK RANGE:: #{chunk_range} range=#{message["range"]}"
       client_info(connection).chunk_info.provide(message["url"],chunk_range)
-      spawn_transfers
+      spawn_transfers_for_client(connection)
     when "unrequest"
       chunk_range=@file_service.get_info(message["url"]).chunk_range_from_byte_range(message["range"],false)
       client_info(connection).chunk_info.unrequest(message["url"],chunk_range)
+      spawn_transfers_for_client(connection)
     when "unprovide"
       chunk_range=@file_service.get_info(message["url"]).chunk_range_from_byte_range(message["range"],false)
       client_info(connection).chunk_info.unprovide(message["url"],chunk_range)
+      spawn_transfers_for_client(connection)
     when "ask_verify"
-      ok=transfer_authorized?(message["peer"],message["url"],message["range"])
+      hash=Transfer::hash(message["peer"],connection.get_peer_info[0],message["url"],message["range"])
+      ok= client_info(connection).transfers[hash] ? true : false
       response={
         "type"=>"tell_verify",
         "peer"=>message["peer"],
@@ -166,20 +244,14 @@ class Server
     when "change_port"
       client_info(connection).listen_port=message["port"].to_i
 		when "completed"
-		  transfer = nil
-			@transfers.each do |t|
-				if t.taker == connection and t.url == message['url'] and t.byte_range == message['range'] then
-				 	transfer = t
-					break
-			  end
-		  end
-
-      if transfer then
-        transfer_completed(transfer)
+      transfer_hash=Transfer::hash(message["peer"],connection.get_peer_info[0],message["url"],message["range"])
+		  transfer=client_info(connection).transfers[transfer_hash]
+      if transfer and transfer.taker==connection then
+        transfer_completed(transfer,message["hash"])
       else
-        @@log.warn("Got completed message for unknown transfer: #{message.inspect}")
+        raise "You sent me a transfer completed message for unknown transfer: #{transfer_hash}"
       end
-				
+			
     else
       raise "Unknown message type: #{message['type']}"
     end

@@ -3,6 +3,7 @@ require File.dirname(__FILE__)+'/../lib/client/client_file_service.rb'
 require File.dirname(__FILE__)+'/../lib/client/client.rb'
 require File.dirname(__FILE__)+'/../lib/common/pdtp_protocol.rb'
 require File.dirname(__FILE__)+'/../lib/client/memory_buffer.rb'
+require File.dirname(__FILE__)+'/../lib/server/transfer.rb'
 
 def test_range_to_hash(hash)
   puts "before:"+hash.inspect
@@ -61,4 +62,8 @@ puts mb.read(11..22).inspect # "ello&goodbye"
 
 mb.write(14,"!!!")
 puts mb.read(11..22).inspect # "ell!!!oodbye"
+
+puts "Testing transfer hash"
+puts Transfer::hash("192.168.1.2","255.255.255.0","pdtp://bla.com/test2.txt",1..20)
+puts Transfer::hash("255.255.255.0","192.168.1.2","pdtp://bla.com/test2.txt",1..20)
 

@@ -1,4 +1,5 @@
 require 'singleton'
+require 'logger'
 
 class PDTPConfig
 	include Singleton
@@ -11,6 +12,9 @@ class PDTPConfig
 		@file_root = File.dirname(__FILE__)+'/../../../testfiles'
 		@debug = true
 		@log = STDOUT
+    @debug_level=Logger::DEBUG
 	end
 
 end
+
+

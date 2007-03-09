@@ -3,11 +3,22 @@ require File.dirname(__FILE__)+'/trust.rb'
 class ClientInfo
   attr_accessor :chunk_info, :trust
   attr_accessor :listen_port
+  attr_accessor :transfers  
+
+  # returns true if this client wants the server to spawn a transfer for it
+  def wants_download?
+    return @transfers.size< 5
+  end 
+
+  def wants_upload?
+    return @transfers.size< 5
+  end 
   
   def initialize
     @chunk_info=ChunkInfo.new
     @listen_port=6000 #default
     @trust=Trust.new
+    @transfers=Hash.new
   end
  
 end
