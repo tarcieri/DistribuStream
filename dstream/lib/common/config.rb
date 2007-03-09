@@ -1,10 +1,11 @@
 require 'singleton'
 require 'logger'
+require 'optparse'
 
 class PDTPConfig
 	include Singleton
 
-	attr_accessor :host,:port,:file_root,:debug,:log
+	attr_accessor :host,:port,:file_root,:debug,:log,:debug_level
 	
 	def initialize 
 		@host = '0.0.0.0'

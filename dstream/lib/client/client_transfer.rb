@@ -52,7 +52,7 @@ class ClientTransferListener < ClientTransferBase
     @server_connection,@file_service=server_connection,file_service
     @authorized=false  
 
-    puts "params=#{@request.params.inspect}"    
+    @@log.debug "params=#{@request.params.inspect}"    
     @method=@request.params["REQUEST_METHOD"].downcase   
 
     #Mongrel doesn't seem to give us the remote port, but it isnt used anyway so just set to 0

@@ -46,6 +46,10 @@ OptionParser.new do |opts|
 	opts.on("-d","Turn on debugging") do |d|
 	  @@config.debug = d
 	end
+  opts.on("-q","--quiet", "Be quiet") do |q|
+    @@config.debug_level=Logger::INFO if q
+  end
+
 	opts.on_tail("-h","--help","Print this message") do 
 		puts opts
 		exit
@@ -53,7 +57,7 @@ OptionParser.new do |opts|
 end.parse!
 
 @@log=Logger.new(@@config.log)
-@@log.level= Logger::DEBUG
+@@log.level= @@config.debug_level
 @@log.datetime_format=""
 
 
@@ -64,6 +68,14 @@ EventMachine::run {
   client.server_connection=connection
   @@log.info("connecting with ev=#{EventMachine::VERSION}")
   @@log.info("host= #{host}  port=#{port}")
+
+  if !@@config.provide then
+    EventMachine::add_periodic_timer(2) do
+      info=cfs.get_info(@@config.url)
+      break if info.nil?
+      puts "Bytes downloaded: #{info.bytes_downloaded}"
+    end
+  end
 
   #start the mongrel server on the specified port.  If it isnt available, keep trying higher ports
   begin

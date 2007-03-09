@@ -68,7 +68,7 @@ class MemoryBuffer
 
   def bytes_stored
     bytes=0
-    entries.each do |e|
+    @entries.each do |e|
       bytes=bytes+e.data.size
     end  
     return bytes
