@@ -8,6 +8,11 @@ Spec::Rake::SpecTask.new(:spec) do |task|
   task.spec_files = FileList['**/*_spec.rb']
 end
 
+Spec::Rake::SpecTask.new(:specfs) do |task|
+  task.spec_files= FileList['**/*_spec.rb']
+  task.spec_opts="-f s".split
+end
+
 Spec::Rake::SpecTask.new(:spec_coverage) do |task|
   task.spec_files = FileList['**/*_spec.rb']
   task.rcov = true
