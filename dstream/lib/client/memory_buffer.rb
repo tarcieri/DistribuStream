@@ -5,13 +5,13 @@ class MemoryBuffer
   end
 
   def write(start_pos, data)
+    return if data.size==0
     new_entry=Entry.new(start_pos,data)
     @entries.each do |e|
       union=combine(e,new_entry)
       if union then
         @entries.delete(e)
-        @entries << union
-        return
+        new_entry=union
       end 
     end
 
@@ -22,6 +22,7 @@ class MemoryBuffer
   #returns a string containing the desired data
   #or nil if the data is not all there
   def read(range)
+    return nil if range.first>range.last
     current_byte=range.first
     
     buffer=String.new
@@ -59,11 +60,14 @@ class MemoryBuffer
   def combine(old,new)
     return nil unless intersects?(old,new)
 
-    data=String.new
     start= old.start_pos<new.start_pos ? old.start_pos: new.start_pos
-    data[old.start_pos-start..old.end_pos-start]=old.data
-    data[new.start_pos-start..new.end_pos-start]=new.data
-    return Entry.new(start,data)    
+    
+    stringio=StringIO.new
+    stringio.seek(old.start_pos-start)
+    stringio.write(old.data)
+    stringio.seek(new.start_pos-start)
+    stringio.write(new.data)
+    return Entry.new(start,stringio.string)    
   end
 
   def bytes_stored
