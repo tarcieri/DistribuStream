@@ -61,10 +61,12 @@ class Server
       c2=client_info(transfer.giver)
 
       if success then
+        #the taker now has the file, so he can provide it
         client_info(transfer.taker).chunk_info.provide(transfer.url,transfer.chunkid..transfer.chunkid)
         c1.trust.success(c2.trust)
       else
-        client_info(transfer.taker).chunk_info.unprovide(transfer.url,transfer.chunkid..transfer.chunkid)
+        #transfer failed, the client still wants the chunk
+        client_info(transfer.taker).chunk_info.request(transfer.url,transfer.chunkid..transfer.chunkid)
         c1.trust.failure(c2.trust)
       end  
 
