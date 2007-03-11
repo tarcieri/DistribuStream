@@ -11,8 +11,11 @@ class FileInfo
   #size of the specified chunk
   def chunk_size(chunkid) 
     raise "Invalid chunkid #{chunkid}" if chunkid<0 or chunkid>=num_chunks
-    rem=@file_size % @base_chunk_size
-    return (chunkid==num_chunks-1) ? rem : @base_chunk_size
+    if chunkid==num_chunks-1 then
+      return @file_size-@base_chunk_size*chunkid 
+    else
+      return @base_chunk_size
+    end
   end
 
   #range of bytes taken up by this chunk in the entire file
@@ -41,13 +44,13 @@ class FileInfo
 
   #returns a range of bytes local to a chunk given a range of bytes in the file
   # returns [chunk,internal_range]
-  def internal_range(range)
-    chunkid=chunk_from_offset(range.first)
-    start=chunkid*@base_chunk_size
-    irange=(range.first-start)..(range.last-start)
-    raise "Invalid range #{range}" if irange.first<0 or irange.last>=chunk_size(chunkid)
-    return [chunkid,irange]
-  end
+  #def internal_range(range)
+  #  chunkid=chunk_from_offset(range.first)
+  #  start=chunkid*@base_chunk_size
+  #  irange=(range.first-start)..(range.last-start)
+  #  raise "Invalid range #{range}" if irange.first<0 or irange.last>=chunk_size(chunkid)
+  #  return [chunkid,irange]
+  #end
 
   #returns a string containing the data for this chunk
   #range specifies a range of bytes local to this chunk
