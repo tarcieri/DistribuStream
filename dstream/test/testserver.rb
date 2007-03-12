@@ -63,11 +63,12 @@ class MongrelServerHandler< Mongrel::HttpHandler
   def process(request,response)
     response.start(200) do |head,out|
       begin
+        #raise "This is a test"
         outstr=@server.generate_html_stats
       rescue Exception=>e
-        outstr="Exception: #{e}+\n#{e.backtrace.join("\n")}"
+        outstr="Exception: #{e}\n#{e.backtrace.join("\n")}"
       end
-      out.write(@server.generate_html_stats)
+      out.write(outstr)
     end    
   end
 end
