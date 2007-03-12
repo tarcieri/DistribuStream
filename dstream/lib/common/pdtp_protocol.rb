@@ -48,7 +48,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
       @@listener.dispatch_message(message,self) 
     rescue Exception=>e
       @@log.warn("pdtp_protocol closing connection for exception: #{e}")
-      @@log.warn("backtrace:\n #{e.backtrace.join('\n')}\n")
+      @@log.warn("backtrace:\n #{e.backtrace.join("\n")}\n")
       error_close_connection(e.to_s) # protocol error
     end
   end
