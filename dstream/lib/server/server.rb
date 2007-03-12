@@ -260,5 +260,44 @@ class Server
 
   end
 
+  def connection_name(c)
+    host,port=c.get_peer_info
+    return "#{get_id(c)}: #{host}:#{port}"
+  end
+
+  def generate_html_stats
+    s=String.new
+    s=s+"<html><head><title>PDTP Statistics</title></head>"
+    s=s+"<body>Time=#{Time.new.to_s} "
+
+    s=s+"<center><table border=1>"
+    s=s+"<tr><th>Client</th><th>Downloads</th><th>Other</th></tr>"
+
+    @connections.each do |c|
+     
+      transfers=""
+      client_info(c).transfers.each do |key,t|
+        if c==t.giver then
+          str="UP: "
+          peer=t.taker
+        else
+          str="DOWN: "
+          peer=t.giver
+        end
+          
+        
+        str=str+"url=#{t.url} peer=#{connection_name(peer)} range=#{t.byte_range}"
+        transfers=transfers+str+"<br>"
+      end
+      
+      s=s+"<tr><td>#{connection_name(c)}</td><td>#{transfers}</td><td>bla</td></tr>"
+    end 
+    s=s+"</table>"
+
+    s=s+"</body></html>"
+
+    return s
+  end
+
 end
     

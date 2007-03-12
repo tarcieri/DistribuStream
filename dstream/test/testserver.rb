@@ -7,6 +7,8 @@ require File.dirname(__FILE__)+'/../lib/server/server_file_service'
 require File.dirname(__FILE__)+'/../lib/common/pdtp_protocol'
 require File.dirname(__FILE__)+'/../lib/server/server_config'
 
+require 'mongrel'
+
 @@config=ServerConfig.instance
 
 OptionParser.new do |opts|
@@ -50,6 +52,27 @@ end.parse!
 server=Server.new
 server.file_service=ServerFileService.new
 PDTPProtocol::listener=server
+
+
+#set up the mongrel server for serving the stats page
+class MongrelServerHandler< Mongrel::HttpHandler
+  def initialize(server)
+    @server=server
+  end
+
+  def process(request,response)
+    response.start(200) do |head,out|
+      Thread.critical=true
+      out.write(@server.generate_html_stats)
+      Thread.critical=false
+    end    
+  end
+end
+mongrel_server=Mongrel::HttpServer.new("0.0.0.0",@@config.port+1)
+@@log.info("Mongrel server listening on port: #{@@config.port+1}")
+mongrel_server.register("/",MongrelServerHandler.new(server))
+mongrel_server.run
+                        
 
 #set root directory
 server.file_service.root=@@config.file_root

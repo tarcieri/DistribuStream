@@ -86,6 +86,13 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
     end
   end
 
+  #throws an exception if any of the fields specified are not in the message
+  def expect_fields(message,fields)
+    fields.each do |f|
+      raise "You didnt send a required field: #{f}" if message[f].nil?
+    end
+  end
+
   def hash_to_range(message)
     key="range"
     auto_types=["provide","request"] #these types assume a range if it isnt specified
