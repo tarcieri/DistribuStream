@@ -1,5 +1,6 @@
 require File.dirname(__FILE__) + '/client_info'
 require File.dirname(__FILE__) +'/transfer'
+require "thread"
 
 class Server
   attr_reader :connections
@@ -9,18 +10,23 @@ class Server
     #@transfers = Hash.new #keyed on Transfer::hash
   	@ids = Hash.new
 		@id = 0
+    @stats_mutex=Mutex.new
 	end
 
   def connection_created(connection)
-    @@log.info("#{@id} Client connected: #{connection.get_peer_info.inspect}")
-    @connections << connection
-		@ids[connection] = @id
-		@id += 1
+    @stats_mutex.synchronize do
+      @@log.info("#{@id} Client connected: #{connection.get_peer_info.inspect}")
+      @connections << connection
+		  @ids[connection] = @id
+		  @id += 1
+    end
   end  
 
   def connection_destroyed(connection)
-    @@log.info("#{@ids[connection]} Client connection closed")
-    @connections.delete(connection)
+    @stats_mutex.synchronize do
+      @@log.info("#{@ids[connection]} Client connection closed")
+      @connections.delete(connection)
+    end
   end
 
   def get_id(connection)
@@ -200,6 +206,12 @@ class Server
   end
 
   def dispatch_message(message,connection)
+    @stats_mutex.synchronize do
+      dispatch_message_needslock(message,connection)
+    end
+  end
+
+  def dispatch_message_needslock(message,connection)
     case message["type"] 
     when "ask_info"
       info=file_service.get_info(message["url"])
@@ -266,12 +278,19 @@ class Server
   end
 
   def generate_html_stats
+    @stats_mutex.synchronize do
+      return generate_html_stats_needslock
+    end
+  end
+
+  def generate_html_stats_needslock
+
     s=String.new
     s=s+"<html><head><title>PDTP Statistics</title></head>"
     s=s+"<body>Time=#{Time.new.to_s} "
 
     s=s+"<center><table border=1>"
-    s=s+"<tr><th>Client</th><th>Downloads</th><th>Other</th></tr>"
+    s=s+"<tr><th>Client</th><th>Downloads</th><th>Files</th></tr>"
 
     @connections.each do |c|
      
@@ -289,9 +308,18 @@ class Server
         str=str+"url=#{t.url} peer=#{connection_name(peer)} range=#{t.byte_range}"
         transfers=transfers+str+"<br>"
       end
-      
-      s=s+"<tr><td>#{connection_name(c)}</td><td>#{transfers}</td><td>bla</td></tr>"
+
+      files=""
+      stats=client_info(c).chunk_info.get_file_stats
+      stats.each do |fs|
+        
+        files=files+"#{fs.url} size=#{fs.file_chunks} req=#{fs.chunks_requested}"
+        files=files+" prov=#{fs.chunks_provided} transf=#{fs.chunks_transferring}<br>"    
+      end      
+
+      s=s+"<tr><td>#{connection_name(c)}</td><td>#{transfers}</td><td>#{files}</td></tr>"
     end 
+
     s=s+"</table>"
 
     s=s+"</body></html>"

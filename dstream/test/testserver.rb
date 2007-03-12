@@ -62,9 +62,7 @@ class MongrelServerHandler< Mongrel::HttpHandler
 
   def process(request,response)
     response.start(200) do |head,out|
-      Thread.critical=true
       out.write(@server.generate_html_stats)
-      Thread.critical=false
     end    
   end
 end

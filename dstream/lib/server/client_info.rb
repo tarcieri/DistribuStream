@@ -57,6 +57,35 @@ class ChunkInfo
       end
     end 
   end
+
+  class FileStats
+    attr_accessor :file_chunks, :chunks_requested,:url
+    attr_accessor :chunks_provided, :chunks_transferring
+    def initialize
+      @url=""
+      @file_chunks=0
+      @chunks_requested=0
+      @chunks_provided=0
+      @chunks_transferring=0
+    end
+  end
+  
+  #returns an array of FileStats objects for debug output
+  def get_file_stats
+    stats=[]
+    @files.each do |name,file|
+      fs=FileStats.new
+      fs.file_chunks=file.size
+      fs.url=name
+      file.each do |chunk|
+        fs.chunks_requested+=1 if chunk==:requested
+        fs.chunks_provided+=1 if chunk==:provided
+        fs.chunks_transferring+=1 if chunk==:transfer
+      end
+      stats << fs
+    end
+    return stats 
+  end
     
 protected
 
