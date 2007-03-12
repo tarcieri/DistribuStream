@@ -43,17 +43,6 @@ public class Network implements ResourceHandler {
     this.link.setDaemon(true);
     this.link.start();
   }
-      
-  protected ByteChannel getChannel(Object address) {
-    try {
-      File f = File.createTempFile(address.toString(), null);
-      FileInputStream F = new FileInputStream(f);
-      return F.getChannel();
-    } catch (IOException e) {
-      e.printStackTrace();
-      return null;
-    }
-  }    
   
   public TellInfo getInfo(String url) throws IOException {
     return getInfo(url, 0);
@@ -114,6 +103,24 @@ public class Network implements ResourceHandler {
     
     return cache.getChannel(res, true);  
   }    
+  
+  public InputStream getStream(String url) throws IOException {
+    Resource r = new Resource(url, null);
+    return getStream(r);
+  }
+  
+  public InputStream getStream(String url, long timeout) throws IOException {
+    Resource r = new Resource(url, null);
+    return getStream(r, timeout);
+  }
+  
+  public InputStream getStream(Resource res) throws IOException {
+    return getStream(res, 0);
+  }
+  
+  public InputStream getStream(Resource res, long timeout) throws IOException {    
+    return Channels.newInputStream(get(res, timeout));
+  }
   
   private class Requester extends Thread {
     private final Resource resource;
@@ -210,17 +217,22 @@ public class Network implements ResourceHandler {
 
   public void postComplete(ByteBuffer b, Resource r, String host, int port) {
     try {
-      MessageDigest digest = MessageDigest.getInstance("MD5");
+      MessageDigest digest = MessageDigest.getInstance("SHA-256");
       b.rewind();
       digest.update(b);
       byte[] hashBytes = digest.digest();
       String hashStr = "";
       for(byte hb : hashBytes) {
-        hashStr += hb + ":";
+        int i = (int) hb;
+        if(i < 0)
+          i = 256 + i;
+        
+        hashStr += Integer.toHexString(i);
       }
-      hashStr = hashStr.substring(0, hashStr.length() - 1);
       
-      Completed tc = new Completed(r.getUrl(), host, port, hashStr);
+      System.err.println(r + " hash=" + hashStr);
+      
+      Completed tc = new Completed(r.getUrl(), host, port, hashStr, r.getRange());
       link.send(tc);
     } catch (NoSuchAlgorithmException e1) {
       e1.printStackTrace();

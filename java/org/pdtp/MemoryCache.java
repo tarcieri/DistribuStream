@@ -1,6 +1,9 @@
 package org.pdtp;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.Pipe;
 import java.nio.channels.ReadableByteChannel;
@@ -49,9 +52,9 @@ public class MemoryCache implements Library {
 
     CacheReader r = new CacheReader(resource, this);
     r.start();
-    return r.getChannel();    
+    return r.getChannel();
   }
-
+  
   public synchronized void write(Resource resource, ByteBuffer buffer) {
     System.err.println(" >>>>>>>>>> WRITE " + resource);
     
@@ -75,9 +78,7 @@ public class MemoryCache implements Library {
         Range i = range.intersection(e);        
         
         synchronized(e.buffer) {
-          //e.buffer.position((int) (i.min() - e.min()));
           buffer.position((int) (i.min() - resource.getRange().min()));
-          //e.buffer.put(buffer);
           e.buffer.put(buffer.array(),
               (int) (i.min() - resource.getRange().min()),
               e.buffer.remaining());
@@ -103,7 +104,7 @@ public class MemoryCache implements Library {
     }
     
     public ByteBuffer buffer;
-  }
+  }  
   
   private class CacheReader extends Thread {
     protected Resource resource;
@@ -125,30 +126,22 @@ public class MemoryCache implements Library {
       Range needed = resource.getRange();
       if(needed == null)
         needed = new Range(0, Long.MAX_VALUE);
-
+      resource = new Resource(resource.getUrl(), needed);
+      
       WritableByteChannel out = pipe.sink();
       
-      synchronized(cache) {      
-        while(!catalogue.containsKey(resource.getUrl())) {
-          try {
-            cache.wait();
-          } catch (InterruptedException e) {
-            e.printStackTrace();
-          }
-        }
-      }
-      
       try {
+        cache.waitOn(resource, 0L);        
+        
         while(!needed.isEmpty()) {
-          MemoryCacheElement chain[]
-            = catalogue.get(resource.getUrl()).toArray(new MemoryCacheElement[0]);
+          SortedSet<MemoryCacheElement> elSet = catalogue.get(resource.getUrl());
+          MemoryCacheElement chain[] = elSet.toArray(new MemoryCacheElement[0]);
                    
           for(MemoryCacheElement e : chain) {
             System.err.println(">>>>> I NEED " + needed);
-            if(e.contains(needed.min())) {
-              
+            if(e.contains(needed.min())) {              
               Range i = needed.intersection(e);
-              System.err.println("<<<< FOUND " + e + "[" + i + "]");
+              System.err.println("<<<< FOUND " + e + "[" + System.identityHashCode(e) + "]");
               
               ByteBuffer buf = allocate(i.size());
               synchronized(e.buffer) {
@@ -158,28 +151,27 @@ public class MemoryCache implements Library {
                 buf.rewind();
               }
               
+              System.err.println("CAP:" + buf.capacity());
+              
               //for(int z = 0; z < buf.capacity(); ++z) {
-              //  System.err.println(" ==== " + (char) buf.get(z));
+              //  System.out.write(buf.get(z));
               //}
               
-              while(buf.remaining() != 0)
-                out.write(buf);              
+             while(buf.remaining() != 0)
+               out.write(buf);
+              
+              System.err.println("Needed, before=" + needed);
+              System.err.println("e=" + e);
               needed = needed.minus(e);
+              System.err.println("Needed, after=" + needed);              
             }
           }
           
-          synchronized(cache) {
-            if(!needed.isEmpty()) {
-              try {
-                System.err.println(">>>>> I NEED " + needed + "::");
-                cache.wait();
-              } catch (InterruptedException e1) {
-                e1.printStackTrace();
-              }
-            }
+          if(!needed.isEmpty()) {
+            cache.waitOn(new Resource(resource.getUrl(), needed), 0l);
           }
         }
-        
+                
         out.close();
       } catch (IOException ex) {
         ex.printStackTrace();
@@ -187,5 +179,25 @@ public class MemoryCache implements Library {
     }
   }
 
+  private synchronized void waitOn(Resource r, long timeout) {
+    while(!catalogue.containsKey(r.getUrl())) {
+      try {
+        wait(timeout);
+      } catch (InterruptedException e) { }
+    }
+    
+    while(true) {
+      for(MemoryCacheElement e : catalogue.get(r.getUrl())) {        
+        if(e.contains(r.getRange().min)) {
+          return;
+        }
+      }
+      
+      try {
+        wait(timeout);
+      } catch (InterruptedException e1) { }
+    }
+  }
+  
   private final Map<String, SortedSet<MemoryCacheElement>> catalogue;
 }
