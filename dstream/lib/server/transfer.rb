@@ -43,11 +43,11 @@ class Transfer
 		return "taker=#{@taker}, giver=#{@giver}, connector=#{@connector}, acceptor=#{@acceptor}, url=#{@url}, chunk_id=#{@chunkid}"
 	end
 
-  def hash
-    return Transfer::hash(@taker.get_peer_info[0],@giver.get_peer_info[0],@url,@byte_range)
+  def transfer_hash
+    return Transfer::transfer_hash(@taker.get_peer_info[0],@giver.get_peer_info[0],@url,@byte_range)
   end
 
-  def Transfer::hash(ip1,ip2,url,byte_range)
+  def Transfer::transfer_hash(ip1,ip2,url,byte_range)
     hash=url+"#"+byte_range.to_s+"#"
     hash=hash+ ( (ip1<ip2) ? (ip1.to_s+"#"+ip2.to_s) : (ip2.to_s+"#"+ip1.to_s) )
     return hash    

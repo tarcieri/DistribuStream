@@ -84,8 +84,8 @@ class Server
         transfer.taker.send_message(msg)
       end
 
- 			client_info(transfer.taker).transfers.delete(transfer.hash)
-      client_info(transfer.giver).transfers.delete(transfer.hash)
+ 			client_info(transfer.taker).transfers.delete(transfer.transfer_hash)
+      client_info(transfer.giver).transfers.delete(transfer.transfer_hash)
 
       spawn_transfers_for_client(transfer.taker)
       spawn_transfers_for_client(transfer.giver)
@@ -98,8 +98,8 @@ class Server
    
     t=Transfer.new(taker,giver,url,chunkid,file_service)
     #@transfers[t.hash] = t
-    client_info(taker).transfers[t.hash]=t
-    client_info(giver).transfers[t.hash]=t
+    client_info(taker).transfers[t.transfer_hash]=t
+    client_info(giver).transfers[t.transfer_hash]=t
   end
 
   # performs a brute force search to pair clients together, 
@@ -233,7 +233,7 @@ class Server
       client_info(connection).chunk_info.unprovide(message["url"],chunk_range)
       spawn_transfers_for_client(connection)
     when "ask_verify"
-      hash=Transfer::hash(message["peer"],connection.get_peer_info[0],message["url"],message["range"])
+      hash=Transfer::transfer_hash(message["peer"],connection.get_peer_info[0],message["url"],message["range"])
       ok= client_info(connection).transfers[hash] ? true : false
       response={
         "type"=>"tell_verify",
@@ -246,7 +246,7 @@ class Server
     when "change_port"
       client_info(connection).listen_port=message["port"].to_i
 		when "completed"
-      transfer_hash=Transfer::hash(message["peer"],connection.get_peer_info[0],message["url"],message["range"])
+      transfer_hash=Transfer::transfer_hash(message["peer"],connection.get_peer_info[0],message["url"],message["range"])
 		  transfer=client_info(connection).transfers[transfer_hash]
       if transfer and transfer.taker==connection then
         transfer_completed(transfer,message["hash"])
