@@ -192,7 +192,7 @@ public class Network implements ResourceHandler {
         URL url = new URL(myurl);
         t.range = part.getRange();
         t.method = "get";
-        //t.transferUrl = part.getUrl();        
+        //t.transferUrl = part.getUrl(); 
         t.url = part.getUrl();
         t.host = url.getHost();
         t.port = url.getPort() != -1 ? url.getPort() : url.getDefaultPort();        
@@ -227,12 +227,14 @@ public class Network implements ResourceHandler {
         if(i < 0)
           i = 256 + i;
         
-        hashStr += Integer.toHexString(i);
+        String bstr = Integer.toHexString(i);
+        hashStr += bstr.length() == 2 ? bstr : "0" + bstr; 
       }
       
       System.err.println(r + " hash=" + hashStr);
       
       Completed tc = new Completed(r.getUrl(), host, port, hashStr, r.getRange());
+      System.err.println("*** CHUNK TRANSFER SUCCESS: " + tc);      
       link.send(tc);
     } catch (NoSuchAlgorithmException e1) {
       e1.printStackTrace();
@@ -377,6 +379,15 @@ public class Network implements ResourceHandler {
         }        
       } catch (Exception e) {
         e.printStackTrace();        
+        Completed tc = new Completed(resource.getUrl(),
+            base.getHost(), base.getPort(), "FAIL", resource.getRange());
+        System.err.println("*** CHUNK TRANSFER FAILED: " + tc);        
+        try {
+          link.send(tc);
+        } catch (IOException e1) {
+          // TODO Auto-generated catch block
+          e1.printStackTrace();
+        }
       }
     }
     

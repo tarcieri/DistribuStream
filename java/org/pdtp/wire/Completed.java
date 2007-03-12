@@ -11,6 +11,11 @@ public class Completed {
     this.range = range;
   }
   
+  @Override
+  public String toString() {
+    return "[ " + url + " @ " + peer + ":" + port + " " + range + " hash=" + hash + "]"; 
+  }
+  
   public String url;
   public String peer;
   public int port;

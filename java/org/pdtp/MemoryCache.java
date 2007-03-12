@@ -1,9 +1,9 @@
 package org.pdtp;
 
+import static java.util.Collections.synchronizedMap;
+import static java.util.Collections.synchronizedSortedSet;
+
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.Pipe;
 import java.nio.channels.ReadableByteChannel;
@@ -15,9 +15,6 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 import org.pdtp.wire.Range;
-
-import static java.util.Collections.synchronizedMap;
-import static java.util.Collections.synchronizedSortedSet;
 
 public class MemoryCache implements Library {
   public MemoryCache() {
