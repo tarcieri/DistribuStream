@@ -130,8 +130,10 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
   end
 
   def get_peer_info
-    #puts "GETPEERNAME:#{ get_peername.inspect}"
-    port,addr= Socket.unpack_sockaddr_in(get_peername)
+    peername=get_peername
+    return "<Peername nil!!!>",91119 if peername.nil?
+    
+    port,addr= Socket.unpack_sockaddr_in(peername)
     return addr.to_s,port.to_i
   end
 
