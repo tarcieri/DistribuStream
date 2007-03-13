@@ -34,9 +34,9 @@ OptionParser.new do |opts|
 	opts.on("-f","Emulate firewall") do |f|
 	  @@config.firewall = f
 	end
-  opts.on("-q","--quiet", "Be quiet") do |q|
-    @@config.debug_level=Logger::INFO if q
-  end
+  	opts.on("-q","--quiet", "Be quiet") do |q|
+          @@config.debug_level=Logger::INFO if q
+  	end
 
 	opts.on_tail("-h","--help","Print this message") do
 		puts opts
@@ -45,7 +45,7 @@ OptionParser.new do |opts|
 end.parse!
 
 @@log=Logger.new(@@config.log)
-@@log.level=@@config.debug_level=Logger::INFO
+@@log.level=@@config.debug_level
 @@log.datetime_format=""
 
 
