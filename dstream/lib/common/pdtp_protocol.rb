@@ -1,6 +1,8 @@
 require 'rubygems'
 require 'eventmachine'
 require 'thread'
+require 'uri'
+require 'ipaddr'
 
 begin
   require 'fjson'
@@ -9,9 +11,16 @@ rescue Exception
 end
 
 
+class ProtocolError < Exception
+end
+
+class ProtocolWarn < Exception
+end
+
 class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
 	@@num_connections=0
   @@listener=nil
+  @@message_params=nil  
 
   def PDTPProtocol::listener= listener
     @@listener=listener
@@ -44,13 +53,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
 
   #override this in a child class to handle messages
   def receive_message message
-    begin
       @@listener.dispatch_message(message,self) 
-    rescue Exception=>e
-      @@log.warn("pdtp_protocol closing connection for exception: #{e}")
-      @@log.warn("backtrace:\n #{e.backtrace.join("\n")}\n")
-      error_close_connection(e.to_s) # protocol error
-    end
   end
    
   def receive_line line
@@ -58,12 +61,23 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
       line.chomp!
 			id = @@listener.get_id(self)
       @@log.debug("#{id} recv: "+line)
-      message=JSON.parse(line)
+      message=JSON.parse(line)rescue nil
+      raise ProtocolError.new("JSON couldn't parse: #{line}") if message.nil?
+
+      PDTPProtocol::validate_message(message)
+      
       hash_to_range(message)
       receive_message(message)
-    rescue Exception
-      @@log.warn("pdtp_protocol closed connection (parse error)")
-      error_close_connection("JSON parse error: #{line}") #there was an error in parsing
+
+    rescue ProtocolError=>e
+      @@log.warn("#{id} PROTOCOL ERROR: #{e.to_s}")
+      @@log.debug(e.backtrace.join("\n"))
+      error_close_connection(e.to_s)
+    rescue ProtocolWarn=>e
+      send_message( {"type"=>"protocol_warn", "message"=>e.to_s} )
+    rescue Exception=>e
+      puts "SERVER GOT UNKNOWN EXCEPTION #{e}"
+      puts e.backtrace.join("\n")
     end
   end
   
@@ -83,13 +97,6 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
           message[key]={"min"=>value.first,"max"=>value.last}
         end
       end   
-    end
-  end
-
-  #throws an exception if any of the fields specified are not in the message
-  def expect_fields(message,fields)
-    fields.each do |f|
-      raise "You didnt send a required field: #{f}" if message[f].nil?
     end
   end
 
@@ -140,6 +147,146 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
   def to_s
     addr,port = get_peer_info
     return "#{addr}:#{port}"
+  end
+
+
+  #makes sure that the message is valid.
+  #if not, throws a ProtocolError
+  def PDTPProtocol::validate_message(message)
+    @@message_params||=define_message_params
+
+    params=@@message_params[message["type"]] rescue nil
+    raise ProtocolError.new("Invalid message type: #{message["type"]}") if params.nil?
+
+    params.each do |name,type|
+      if type.class==Optional then
+        next if message[name].nil? #dont worry about it if they dont have this param
+        type=type.type #grab the real type from within the optional class
+      end
+
+      raise ProtocolError.new("required parameter: '#{name}' missing for message type: '#{message["type"]}'") if message[name].nil?
+      if !obj_matches_type?(message[name],type) then
+        raise ProtocolError.new("parameter: '#{name}' val='#{message[name]}' is not of type: '#{type}' for message type: '#{message["type"]}' ")
+      end
+
+    end    
+
+  end
+
+  # an optional field of the specified type
+  class Optional
+    attr_accessor :type
+    def initialize(type)
+      @type=type
+    end
+  end
+
+  #available types:
+  # :url, :range, :ip, :int, :bool, :string
+  def PDTPProtocol::obj_matches_type?(obj,type)
+    case type
+    when :url
+      return obj.class==String
+      #uri=URI::parse(obj) rescue nil
+      #return uri ? true : false
+    when :range
+      return (obj.class==Range or obj.class==Hash)
+    when :ip
+      ip=IPAddr.new(obj) rescue nil
+      return ip!=nil 
+    when :int
+      return obj.class==Fixnum
+    when :bool
+      return (obj==true or obj==false)
+    when :string
+      return obj.class==String
+    else 
+      raise "Invalid type specified: #{type}"
+    end 
+  end
+
+  #this function defines the required fields for each message
+  def PDTPProtocol::define_message_params
+    mp={}
+      
+    mp["ask_info"]={
+      "url"=>:url
+    }
+
+    mp["tell_info"]={
+      "url"=>:url,
+      "size"=>Optional.new(:int),
+      "chunk_size"=>Optional.new(:int),
+      "streaming"=>Optional.new(:bool)
+    }
+
+    mp["ask_verify"]={
+      "peer"=>:ip,
+      "url"=>:url,
+      "range"=>:range
+    }
+
+    mp["tell_verify"]={
+      "peer"=>:ip,
+      "url"=>:url,
+      "range"=>:range,
+      "is_authorized"=>:bool
+    }
+
+    mp["request"]={
+      "url"=>:url,
+      "range"=>Optional.new(:range)
+    }
+
+    mp["provide"]={
+      "url"=>:url,
+      "range"=>Optional.new(:range)
+    }
+
+    mp["unrequest"]={
+      "url"=>:url,
+      "range"=>Optional.new(:range)
+    }
+
+    mp["unprovide"]={
+      "url"=>:url,
+      "range"=>Optional.new(:range)
+    }
+
+    mp["change_port"]={
+      "port"=>:int
+    }
+
+    mp["completed"]={
+      "peer"=>:ip,
+      "url"=>:url,
+      "range"=>:range,
+      "hash"=>:string
+    }
+
+    mp["hash_verify"]={
+      "url"=>:url,
+      "range"=>:range,
+      "hash_ok"=>:bool
+    }
+
+    mp["transfer"]={
+      "host"=>:string,
+      "port"=>:int,
+      "method"=>:string,
+      "url"=>:url,
+      "range"=>:range
+    }  
+
+    mp["protocol_error"]={
+      "message"=>Optional.new(:string)
+    }
+
+    mp["protocol_warn"]={
+      "message"=>Optional.new(:string)
+    }
+
+    return mp
   end
 
 end

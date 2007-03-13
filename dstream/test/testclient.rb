@@ -72,8 +72,7 @@ EventMachine::run {
   if !@@config.provide then
     EventMachine::add_periodic_timer(2) do
       info=cfs.get_info(@@config.url)
-      break if info.nil?
-      puts "Bytes downloaded: #{info.bytes_downloaded}"
+      puts "Bytes downloaded: #{info.bytes_downloaded}" unless info.nil?
     end
   end
 

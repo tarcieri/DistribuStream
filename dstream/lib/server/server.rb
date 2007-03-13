@@ -211,6 +211,21 @@ class Server
     end
   end
 
+  #handles the request, provide, unrequest, unprovide messages
+  def handle_requestprovide(connection,message)
+    type=message["type"]
+    url=message["url"]
+    info=@file_service.get_info(url) rescue nil
+    raise ProtocolWarn.new("Requested URL: '#{url}' not found") if info.nil?
+    
+    exclude_partial= (type=="provide") #only exclude partial chunks from provides
+    range=info.chunk_range_from_byte_range(message["range"],exclude_partial)
+
+    #call request, provide, unrequest, or unprovide
+    client_info(connection).chunk_info.send( type.to_sym, url, range)
+    spawn_transfers_for_client(connection)
+  end
+
   def dispatch_message_needslock(message,connection)
     case message["type"] 
     when "ask_info"
@@ -227,23 +242,13 @@ class Server
       connection.send_message(response)
 
     when "request"
-      chunk_range=@file_service.get_info(message["url"]).chunk_range_from_byte_range(message["range"],false)
-      client_info(connection).chunk_info.request(message["url"],chunk_range)
-      spawn_transfers_for_client(connection)
+      handle_requestprovide(connection,message)
     when "provide"
-      #puts message.inspect
-      chunk_range=@file_service.get_info(message["url"]).chunk_range_from_byte_range(message["range"],true)  
-      puts "PROVIDING CHUNK RANGE:: #{chunk_range} range=#{message["range"]}"
-      client_info(connection).chunk_info.provide(message["url"],chunk_range)
-      spawn_transfers_for_client(connection)
+      handle_requestprovide(connection,message)
     when "unrequest"
-      chunk_range=@file_service.get_info(message["url"]).chunk_range_from_byte_range(message["range"],false)
-      client_info(connection).chunk_info.unrequest(message["url"],chunk_range)
-      spawn_transfers_for_client(connection)
+      handle_requestprovide(connection,message)
     when "unprovide"
-      chunk_range=@file_service.get_info(message["url"]).chunk_range_from_byte_range(message["range"],false)
-      client_info(connection).chunk_info.unprovide(message["url"],chunk_range)
-      spawn_transfers_for_client(connection)
+      handle_requestprovide(connection,message)
     when "ask_verify"
       hash=Transfer::transfer_hash(message["peer"],connection.get_peer_info[0],message["url"],message["range"])
       ok= client_info(connection).transfers[hash] ? true : false
@@ -263,11 +268,15 @@ class Server
       if transfer and transfer.taker==connection then
         transfer_completed(transfer,message["hash"])
       else
-        raise "You sent me a transfer completed message for unknown transfer: #{transfer_hash}"
+        raise ProtocolWarn.new("You sent me a transfer completed message for unknown transfer: #{transfer_hash}")
       end
-			
+		
+    when "protocol_error"
+      #ignore
+    when "protocol_warn"
+      #ignore	
     else
-      raise "Unknown message type: #{message['type']}"
+      raise "Unhandled message type: #{message['type']}"
     end
 
   end
