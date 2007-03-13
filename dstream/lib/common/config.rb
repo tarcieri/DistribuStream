@@ -13,7 +13,7 @@ class PDTPConfig
 		@file_root = File.dirname(__FILE__)+'/../../../testfiles'
 		@debug = true
 		@log = STDOUT
-    @debug_level=Logger::DEBUG
+                @debug_level=Logger::DEBUG
 	end
 
 end

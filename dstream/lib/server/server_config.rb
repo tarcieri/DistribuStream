@@ -6,7 +6,7 @@ class ServerConfig < PDTPConfig
 	def initialize
 		super
 		@firewall = false
-		@chunk_size = 512
+		@chunk_size = 4096
 	end
 
 end
