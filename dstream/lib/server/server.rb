@@ -252,6 +252,7 @@ class Server
     when "ask_verify"
       hash=Transfer::transfer_hash(message["peer"],connection.get_peer_info[0],message["url"],message["range"])
       ok= client_info(connection).transfers[hash] ? true : false
+      puts "Transfer not ok:\npeer: #{message['peer']}\nhash:#{hash}\ninfo: #{connection.get_peer_info[0]}\nrange: #{message['range']}" if ok == false
       response={
         "type"=>"tell_verify",
         "peer"=>message["peer"],
