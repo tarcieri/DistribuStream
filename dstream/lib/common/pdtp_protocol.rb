@@ -223,13 +223,15 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
     mp["ask_verify"]={
       "peer"=>:ip,
       "url"=>:url,
-      "range"=>:range
+      "range"=>:range,
+      "transfer_id"=>:string
     }
 
     mp["tell_verify"]={
-      "peer"=>:ip,
-      "url"=>:url,
-      "range"=>:range,
+      #"peer"=>:ip,
+      #"url"=>:url,
+      #"range"=>:range,
+      "transfer_id"=>:string,
       "is_authorized"=>:bool
     }
 
@@ -258,9 +260,10 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
     }
 
     mp["completed"]={
-      "peer"=>:ip,
-      "url"=>:url,
-      "range"=>:range,
+      #"peer"=>:ip,
+      #"url"=>:url,
+      #"range"=>:range,
+      "transfer_id"=>:string,
       "hash"=>:string
     }
 
@@ -275,7 +278,8 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
       "port"=>:int,
       "method"=>:string,
       "url"=>:url,
-      "range"=>:range
+      "range"=>:range,
+      "transfer_id"=>:string
     }  
 
     mp["protocol_error"]={

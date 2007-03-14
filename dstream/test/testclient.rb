@@ -70,7 +70,7 @@ EventMachine::run {
   @@log.info("host= #{host}  port=#{port}")
 
   oldbytes = 0
-  points = 0
+  points = 1
   avg = 0
   if !@@config.provide then
     EventMachine::add_periodic_timer(1) do
@@ -78,7 +78,7 @@ EventMachine::run {
       newbytes = info.bytes_downloaded
       point_rate = newbytes - oldbytes 
       avg += point_rate
-      points += 1 unless points !=0 and point_rate == 0 
+      points += 1 unless point_rate == 0 
       avg_rate = avg / points
       oldbytes = newbytes
       puts "Bytes downloaded: #{newbytes}  Point Rate: #{point_rate}  Average Rate: #{avg_rate}" unless info.nil?

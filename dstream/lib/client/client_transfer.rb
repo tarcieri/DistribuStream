@@ -17,6 +17,7 @@ end
 class ClientTransferBase
   attr :peer, :port
   attr_reader :url, :byte_range
+  attr_accessor :transfer_id
 
   attr_reader  :finished
  
@@ -66,6 +67,8 @@ class ClientTransferListener < ClientTransferBase
     @url="pdtp://"+vhost+path
     
     @byte_range=parse_http_range(request.params["HTTP_RANGE"])
+    @transfer_id=@request.params["HTTP_X_TRANSFER_ID"]
+    raise HTTPException.new(400 , "You need to send an X-Transfer-Id header") if @transfer_id.nil?
   
     @@log.debug("Got request,  range=#{@byte_range.inspect}")        
   end
@@ -77,7 +80,8 @@ class ClientTransferListener < ClientTransferBase
 			"type"=>"ask_verify",
 			"peer"=>@peer,
 			"url"=>@url,
-			"range"=>@byte_range
+			"range"=>@byte_range,
+      "transfer_id"=>@transfer_id
 		}
 		@@log.debug("Sending ask_verify")
 		@server_connection.send_message(ask_verify)
@@ -135,6 +139,7 @@ class ClientTransferConnector < ClientTransferBase
     @method = message["method"]
     @url=message["url"]
     @byte_range=message["range"]
+    @transfer_id=message["transfer_id"]
     
   end
     
@@ -163,6 +168,7 @@ class ClientTransferConnector < ClientTransferBase
     
     req.add_field("Range", "bytes=#{@byte_range.begin}-#{@byte_range.end}")
     req.add_field("Host",vhost)
+    req.add_field("X-Transfer-Id",@transfer_id)
 		res = Net::HTTP.start(@peer,@port) {|http| http.request(req,body) }
     
     if res.code=='206' and @method=="get" then
@@ -173,10 +179,8 @@ class ClientTransferConnector < ClientTransferBase
 
       msg={
         "type"=>"completed",
-        "url"=>@url,
-        "range"=>@byte_range,
-        "hash"=>hash,
-        "peer"=>@peer
+        "transfer_id"=>@transfer_id,
+        "hash"=>hash
       }
       @server_connection.send_message(msg)
     else

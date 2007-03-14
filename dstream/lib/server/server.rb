@@ -3,6 +3,7 @@ require File.dirname(__FILE__) +'/transfer'
 require "thread"
 
 class Server
+ 
   attr_reader :connections
   attr_accessor :file_service
   def initialize()
@@ -90,8 +91,8 @@ class Server
         transfer.taker.send_message(msg)
       end
 
- 			client_info(transfer.taker).transfers.delete(transfer.transfer_hash)
-      client_info(transfer.giver).transfers.delete(transfer.transfer_hash)
+ 			client_info(transfer.taker).transfers.delete(transfer.transfer_id)
+      client_info(transfer.giver).transfers.delete(transfer.transfer_id)
 
       spawn_transfers_for_client(transfer.taker)
       spawn_transfers_for_client(transfer.giver)
@@ -101,11 +102,26 @@ class Server
   def begin_transfer(taker,giver,url,chunkid)
     @@log.debug("#{@ids[giver]}->#{@ids[taker]} transfer starting: taker=#{taker} giver=#{giver} url=#{url}  chunkid=#{chunkid}")
     client_info(taker).chunk_info.transfer(url,chunkid..chunkid)
-   
-    t=Transfer.new(taker,giver,url,chunkid,file_service)
-    #@transfers[t.hash] = t
-    client_info(taker).transfers[t.transfer_hash]=t
-    client_info(giver).transfers[t.transfer_hash]=t
+  
+    byte_range=@file_service.get_info(url).chunk_range(chunkid) 
+    t=Transfer.new(taker,giver,url,chunkid,byte_range)
+    client_info(taker).transfers[t.transfer_id]=t
+    client_info(giver).transfers[t.transfer_id]=t
+
+    #send transfer message to the connector
+    addr,port=t.acceptor.get_peer_info
+    request={
+      "type"=>"transfer",
+      "host"=>addr,
+      "port"=>t.acceptor.user_data.listen_port,
+      "method"=> (t.connector == t.taker ? "get" : "put"),
+      "url"=>url,
+      "range"=>byte_range,
+      "transfer_id"=>t.transfer_id
+    }
+
+    t.connector.send_message(request)
+    
   end
 
   # performs a brute force search to pair clients together, 
@@ -250,21 +266,22 @@ class Server
     when "unprovide"
       handle_requestprovide(connection,message)
     when "ask_verify"
-      hash=Transfer::transfer_hash(message["peer"],connection.get_peer_info[0],message["url"],message["range"])
+      hash=message["transfer_id"]
+
+      #FIXME we should probably make sure everything matches inside the transfer
       ok= client_info(connection).transfers[hash] ? true : false
+        
       puts "Transfer not ok:\npeer: #{message['peer']}\nhash:#{hash}\ninfo: #{connection.get_peer_info[0]}\nrange: #{message['range']}" if ok == false
       response={
         "type"=>"tell_verify",
-        "peer"=>message["peer"],
-        "url"=>message["url"],
-        "range"=>message["range"],
+        "transfer_id"=>hash,
         "is_authorized"=>ok
       }
       connection.send_message(response)
     when "change_port"
       client_info(connection).listen_port=message["port"].to_i
 		when "completed"
-      transfer_hash=Transfer::transfer_hash(message["peer"],connection.get_peer_info[0],message["url"],message["range"])
+      transfer_hash=message["transfer_id"]
 		  transfer=client_info(connection).transfers[transfer_hash]
       if transfer and transfer.taker==connection then
         transfer_completed(transfer,message["hash"])

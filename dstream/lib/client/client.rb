@@ -74,9 +74,10 @@ class Client < Mongrel::HttpHandler
 
 
 	def transfer_matches?(transfer, message)
-		return( transfer.peer == message["peer"] and 
-            transfer.url == message["url"] and
-            transfer.byte_range == message["range"] )
+		#return( transfer.peer == message["peer"] and 
+    #        transfer.url == message["url"] and
+    #        transfer.byte_range == message["range"] )
+    return transfer.transfer_id==message["transfer_id"]
 	end
 
   def dispatch_message(message,connection)
