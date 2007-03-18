@@ -1,0 +1,42 @@
+<project name="pdtp" default="dist" basedir=".">
+	<description>
+		Builds the PDTP java distributions.	
+	</description>
+	
+  <!-- set global properties for this build -->
+  <property name="src" location="org"/>
+  <property name="build" location="build"/>
+  <property name="dist"  location="dist"/>
+
+  <target name="init">
+    <!-- Create the time stamp -->
+    <tstamp/>
+    <!-- Create the build directory structure used by compile -->
+    <mkdir dir="${build}"/>
+  </target>
+
+  <target name="compile" depends="init"
+        description="compile the source " >
+    <!-- Compile the java code from ${src} into ${build} -->
+    <javac srcdir="${src}" destdir="${build}"/>
+  </target>
+
+  <target name="dist" depends="compile"
+        description="generate the distribution" >
+    <!-- Create the distribution directory -->
+    <mkdir dir="${dist}/lib"/>
+
+    <!-- Put everything in ${build} into the applet.jar file -->
+    <jar jarfile="${dist}/lib/applet.jar" basedir="${build}"/>
+    
+    <!-- Sign applet.jar -->
+    <signjar jar="${dist}/lib/applet.jar" storepass="${ccstorepass}" alias="ccjava" keystore="clickcaster.keystore"/>
+  </target>
+
+  <target name="clean"
+        description="clean up" >
+    <!-- Delete the ${build} and ${dist} directory trees -->
+    <delete dir="${build}"/>
+    <delete dir="${dist}"/>
+  </target>
+</project>
