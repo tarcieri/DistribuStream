@@ -75,13 +75,15 @@ EventMachine::run {
   if !@@config.provide then
     EventMachine::add_periodic_timer(1) do
       info=cfs.get_info(@@config.url)
-      newbytes = info.bytes_downloaded
-      point_rate = newbytes - oldbytes 
-      avg += point_rate
-      points += 1 unless point_rate == 0 
-      avg_rate = avg / points
-      oldbytes = newbytes
-      puts "Bytes downloaded: #{newbytes}  Point Rate: #{point_rate}  Average Rate: #{avg_rate}" unless info.nil?
+      if info then
+        newbytes = info.bytes_downloaded
+        point_rate = newbytes - oldbytes 
+        avg += point_rate
+        points += 1 unless point_rate == 0 
+        avg_rate = avg / points
+        oldbytes = newbytes
+        puts "Bytes downloaded: #{newbytes}  Point Rate: #{point_rate}  Average Rate: #{avg_rate}" unless info.nil?
+      end    
     end
   end
 
@@ -98,9 +100,11 @@ EventMachine::run {
   mongrel_server.run
 
  
+  client.my_id=Client::generate_client_id(listen_port)
   request={
-    "type"=>"change_port",
-    "port"=>listen_port
+    "type"=>"client_info",
+    "listen_port"=>listen_port,
+    "client_id"=>client.my_id
   }
   connection.send_message(request)
 

@@ -52,37 +52,31 @@ class Server
   end
 
   # called when a transfer either finishes, successfully or not
-  def transfer_completed(transfer,chunk_hash)      
+  def transfer_completed(transfer,connection,chunk_hash)      
 
       # did the transfer complete successfully?
       local_hash=@file_service.get_chunk_hash(transfer.url,transfer.chunkid)
 
-      if chunk_hash==nil then
-        success=true
-        send_response=false
-      else
-        success= local_hash==chunk_hash 
-        send_response=true
-      end
+      if connection==transfer.taker then
+        success= (chunk_hash==local_hash)
+
+        c1=client_info(transfer.taker)
+        c2=client_info(transfer.giver)
+
+        if success then
+          #the taker now has the file, so he can provide it
+          client_info(transfer.taker).chunk_info.provide(transfer.url,transfer.chunkid..transfer.chunkid)
+          c1.trust.success(c2.trust)
+        else
+          #transfer failed, the client still wants the chunk
+          client_info(transfer.taker).chunk_info.request(transfer.url,transfer.chunkid..transfer.chunkid)
+          c1.trust.failure(c2.trust)
+        end 
       
-      c1=client_info(transfer.taker)
-      c2=client_info(transfer.giver)
-
-      if success then
-        #the taker now has the file, so he can provide it
-        client_info(transfer.taker).chunk_info.provide(transfer.url,transfer.chunkid..transfer.chunkid)
-        c1.trust.success(c2.trust)
-      else
-        #transfer failed, the client still wants the chunk
-        client_info(transfer.taker).chunk_info.request(transfer.url,transfer.chunkid..transfer.chunkid)
-        c1.trust.failure(c2.trust)
-      end  
-
-      outstr="#{@ids[transfer.giver]}->#{@ids[transfer.taker]} transfer completed: #{transfer}"
-      outstr=outstr+" t->g=#{c1.trust.weight(c2.trust)} g->t=#{c2.trust.weight(c1.trust)}" 
-      @@log.debug(outstr)
+        outstr="#{@ids[transfer.giver]}->#{@ids[transfer.taker]} transfer completed: #{transfer}"
+        outstr=outstr+" t->g=#{c1.trust.weight(c2.trust)} g->t=#{c2.trust.weight(c1.trust)}" 
+        @@log.debug(outstr)
     
-      if send_response then
         msg={
           "type"=>"hash_verify",
           "url"=>transfer.url,
@@ -90,13 +84,13 @@ class Server
           "hash_ok"=>success
         }
         transfer.taker.send_message(msg)
+
       end
 
- 			client_info(transfer.taker).transfers.delete(transfer.transfer_id)
-      client_info(transfer.giver).transfers.delete(transfer.transfer_id)
+      #remove this transfer from whoever sent it
+      client_info(connection).transfers.delete(transfer.transfer_id)
+      spawn_transfers_for_client(connection)     
 
-      spawn_transfers_for_client(transfer.taker)
-      spawn_transfers_for_client(transfer.giver)
 
   end
 
@@ -183,8 +177,8 @@ class Server
 
     connections.each do |c2|
       next if client_connection==c2
+      next if client_info(c2).wants_upload? == false
       if client_info(c2).chunk_info.provided?(url,chunkid) then
-        #FIXME check if this client wants to upload
         feasible_peers << c2
       end
     end
@@ -206,11 +200,12 @@ class Server
 
     connections.each do |c2|
       next if client_connection==c2
+      next if client_info(c2).wants_download? == false
     
       begin
         url,chunkid=client_info(c2).chunk_info.high_priority_chunk
       rescue
-        return false
+        next
       end
 
       if c1info.chunk_info.provided?(url,chunkid) then
@@ -283,24 +278,28 @@ class Server
       handle_requestprovide(connection,message)
     when "ask_verify"
 
-      my_id=peer_info(connection).client_id
+      my_id=client_info(connection).client_id
       transfer_id=Transfer::gen_transfer_id(my_id,message["peer_id"],message["url"],message["range"])
-      ok= client_info(connection).transfers[hash] ? true : false 
+      ok= client_info(connection).transfers[transfer_id] ? true : false
+ 
       puts "Transfer not ok:\npeer: #{message['peer']}\nhash:#{hash}\ninfo: #{connection.get_peer_info[0]}\nrange: #{message['range']}" if ok == false
       response={
         "type"=>"tell_verify",
-        "transfer_id"=>hash,
+        "url"=>message["url"],
+        "peer_id"=>message["peer_id"],
+        "range"=>message["range"],
+        "peer"=>message["peer"],
         "is_authorized"=>ok
       }
       connection.send_message(response)
 		when "completed"
-      my_id=peer_info(connection).client_id
+      my_id=client_info(connection).client_id
       transfer_id=Transfer::gen_transfer_id(my_id,message["peer_id"],message["url"],message["range"])
 		  transfer=client_info(connection).transfers[transfer_id]
-      if transfer and transfer.taker==connection then
-        transfer_completed(transfer,message["hash"])
+      if transfer  then
+        transfer_completed(transfer,connection,message["hash"])
       else
-        raise ProtocolWarn.new("You sent me a transfer completed message for unknown transfer: #{transfer_hash}")
+        raise ProtocolWarn.new("You sent me a transfer completed message for unknown transfer: #{transfer_id}")
       end
 		
     when "protocol_error"

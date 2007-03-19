@@ -1,0 +1,25 @@
+#!/usr/bin/env ruby
+#trap("INT") {
+  #children.each do |c|
+  #  Process.kill("SIGKILL",c)
+  #end
+#  puts "Interrupted.  Killed #{children.size} children."
+  #exit
+#}
+
+
+
+puts "creating #{ARGV[0]} clients"
+
+children=[]
+
+ARGV[0].to_i.times do |i|
+  args=ARGV[1..500]
+  #puts "client #{i}: args="+args.join(" ")
+  children << fork do
+    #$stderr=$stdout=open("/dev/null","w")
+    exec("dstream_client", *args)
+  end
+end
+
+Process.wait

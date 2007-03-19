@@ -5,6 +5,7 @@ require File.dirname(__FILE__) + '/client_transfer'
 require 'mongrel'
 require 'net/http'
 require 'thread'
+require 'digest/md5'
 
 # This is the main driver for the client-side implementation
 # of PDTP. It maintains a single connection to a server and 
@@ -15,6 +16,7 @@ class Client < Mongrel::HttpHandler
   # Accessor for a client file service instance
   attr_accessor :file_service
   attr_accessor :server_connection
+  attr_accessor :my_id
 
   def initialize
     @transfers = Array.new
@@ -58,26 +60,21 @@ class Client < Mongrel::HttpHandler
 				@transfers << transfer
 			end
 
-			transfer.run
+			transfer.handle_header
      
-    rescue HTTPException=>e
-      response.start(e.code) do |head,out|
-        out.write(e.to_s + "\n\n" + e.backtrace.join("\n"))
-      end
-    rescue Exception=>e 
-      response.start(500) do |head,out|
-        out.write("Server error, unknown exception\n"+e.to_s+"\n\n"+e.backtrace.join("\n"))
-      end
-    end    
+    rescue Exception=>e
+      transfer.write_http_exception(e)
+    end
+      transfer.send_completed_message(transfer.hash)   
 
   end
 
 
 	def transfer_matches?(transfer, message)
-		#return( transfer.peer == message["peer"] and 
-    #        transfer.url == message["url"] and
-    #        transfer.byte_range == message["range"] )
-    return transfer.transfer_id==message["transfer_id"]
+		return( transfer.peer == message["peer"] and 
+            transfer.url == message["url"] and
+            transfer.byte_range == message["range"] and
+            transfer.peer_id == message["peer_id"] )
 	end
 
   def dispatch_message(message,connection)
@@ -100,19 +97,24 @@ class Client < Mongrel::HttpHandler
 
 
 		when "transfer"
-      transfer=ClientTransferConnector.new(message,@server_connection,@file_service)
+      transfer=ClientTransferConnector.new(message,@server_connection,@file_service,self)
 
       @@log.debug("TRANSFER STARTING")
       Thread.new(transfer) do |t|
-        t.run
+        begin
+          t.run
+        rescue Exception=>e
+        end
+        t.send_completed_message(t.hash)
       end
      
     when "tell_verify"
 			@transfers.each do |t|
         if transfer_matches?(t, message) then
-          t.authorized=true if message["is_authorized"]
-				  @@log.debug("Restarting thread execution: thread=#{t.thread.inspect}")
-					t.thread.run
+		
+          #don't need this in the list anymore, its thread will handle it
+          finished(t)
+          t.tell_verify(message["is_authorized"])
 				  break
         end
       end
@@ -144,5 +146,15 @@ class Client < Mongrel::HttpHandler
 	def get_id(connection)
 	  return nil
 	end
+
+  def Client::generate_client_id(port=0)
+    md5 = Digest::MD5::new
+    now = Time::now
+    md5.update(now.to_s)
+    md5.update(String(now.usec))
+    md5.update(String(rand(0)))
+    md5.update(String($$))
+    return md5.hexdigest+":#{port}"
+  end
 
 end

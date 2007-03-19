@@ -270,6 +270,12 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
     #the taker sends this message when a transfer finishes
     #if there is an error in the transfer, dont set a hash
     #to signify failure
+    #when this is received from the taker, the connection is considered done for all parties
+    #
+    #The giver also sends this message when they are done transferring.
+    #this closes the connection on their side, allowing them to start other transfers
+    #It leaves the connection open on the taker side to allow them to decide if the transfer was successful
+    #the hash parameter is ignored when sent by the giver
     mp["completed"]={
       "peer"=>:ip,
       "url"=>:url,
