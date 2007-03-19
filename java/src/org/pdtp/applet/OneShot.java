@@ -7,6 +7,8 @@ import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.util.Properties;
 
+import netscape.javascript.JSObject;
+
 import org.pdtp.MemoryCache;
 import org.pdtp.NanoHTTPD;
 import org.pdtp.Network;
@@ -19,7 +21,7 @@ public class OneShot extends Applet {
   private Network net;
   private String url;
   private AppletHTTP localServer;
-  private int localHttpPort;
+  private int localHttpPort;  
   
   private class AppletHTTP extends NanoHTTPD {
     @Override
@@ -66,7 +68,10 @@ public class OneShot extends Applet {
     } catch (IOException e) {
       net = null;
       e.printStackTrace();
-    }    
+    }
+    
+    JSObject win = JSObject.getWindow(this);
+    win.call("alert", new Object[] { "initialized." });
   }
 
   @Override
