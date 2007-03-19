@@ -1,5 +1,7 @@
 package org.pdtp;
 
+import static org.pdtp.Logger.trace;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -18,7 +20,7 @@ public class JSONSerializer implements Serializer {
   public Object read(InputStream in) throws IOException {
     String json = readJSON(in);
     
-    System.err.println("READ: " + json);
+    trace("READ: " + json);
     
     try {
       return parse(new JSONObject(json), null);
@@ -31,7 +33,7 @@ public class JSONSerializer implements Serializer {
     try {
       JSONObject json = convert(obj);
       json.put("type", camelToUnderscore(obj.getClass().getSimpleName()));      
-      System.err.println("SEND: " + json.toString());
+      trace("SEND: " + json.toString());
       stream.write((json.toString() + "\n").getBytes());
     } catch (Exception e) {
       throw new EndpointException(e);

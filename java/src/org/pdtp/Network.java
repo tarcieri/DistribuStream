@@ -1,7 +1,8 @@
 package org.pdtp;
 
-import java.io.File;
-import java.io.FileInputStream;
+import static org.pdtp.Logger.info;
+import static org.pdtp.Logger.warn;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -10,7 +11,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
-import java.nio.channels.ByteChannel;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.security.MessageDigest;
@@ -22,12 +22,12 @@ import java.util.Set;
 import java.util.Vector;
 
 import org.pdtp.wire.AskInfo;
+import org.pdtp.wire.Completed;
 import org.pdtp.wire.Provide;
 import org.pdtp.wire.Range;
 import org.pdtp.wire.Request;
 import org.pdtp.wire.TellInfo;
 import org.pdtp.wire.Transfer;
-import org.pdtp.wire.Completed;
 
 public class Network implements ResourceHandler {
   public Network(String host, int port, int peerPort, Library cache) throws IOException {    
@@ -137,12 +137,13 @@ public class Network implements ResourceHandler {
       
       try {       
         if(requestRange == null) {
-          System.err.println("Getting info...");
+          
+          info("Getting info...");
           TellInfo info = getInfo(resource.getUrl(), timeout);
           if(info != null) {
              requestRange = new Range(0, info.size);
           } else {
-            System.err.println("NO INFO, Raw request.");
+            info("NO INFO, Raw request.");
             makeRawRequest(resource);
             return;
           }
@@ -151,10 +152,10 @@ public class Network implements ResourceHandler {
         if(requestRange == null || requestRange.isEmpty()) {
           link.send(new Request(new Resource(resource.getUrl(), null)));
         } else {        
-          System.err.println("Request Range (" + requestRange + ")");
+          info("Request Range (" + requestRange + ")");
           Set<Range> missing = cache.missing(new Resource(resource.getUrl(), requestRange));
           for(Range m : missing) {
-            System.err.println("  Missing (" + m + ")");
+            info("  Missing (" + m + ")");
             link.send(new Request(new Resource(resource.getUrl(), m)));
           }
         }
@@ -171,11 +172,11 @@ public class Network implements ResourceHandler {
           Set<Range> missing = cache.missing(new Resource(resource.getUrl(), requestRange));
           for(Range m : missing) {
             Resource res = new Resource(resource.getUrl(), m);
-            System.err.println("Partial time out, raw request.");
+            info("Partial time out, raw request.");
             makeRawRequest(res);
           }
         } else {
-          System.err.println("Timed out, raw request.");
+          info("Timed out, raw request.");
           makeRawRequest(new Resource(resource.getUrl(), null));
         }
       }
@@ -231,10 +232,10 @@ public class Network implements ResourceHandler {
         hashStr += bstr.length() == 2 ? bstr : "0" + bstr; 
       }
       
-      System.err.println(r + " hash=" + hashStr);
+      info(r + " hash=" + hashStr);
       
       Completed tc = new Completed(r.getUrl(), host, port, hashStr, r.getRange());
-      System.err.println("*** CHUNK TRANSFER SUCCESS: " + tc);      
+      info("*** CHUNK TRANSFER SUCCESS: " + tc);      
       link.send(tc);
     } catch (NoSuchAlgorithmException e1) {
       e1.printStackTrace();
@@ -279,14 +280,14 @@ public class Network implements ResourceHandler {
               + (resource.getRange().max() - 1));
         }
         
-        System.err.println("  <" + Thread.currentThread().getName() + ">  " + conn.getRequestMethod() + " " + conn.getURL().getPath());
+        info("  <" + Thread.currentThread().getName() + ">  " + conn.getRequestMethod() + " " + conn.getURL().getPath());
         for(Map.Entry<String, List<String>> e 
             : conn.getRequestProperties().entrySet()) {
-          System.err.print("  <" + Thread.currentThread().getName() + ">  " + e.getKey() + ": ");
+          info("  <" + Thread.currentThread().getName() + ">  " + e.getKey() + ": ");
           for(String v : e.getValue()) {
-            System.err.print(v + " ");
+            info(v + " ");
           }
-          System.err.print("\n");
+          info("\n");
         }
         
         conn.connect();
@@ -316,7 +317,7 @@ public class Network implements ResourceHandler {
         
         Range actualRange = resource.getRange();
         if(conn.getResponseCode() == HttpURLConnection.HTTP_PARTIAL) {
-          System.err.println("RANGE: " + conn.getHeaderField("Content-Range"));
+          info("RANGE: " + conn.getHeaderField("Content-Range"));
           actualRange = Range.parseHTTPRange(conn.getHeaderField("Content-Range"));           
 
           if(actualRange == null) {
@@ -381,7 +382,7 @@ public class Network implements ResourceHandler {
         e.printStackTrace();        
         Completed tc = new Completed(resource.getUrl(),
             base.getHost(), base.getPort(), "FAIL", resource.getRange());
-        System.err.println("*** CHUNK TRANSFER FAILED: " + tc);        
+        warn("*** CHUNK TRANSFER FAILED: " + tc);        
         try {
           link.send(tc);
         } catch (IOException e1) {
@@ -415,7 +416,7 @@ public class Network implements ResourceHandler {
       URL u = new URL("http://" + peerHost + ":" + t.port + src.getPath());            
       
       Resource r = new Resource(t.url, t.range);
-      System.err.println("Told to " + t.method + " " + r + " at " + u);
+      info("Told to " + t.method + " " + r + " at " + u);
       
       if(!cache.contains(r)) {
         Fetcher f = new Fetcher(r, u, src.getHost()

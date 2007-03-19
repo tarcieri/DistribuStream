@@ -1,5 +1,7 @@
 package org.pdtp.applet;
 
+import static org.pdtp.Logger.info;
+
 import java.applet.Applet;
 import java.io.IOException;
 import java.io.InputStream;
@@ -9,10 +11,12 @@ import java.util.Properties;
 
 import netscape.javascript.JSObject;
 
+import org.pdtp.LogWriter;
+import org.pdtp.Logger;
 import org.pdtp.MemoryCache;
 import org.pdtp.NanoHTTPD;
 import org.pdtp.Network;
-import org.pdtp.NanoHTTPD.Response;
+import org.pdtp.Logger.Level;
 import org.pdtp.wire.TellInfo;
 
 public class OneShot extends Applet {
@@ -22,6 +26,20 @@ public class OneShot extends Applet {
   private String url;
   private AppletHTTP localServer;
   private int localHttpPort;  
+  
+  private class AppletLogWriter implements LogWriter {
+    private final JSObject window;
+    
+    private AppletLogWriter(JSObject window) {
+      this.window = window;
+    }
+    
+    public void log(Level level, Object message) {
+      if(message != null && level != null) {
+        //window.call("pdtp_log", new Object[] { level.toString(), message.toString() });
+      }
+    }    
+  }
   
   private class AppletHTTP extends NanoHTTPD {
     @Override
@@ -61,7 +79,7 @@ public class OneShot extends Applet {
     int sharePort = Integer.parseInt(getParameter("share-port"));
     localHttpPort = Integer.parseInt(getParameter("local-http-port"));
     
-    System.err.println("Local HTTP port set to " + localHttpPort);
+    info("Local HTTP port set to " + localHttpPort);
     
     try {
       net = new Network(server, serverPort, sharePort, new MemoryCache());
@@ -71,16 +89,16 @@ public class OneShot extends Applet {
     }
     
     JSObject win = JSObject.getWindow(this);
-    win.call("alert", new Object[] { "initialized." });
+    Logger.setLogWriter(new AppletLogWriter(win));    
   }
 
   @Override
   public void start() {
     try {
       net.get(url);
-      System.err.println("Starting server on " + localHttpPort);
+      info("Starting server on " + localHttpPort);
       localServer = new AppletHTTP(localHttpPort);
-      System.err.println("Server started.");
+      info("Server started.");
     } catch (IOException e) {
       e.printStackTrace();
     }
