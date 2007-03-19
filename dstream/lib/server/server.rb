@@ -12,6 +12,7 @@ class Server
   	@ids = Hash.new
 		@id = 0
     @stats_mutex=Mutex.new
+    @used_client_ids=Hash.new
 	end
 
   def connection_created(connection)
@@ -117,7 +118,7 @@ class Server
       "method"=> (t.connector == t.taker ? "get" : "put"),
       "url"=>url,
       "range"=>byte_range,
-      "transfer_id"=>t.transfer_id
+      "peer_id"=>client_info(t.acceptor).client_id
     }
 
     t.connector.send_message(request)
@@ -243,7 +244,22 @@ class Server
   end
 
   def dispatch_message_needslock(message,connection)
+    #require the client to be logged in with a client id
+    if message["type"] != "client_info" and client_info(connection).client_id.nil? then
+      raise ProtocolError.new("You need to send a 'client_info' message first")
+    end 
+
     case message["type"] 
+    when "client_info"
+      cid=message["client_id"]
+      #make sure this id isnt in use
+      if @used_client_ids[cid] then
+        raise ProtocolError.new("Your client id: #{cid} is already in use.")   
+      else
+        @used_client_ids[cid]=true
+      end    
+      client_info(connection).listen_port=message["listen_port"]
+      client_info(connection).client_id=cid
     when "ask_info"
       info=file_service.get_info(message["url"])
       response={
@@ -266,11 +282,10 @@ class Server
     when "unprovide"
       handle_requestprovide(connection,message)
     when "ask_verify"
-      hash=message["transfer_id"]
 
-      #FIXME we should probably make sure everything matches inside the transfer
-      ok= client_info(connection).transfers[hash] ? true : false
-        
+      my_id=peer_info(connection).client_id
+      transfer_id=Transfer::gen_transfer_id(my_id,message["peer_id"],message["url"],message["range"])
+      ok= client_info(connection).transfers[hash] ? true : false 
       puts "Transfer not ok:\npeer: #{message['peer']}\nhash:#{hash}\ninfo: #{connection.get_peer_info[0]}\nrange: #{message['range']}" if ok == false
       response={
         "type"=>"tell_verify",
@@ -278,11 +293,10 @@ class Server
         "is_authorized"=>ok
       }
       connection.send_message(response)
-    when "change_port"
-      client_info(connection).listen_port=message["port"].to_i
 		when "completed"
-      transfer_hash=message["transfer_id"]
-		  transfer=client_info(connection).transfers[transfer_hash]
+      my_id=peer_info(connection).client_id
+      transfer_id=Transfer::gen_transfer_id(my_id,message["peer_id"],message["url"],message["range"])
+		  transfer=client_info(connection).transfers[transfer_id]
       if transfer and transfer.taker==connection then
         transfer_completed(transfer,message["hash"])
       else

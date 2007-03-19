@@ -20,8 +20,8 @@ end
 class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
 	@@num_connections=0
   @@listener=nil
-  @@message_params=nil  
-
+  @@message_params=nil
+  
   def PDTPProtocol::listener= listener
     @@listener=listener
   end
@@ -33,6 +33,16 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
   end
 
   def post_init
+
+    # a cache of the peer info because eventmachine seems to drop it before we want
+    peername=get_peername
+    if peername.nil? then
+      @cached_peer_info="<Peername nil!!!>",91119 if peername.nil?
+    else
+      port,addr= Socket.unpack_sockaddr_in(peername)
+      @cached_peer_info=[addr.to_s,port.to_i]
+    end
+
     @@num_connections+=1
     @@listener.connection_created(self) if @@listener.respond_to?(:connection_created)
   end
@@ -137,11 +147,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
   end
 
   def get_peer_info
-    peername=get_peername
-    return "<Peername nil!!!>",91119 if peername.nil?
-    
-    port,addr= Socket.unpack_sockaddr_in(peername)
-    return addr.to_s,port.to_i
+    return @cached_peer_info
   end
 
   def to_s
@@ -208,6 +214,12 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
   #this function defines the required fields for each message
   def PDTPProtocol::define_message_params
     mp={}
+
+    #must be the first message the client sends
+    mp["client_info"]={
+      "client_id"=>:string,
+      "listen_port"=>:int                  
+    }
       
     mp["ask_info"]={
       "url"=>:url
@@ -224,14 +236,14 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
       "peer"=>:ip,
       "url"=>:url,
       "range"=>:range,
-      "transfer_id"=>:string
+      "peer_id"=>:string
     }
 
     mp["tell_verify"]={
-      #"peer"=>:ip,
-      #"url"=>:url,
-      #"range"=>:range,
-      "transfer_id"=>:string,
+      "peer"=>:ip,
+      "url"=>:url,
+      "range"=>:range,
+      "peer_id"=>:string,
       "is_authorized"=>:bool
     }
 
@@ -255,16 +267,15 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
       "range"=>Optional.new(:range)
     }
 
-    mp["change_port"]={
-      "port"=>:int
-    }
-
+    #the taker sends this message when a transfer finishes
+    #if there is an error in the transfer, dont set a hash
+    #to signify failure
     mp["completed"]={
-      #"peer"=>:ip,
-      #"url"=>:url,
-      #"range"=>:range,
-      "transfer_id"=>:string,
-      "hash"=>:string
+      "peer"=>:ip,
+      "url"=>:url,
+      "range"=>:range,
+      "peer_id"=>:string,
+      "hash"=>Optional.new(:string)
     }
 
     mp["hash_verify"]={
@@ -279,7 +290,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
       "method"=>:string,
       "url"=>:url,
       "range"=>:range,
-      "transfer_id"=>:string
+      "peer_id"=>:string
     }  
 
     mp["protocol_error"]={

@@ -1,7 +1,6 @@
 require File.dirname(__FILE__)+'/server_config'
 
 class Transfer
-  @@unique_id=0
   attr_reader :taker, :giver, :url, :chunkid
   attr_reader :connector, :acceptor, :byte_range
   attr_accessor :transfer_id
@@ -19,10 +18,20 @@ class Transfer
 			@connector=@taker
     	@acceptor=@giver
 		end
+    
+    recompute_transfer_id
+  end
 
-    #compute transfer id
-    @transfer_id=@@unique_id.to_s
-    @@unique_id+=1
+  def recompute_transfer_id
+    id1=connector.user_data.client_id
+    id2=acceptor.user_data.client_id
+    @transfer_id=Transfer::gen_transfer_id(id1,id2,@url,@byte_range)
+  end
+  
+  def Transfer::gen_transfer_id(id1,id2,url,byte_range)
+    a = id1<id2 ? id1 : id2
+    b = id1<id2 ? id2 : id1
+    return "#{a}$#{b}$#{url}$#{byte_range}"
   end
 
   def to_s

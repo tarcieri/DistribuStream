@@ -2,7 +2,7 @@ require File.dirname(__FILE__)+'/trust.rb'
 
 class ClientInfo
   attr_accessor :chunk_info, :trust
-  attr_accessor :listen_port
+  attr_accessor :listen_port, :client_id
   attr_accessor :transfers  
 
   # returns true if this client wants the server to spawn a transfer for it
