@@ -95,7 +95,7 @@ class ClientTransferListener < ClientTransferBase
     #here we construct the GUID for this file
     path=@request.params["REQUEST_PATH"]
 		vhost=@request.params["HTTP_HOST"]
-    @url="pdtp://"+vhost+path
+    @url="http://"+vhost+path
     
     @byte_range=parse_http_range(request.params["HTTP_RANGE"])
     @peer_id=@request.params["HTTP_X_PDTP_PEER_ID"]
