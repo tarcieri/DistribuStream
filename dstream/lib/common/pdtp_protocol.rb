@@ -21,15 +21,20 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
 	@@num_connections=0
   @@listener=nil
   @@message_params=nil
+  @connection_open=false
+
+  def connection_open?
+    return @connection_open
+  end
   
   def PDTPProtocol::listener= listener
     @@listener=listener
   end
   
   def initialize *args
-    super
     user_data=nil
     @mutex=Mutex.new
+    super
   end
 
   def post_init
@@ -44,6 +49,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
     end
 
     @@num_connections+=1
+    @connection_open=true
     @@listener.connection_created(self) if @@listener.respond_to?(:connection_created)
   end
 
@@ -140,6 +146,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
   def unbind
     @@num_connections-=1
     @@listener.connection_destroyed(self) if @@listener.respond_to?(:connection_destroyed)
+    @connection_open=false
   end
 
   def PDTPProtocol::print_info
