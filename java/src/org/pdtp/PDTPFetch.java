@@ -13,7 +13,7 @@ public class PDTPFetch {
     } else {
       Network N = new Network(args[1], Integer.parseInt(args[2]),
           Integer.parseInt(args[3]), new MemoryCache());
-      ReadableByteChannel c = N.get(args[0]);
+      ReadableByteChannel c = N.get(args[0], 1000);
 
       ByteBuffer buf = ByteBuffer.allocate(1024);
       int bytes = c.read(buf);

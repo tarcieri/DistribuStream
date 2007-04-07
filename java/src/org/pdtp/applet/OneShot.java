@@ -16,16 +16,17 @@ import org.pdtp.Logger;
 import org.pdtp.MemoryCache;
 import org.pdtp.NanoHTTPD;
 import org.pdtp.Network;
-import org.pdtp.Logger.Level;
 import org.pdtp.wire.TellInfo;
+
+import org.pdtp.Logger.Level;
 
 public class OneShot extends Applet {
   private static final long serialVersionUID = -7844878798366445725L;
 
   private Network net;
-  private String url;
   private AppletHTTP localServer;
   private int localHttpPort;  
+  private int timeout;
   
   private class AppletLogWriter implements LogWriter {
     private final JSObject window;
@@ -36,20 +37,26 @@ public class OneShot extends Applet {
     
     public void log(Level level, Object message) {
       if(message != null && level != null) {
-        //window.call("pdtp_log", new Object[] { level.toString(), message.toString() });
+        window.call("pdtp_log", new Object[] { level.toString(), message.toString() });        
       }
-    }    
+    }
   }
   
   private class AppletHTTP extends NanoHTTPD {
     @Override
     public Response serve(String uri, String method, Properties header, Properties parms) {
       try {
-        InputStream is = Channels.newInputStream(net.get(url));
+        String url = uri.substring(1);
+        InputStream is = null;
+        if(timeout != 0)
+          is = Channels.newInputStream(net.get(url, timeout));
+        else
+          is = Channels.newInputStream(net.get(url));
+        
         TellInfo inf = net.getInfo(url);
         Response r = new NanoHTTPD.Response(NanoHTTPD.HTTP_NOTFOUND, "text/plain", "Not found.");
         if(inf != null && is != null) {
-          r = new NanoHTTPD.Response(NanoHTTPD.HTTP_OK, "video/x-ms-wmv", is);
+          r = new NanoHTTPD.Response(NanoHTTPD.HTTP_OK, "application/octet-stream", is);
         }
       
         return r;
@@ -73,11 +80,11 @@ public class OneShot extends Applet {
   public void init() {
     super.init();
     
-    url = getParameter("url");
     String server = getParameter("server");
     int serverPort = Integer.parseInt(getParameter("server-port"));
     int sharePort = Integer.parseInt(getParameter("share-port"));
     localHttpPort = Integer.parseInt(getParameter("local-http-port"));
+    timeout = Integer.parseInt(getParameter("base-url-timeout"));
     
     info("Local HTTP port set to " + localHttpPort);
     
@@ -89,13 +96,13 @@ public class OneShot extends Applet {
     }
     
     JSObject win = JSObject.getWindow(this);
-    Logger.setLogWriter(new AppletLogWriter(win));    
+    Logger.setLogWriter(new AppletLogWriter(win));
+    info("Initialized.");
   }
 
   @Override
   public void start() {
     try {
-      net.get(url);
       info("Starting server on " + localHttpPort);
       localServer = new AppletHTTP(localHttpPort);
       info("Server started.");

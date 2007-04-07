@@ -3,12 +3,13 @@ package org.pdtp.wire;
 public class Completed {
   public Completed() { }
   
-  public Completed(String url, String peer, int port, String hash, Range range) {
+  public Completed(String url, String peer, int port, String hash, Range range, String peerId) {
     this.url = url;
     this.peer = peer;
     this.port = port;
     this.hash = hash;
     this.range = range;
+    this.peerId = peerId;
   }
   
   @Override
@@ -21,4 +22,5 @@ public class Completed {
   public int port;
   public String hash;
   public Range range;
+  public String peerId;
 }

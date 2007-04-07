@@ -10,4 +10,6 @@ public class Transfer {
   
   public String method;
   public Range range;
+  
+  public String peerId;
 }

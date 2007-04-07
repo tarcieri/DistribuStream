@@ -7,7 +7,8 @@
   <property name="src" location="src"/>
   <property name="build" location="build"/>
   <property name="dist"  location="dist"/>
-
+  <property name="libpath" location="lib/plugin.jar"/>
+	
   <target name="init">
     <!-- Create the time stamp -->
     <tstamp/>
@@ -18,7 +19,7 @@
   <target name="compile" depends="init"
         description="compile the source " >
     <!-- Compile the java code from ${src} into ${build} -->
-    <javac srcdir="${src}" destdir="${build}"/>
+    <javac srcdir="${src}" destdir="${build}" classpath="${libpath}" source="1.5" target="1.5"/>
   </target>
 
   <target name="dist" depends="compile"

@@ -197,6 +197,7 @@ public class Network implements ResourceHandler {
         t.url = part.getUrl();
         t.host = url.getHost();
         t.port = url.getPort() != -1 ? url.getPort() : url.getDefaultPort();        
+        t.peerId = "rawurl:" + myurl;
         transferCommand(t);
       } catch (MalformedURLException e) {
         e.printStackTrace();
@@ -216,7 +217,7 @@ public class Network implements ResourceHandler {
     }
   }
 
-  public void postComplete(ByteBuffer b, Resource r, String host, int port) {
+  public void postComplete(ByteBuffer b, Resource r, String host, int port, String id) {
     try {
       MessageDigest digest = MessageDigest.getInstance("SHA-256");
       b.rewind();
@@ -234,7 +235,7 @@ public class Network implements ResourceHandler {
       
       info(r + " hash=" + hashStr);
       
-      Completed tc = new Completed(r.getUrl(), host, port, hashStr, r.getRange());
+      Completed tc = new Completed(r.getUrl(), host, port, hashStr, r.getRange(), id);
       info("*** CHUNK TRANSFER SUCCESS: " + tc);      
       link.send(tc);
     } catch (NoSuchAlgorithmException e1) {
@@ -260,11 +261,13 @@ public class Network implements ResourceHandler {
 
   private class Fetcher extends Thread {
     private String vhost;
+    private String peerId;
     
-    public Fetcher(Resource r, URL base, String vhost) {
+    public Fetcher(Resource r, URL base, String vhost, String peerId) {
       this.resource = r;
       this.base = base;
       this.vhost = vhost;
+      this.peerId = peerId;
     }
     
     @Override
@@ -338,7 +341,7 @@ public class Network implements ResourceHandler {
               in.read(buf);
             }
           
-            postComplete(buf, actualResource, base.getHost(), base.getPort());
+            postComplete(buf, actualResource, base.getHost(), base.getPort(), peerId);
           }
         } else {
           InputStream ins = Channels.newInputStream(in);
@@ -360,7 +363,7 @@ public class Network implements ResourceHandler {
           
           if(!cache.contains(actualResource)) {
             postComplete(ByteBuffer.wrap(bytes), actualResource, base.getHost(),
-                base.getPort());
+                base.getPort(), peerId);
 
             // Update the mime type and entity size information, possibly.
             TellInfo inf = getInfoCached(resource.getUrl());
@@ -381,7 +384,7 @@ public class Network implements ResourceHandler {
       } catch (Exception e) {
         e.printStackTrace();        
         Completed tc = new Completed(resource.getUrl(),
-            base.getHost(), base.getPort(), "FAIL", resource.getRange());
+            base.getHost(), base.getPort(), "FAIL", resource.getRange(), peerId);
         warn("*** CHUNK TRANSFER FAILED: " + tc);        
         try {
           link.send(tc);
@@ -423,7 +426,7 @@ public class Network implements ResourceHandler {
             + (src.getPort() > 0
                 && src.getPort() != src.getDefaultPort()
                 ? ":" + src.getPort()
-                : ""));
+                : ""), t.peerId);
         f.start();
       }
     } catch (MalformedURLException e) {

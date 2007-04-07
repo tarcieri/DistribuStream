@@ -6,8 +6,9 @@ import java.net.URLDecoder;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.util.Properties;
+import java.util.UUID;
 
-import org.pdtp.wire.ChangePort;
+import org.pdtp.wire.ClientInfo;
 import org.pdtp.wire.Range;
 import org.pdtp.wire.TellInfo;
 import org.pdtp.wire.Transfer;
@@ -17,11 +18,12 @@ public class Link extends Thread {
     this.endpoint = endpoint;
     this.running = true;
     this.peerPort = peerPort;
+    this.id = UUID.randomUUID();
     
     if(peerPort > 0) {
       try {
         this.peerServer = new PeerServer(peerPort);
-        send(new ChangePort(peerPort));
+        send(new ClientInfo(id.toString(), peerPort));
       } catch (IOException e) {
         e.printStackTrace();
       }
@@ -114,6 +116,7 @@ public class Link extends Thread {
     }
   }
 
+  private UUID id;
   private boolean running;
   private Endpoint endpoint;
   private ResourceHandler handler;
