@@ -284,7 +284,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
     #It leaves the connection open on the taker side to allow them to decide if the transfer was successful
     #the hash parameter is ignored when sent by the giver
     mp["completed"]={
-      "peer"=>:ip,
+      #"peer"=>:ip, no longer used
       "url"=>:url,
       "range"=>:range,
       "peer_id"=>:string,
