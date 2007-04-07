@@ -100,6 +100,24 @@ class Server
   
     byte_range=@file_service.get_info(url).chunk_range(chunkid) 
     t=Transfer.new(taker,giver,url,chunkid,byte_range)
+
+    #DEBUG make sure this transfer doesnt already exist
+    t1=client_info(taker).transfers[t.transfer_id]
+    t2=client_info(giver).transfers[t.transfer_id]
+    if t1 != nil or t2 != nil then
+      begin
+      puts "BUG: transfer already exists"
+      puts "newtrans=#{t.debug_str rescue nil}" 
+      puts "oldtrans1=#{t1.debug_str rescue nil}"
+      puts "oldtrans2=#{t2.debug_str rescue nil}"
+      rescue Exception=>e
+        puts e
+        puts e.backtrace.join("\n")
+      end
+      exit!
+    end
+
+
     client_info(taker).transfers[t.transfer_id]=t
     client_info(giver).transfers[t.transfer_id]=t
 
@@ -296,6 +314,7 @@ class Server
       my_id=client_info(connection).client_id
       transfer_id=Transfer::gen_transfer_id(my_id,message["peer_id"],message["url"],message["range"])
 		  transfer=client_info(connection).transfers[transfer_id]
+      @@log.debug("Completed: hash=#{transfer_id}")
       if transfer  then
         transfer_completed(transfer,connection,message["hash"])
       else

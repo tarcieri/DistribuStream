@@ -38,4 +38,11 @@ class Transfer
 		return "taker=#{@taker}, giver=#{@giver}, connector=#{@connector}, acceptor=#{@acceptor}, url=#{@url}, chunk_id=#{@chunkid}"
 	end
 
+  def debug_str
+    str=""
+    str=str+"to_s=#{to_s}"
+    str=str+"   taker_id=#{@taker.user_data.client_id} giver_id=#{@giver.user_data.client_id}" 
+    return str
+  end
+
 end

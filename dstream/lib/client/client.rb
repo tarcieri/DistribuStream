@@ -27,11 +27,11 @@ class Client < Mongrel::HttpHandler
     #For some reason, we can't use this get_peer_info for a remote connection
     # why?
     #@@log.debug("Opened connection: #{connection.get_peer_info.inspect}")
-		@@log.debug("Opened connection...");
+		@@log.debug("[mongrel]Opened connection...");
   end
 
   def connection_destroyed(connection)
-	  @@log.debug("Closed server connection...")
+	  @@log.debug("[mongrel]Closed connection...")
   end
   
 
@@ -109,14 +109,21 @@ class Client < Mongrel::HttpHandler
       end
      
     when "tell_verify"
+      found=false
 			@transfers.each do |t|
         if transfer_matches?(t, message) then
 		
           #don't need this in the list anymore, its thread will handle it
           finished(t)
           t.tell_verify(message["is_authorized"])
+          found=true
 				  break
         end
+      end
+
+      if found==false then
+        puts "BUG: Tell verify sent for an unknown transfer"
+        exit!
       end
     when "hash_verify"
       @@log.debug("Hash verified for url=#{message["url"]} range=#{message["range"]} hash_ok=#{message["hash_ok"]}")

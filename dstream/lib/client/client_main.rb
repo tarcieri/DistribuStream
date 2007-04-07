@@ -96,8 +96,8 @@ class FileServiceProtocol < PDTPProtocol
 
   def unbind
     super
-    puts "Disconnected from server. Exiting."
-    exit!
+    puts "Disconnected from PDTP server. "
+    
   end
     
 end

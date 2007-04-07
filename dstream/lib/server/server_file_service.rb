@@ -50,11 +50,14 @@ class ServerFileService < FileServiceBase
 
 	def get_info(url)
 		begin
+      host=URI.split(url)[2]
+      #FIXME we should check host against a list of known hosts here
 		  info=ServerFileInfo.new
 		  info.streaming=false
 		  info.base_chunk_size=@default_chunk_size
       info.path=get_local_path(url)
-		  info.file_size=File.size?( info.path )
+		  raise if File.directory?(info.path)
+      info.file_size=File.size?( info.path )
       return nil if info.file_size==0 or info.file_size==nil
 		rescue
       return nil

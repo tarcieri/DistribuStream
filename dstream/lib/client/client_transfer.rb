@@ -107,6 +107,7 @@ class ClientTransferListener < ClientTransferBase
    
     send_ask_verify_message
 
+    #tell_verify(true)
     Thread.stop
     after_verification
   end
