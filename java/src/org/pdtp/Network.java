@@ -335,17 +335,15 @@ public class Network implements ResourceHandler {
           }
         }                
         
+        Resource actualResource = null;
+        ByteBuffer data = null;
         if(actualRange != null) {
-          Resource actualResource = new Resource(resource.getUrl(), actualRange);
-          if(!cache.contains(actualResource)) {
-            ByteBuffer buf = cache.allocate(actualRange.size());
+          actualResource = new Resource(resource.getUrl(), actualRange);
+          data = cache.allocate(actualRange.size());
         
-            while(in.isOpen() && buf.hasRemaining()) {
-              in.read(buf);
-            }
-          
-            postComplete(buf, actualResource, base.getHost(), base.getPort(), peerId);
-          }
+          while(in.isOpen() && data.hasRemaining()) {
+            in.read(data);
+          }          
         } else {
           InputStream ins = Channels.newInputStream(in);
           Vector<Byte> byteStream = new Vector<Byte>();
@@ -361,30 +359,31 @@ public class Network implements ResourceHandler {
             bytes[i++] = x.byteValue();
           }
           
+          data = ByteBuffer.wrap(bytes);
           actualRange = new Range(0, bytes.length);
-          Resource actualResource = new Resource(resource.getUrl(), actualRange);                    
-          
-          if(!cache.contains(actualResource)) {
-            postComplete(ByteBuffer.wrap(bytes), actualResource, base.getHost(),
-                base.getPort(), peerId);
-
-            // Update the mime type and entity size information, possibly.
-            TellInfo inf = getInfoCached(resource.getUrl());
-            if(inf != null) {
-              if("application/octet-stream".equals(inf.mimeType))
-                inf.mimeType = conn.getContentType();
-            } else {
-              inf = new TellInfo();
-              inf.chunkSize = 1;
-              inf.mimeType = conn.getContentType();
-              inf.size = actualResource.getRange().max();
-              inf.streamable = false;
-              inf.url = actualResource.getUrl();
-            }
-            infoReceived(inf);
-          }
+          actualResource = new Resource(resource.getUrl(), actualRange);                    
         }        
-      } catch (Exception e) {
+        // if(!cache.contains(actualResource))
+        postComplete(data, actualResource, base.getHost(),
+            base.getPort(), peerId);
+        // }
+
+        // Update the mime type and entity size information, possibly.
+        TellInfo inf = getInfoCached(resource.getUrl());
+        if(inf != null) {
+          if("application/octet-stream".equals(inf.mimeType))
+            inf.mimeType = conn.getContentType();
+        } else {
+          inf = new TellInfo();
+          inf.chunkSize = 1;
+          inf.mimeType = conn.getContentType();
+          inf.size = actualResource.getRange().max();
+          inf.streamable = false;
+          inf.url = actualResource.getUrl();
+        }
+        
+        infoReceived(inf);      
+      } catch(Throwable e) {
         e.printStackTrace();        
         Completed tc = new Completed(resource.getUrl(),
             base.getHost(), base.getPort(), "FAIL", resource.getRange(), peerId);
