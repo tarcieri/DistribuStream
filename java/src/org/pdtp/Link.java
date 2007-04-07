@@ -14,11 +14,11 @@ import org.pdtp.wire.TellInfo;
 import org.pdtp.wire.Transfer;
 
 public class Link extends Thread {
-  public Link(Endpoint endpoint, int peerPort) {
+  public Link(Endpoint endpoint, int peerPort, UUID id) {
     this.endpoint = endpoint;
     this.running = true;
     this.peerPort = peerPort;
-    this.id = UUID.randomUUID();
+    this.id = id;
     
     if(peerPort > 0) {
       try {

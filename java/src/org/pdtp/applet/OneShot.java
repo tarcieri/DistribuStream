@@ -56,7 +56,7 @@ public class OneShot extends Applet {
         TellInfo inf = net.getInfo(url);
         Response r = new NanoHTTPD.Response(NanoHTTPD.HTTP_NOTFOUND, "text/plain", "Not found.");
         if(inf != null && is != null) {
-          r = new NanoHTTPD.Response(NanoHTTPD.HTTP_OK, "application/octet-stream", is);
+          r = new NanoHTTPD.Response(NanoHTTPD.HTTP_OK, inf.mimeType, is);
         }
       
         return r;

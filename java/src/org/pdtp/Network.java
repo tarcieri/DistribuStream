@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.Vector;
 
 import org.pdtp.wire.AskInfo;
@@ -36,9 +37,10 @@ public class Network implements ResourceHandler {
     
     this.serverHost = host;
     
-    InetAddress addr = InetAddress.getByName(host);    
+    InetAddress addr = InetAddress.getByName(host);
+    this.id = UUID.randomUUID();
     this.link = new Link(new SocketEndpoint
-        (new JSONSerializer("org.pdtp.wire"), addr, port), peerPort);
+        (new JSONSerializer("org.pdtp.wire"), addr, port), peerPort, id);
     link.setResourceHandler(this);
     this.link.setDaemon(true);
     this.link.start();
@@ -275,6 +277,7 @@ public class Network implements ResourceHandler {
       try {        
         HttpURLConnection conn = (HttpURLConnection) base.openConnection();
         conn.setRequestProperty("Host", vhost);
+        conn.setRequestProperty("X-PDTP-Peer-Id", id.toString());
         
         conn.setRequestMethod("GET");
         if(resource.getRange() != null) {          
@@ -439,4 +442,5 @@ public class Network implements ResourceHandler {
   }
   
   private String serverHost;
+  private final UUID id;
 }

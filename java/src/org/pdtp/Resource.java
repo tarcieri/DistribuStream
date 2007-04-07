@@ -26,7 +26,7 @@ public class Resource {
   
   @Override
   public String toString() {
-    return url + "::" + range.min() + '-' + range.max();
+    return url + "::" + range;
   }
   
   @Override
