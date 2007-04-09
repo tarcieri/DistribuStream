@@ -94,6 +94,7 @@ class Server
 
   end
 
+  #returns true on success, or false if the specified transfer is already in progress
   def begin_transfer(taker,giver,url,chunkid)
     @@log.debug("#{@ids[giver]}->#{@ids[taker]} transfer starting: taker=#{taker} giver=#{giver} url=#{url}  chunkid=#{chunkid}")
     client_info(taker).chunk_info.transfer(url,chunkid..chunkid)
@@ -105,16 +106,17 @@ class Server
     t1=client_info(taker).transfers[t.transfer_id]
     t2=client_info(giver).transfers[t.transfer_id]
     if t1 != nil or t2 != nil then
-      begin
-      puts "BUG: transfer already exists"
-      puts "newtrans=#{t.debug_str rescue nil}" 
-      puts "oldtrans1=#{t1.debug_str rescue nil}"
-      puts "oldtrans2=#{t2.debug_str rescue nil}"
-      rescue Exception=>e
-        puts e
-        puts e.backtrace.join("\n")
-      end
-      exit!
+      return false
+      #begin
+      #puts "BUG: transfer already exists"
+      #puts "newtrans=#{t.debug_str rescue nil}" 
+      #puts "oldtrans1=#{t1.debug_str rescue nil}"
+      #puts "oldtrans2=#{t2.debug_str rescue nil}"
+      #rescue Exception=>e
+      #  puts e
+      #  puts e.backtrace.join("\n")
+      #end
+      #exit!
     end
 
 
@@ -134,7 +136,7 @@ class Server
     }
 
     t.connector.send_message(request)
-    
+    return true
   end
 
   # performs a brute force search to pair clients together, 
@@ -158,8 +160,8 @@ class Server
         # pick one and start the transfer
         if feasible_peers.size>0 then
           giver=feasible_peers[rand(feasible_peers.size)]
-          begin_transfer(c,giver,url,chunkid)
-          return true
+          return begin_transfer(c,giver,url,chunkid)
+          
         end
 
       end #requested chunks
@@ -198,6 +200,7 @@ class Server
       next if client_info(c2).wants_upload? == false
       if client_info(c2).chunk_info.provided?(url,chunkid) then
         feasible_peers << c2
+        break if feasible_peers.size > 5
       end
     end
 
@@ -206,8 +209,8 @@ class Server
     if feasible_peers.size>0 then
       #FIXME base this on the trust model
       giver=feasible_peers[rand(feasible_peers.size)]
-      begin_transfer(client_connection,giver,url,chunkid)
-      return true
+      return begin_transfer(client_connection,giver,url,chunkid)
+      
     end
 
     return false
@@ -227,8 +230,7 @@ class Server
       end
 
       if c1info.chunk_info.provided?(url,chunkid) then
-        begin_transfer(c2,client_connection,url,chunkid)
-        return true
+        return begin_transfer(c2,client_connection,url,chunkid)
       end
     end
 
