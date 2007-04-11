@@ -35,7 +35,7 @@ class Transfer
   end
 
   def to_s
-		return "taker=#{@taker}, giver=#{@giver}, connector=#{@connector}, acceptor=#{@acceptor}, url=#{@url}, chunk_id=#{@chunkid}"
+		return "taker=#{@taker}, giver=#{@giver}, connector=#{@connector}, acceptor=#{@acceptor}, url=#{@url}, chunk_id=#{@chunkid} range=#{@byte_range}"
 	end
 
   def debug_str

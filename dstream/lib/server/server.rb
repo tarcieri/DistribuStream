@@ -18,7 +18,8 @@ class Server
   def connection_created(connection)
     @stats_mutex.synchronize do
       @@log.info("#{@id} Client connected: #{connection.get_peer_info.inspect}")
-      @connections << connection
+      connection.user_data=ClientInfo.new
+      @connections << connection 
 		  @ids[connection] = @id
 		  @id += 1
     end
@@ -57,11 +58,11 @@ class Server
       # did the transfer complete successfully?
       local_hash=@file_service.get_chunk_hash(transfer.url,transfer.chunkid)
 
+      c1=client_info(transfer.taker)
+      c2=client_info(transfer.giver)
+
       if connection==transfer.taker then
         success= (chunk_hash==local_hash)
-
-        c1=client_info(transfer.taker)
-        c2=client_info(transfer.giver)
 
         if success then
           #the taker now has the file, so he can provide it
@@ -73,10 +74,7 @@ class Server
           c1.trust.failure(c2.trust)
         end 
       
-        outstr="#{@ids[transfer.giver]}->#{@ids[transfer.taker]} transfer completed: #{transfer}"
-        outstr=outstr+" t->g=#{c1.trust.weight(c2.trust)} g->t=#{c2.trust.weight(c1.trust)}" 
-        @@log.debug(outstr)
-    
+      
         msg={
           "type"=>"hash_verify",
           "url"=>transfer.url,
@@ -87,10 +85,15 @@ class Server
 
       end
 
+      outstr="#{@ids[transfer.giver]}->#{@ids[transfer.taker]} transfer completed: #{transfer}"
+      outstr=outstr+" t->g=#{c1.trust.weight(c2.trust)} g->t=#{c2.trust.weight(c1.trust)}" 
+      outstr=outstr+"sent_by: "+ ( connection==transfer.taker ? "taker" : "giver" )
+      outstr=outstr+" success=#{success} "
+      @@log.debug(outstr)
+    
       #remove this transfer from whoever sent it
       client_info(connection).transfers.delete(transfer.transfer_id)
       spawn_transfers_for_client(connection)     
-
 
   end
 
