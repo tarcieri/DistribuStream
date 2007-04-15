@@ -108,11 +108,13 @@ public class JSONSerializer implements Serializer {
     while(c != '{') c = (char) in.read();
     str += c;
     int balance = 1;
+    
     while(balance != 0) {
       c = (char) in.read();
       if(c == '{') ++balance;
       if(c == '}') --balance;
       str += c;
+      //trace("::" + c);
     }
     
     return str;

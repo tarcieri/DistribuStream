@@ -60,5 +60,5 @@ public class Logger {
   }
   
   private static Level logLevel = Level.WARN;
-  private static LogWriter writer = new OutputStreamWriter(System.out);
+  private static LogWriter writer = new OutputStreamWriter(System.err);
 }

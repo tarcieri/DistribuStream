@@ -384,9 +384,10 @@ public class Network implements ResourceHandler {
         
         infoReceived(inf);      
       } catch(Throwable e) {
-        e.printStackTrace();        
+        e.printStackTrace();
+        Range failedRange = resource.getRange() != null ? resource.getRange() : new Range(0, 0);
         Completed tc = new Completed(resource.getUrl(),
-            base.getHost(), base.getPort(), "FAIL", resource.getRange(), peerId);
+            base.getHost(), base.getPort(), e.toString(), failedRange, peerId);
         warn("*** CHUNK TRANSFER FAILED: " + tc);        
         try {
           link.send(tc);

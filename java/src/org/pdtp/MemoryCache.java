@@ -14,6 +14,7 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+import org.pdtp.wire.AskInfo;
 import org.pdtp.wire.Range;
 
 public class MemoryCache implements Library {
@@ -25,11 +26,11 @@ public class MemoryCache implements Library {
     return ByteBuffer.allocate((int) size);
   }
 
-  public boolean contains(Resource resource) {
+  public synchronized boolean contains(Resource resource) {
     return missing(resource).isEmpty();
   }
 
-  public Set<Range> missing(Resource resource) {
+  public synchronized Set<Range> missing(Resource resource) {
     if(!catalogue.containsKey(resource.getUrl())) {
       Set<Range> missing = new TreeSet<Range>();
       missing.add(resource.getRange());
@@ -135,7 +136,8 @@ public class MemoryCache implements Library {
           MemoryCacheElement chain[] = elSet.toArray(new MemoryCacheElement[0]);
                    
           for(MemoryCacheElement e : chain) {
-            System.err.println(">>>>> I NEED " + needed);
+            //System.err.println(">>>>> I NEED " + needed);
+            System.err.print(".");
             if(e.contains(needed.min())) {              
               Range i = needed.intersection(e);
               System.err.println("<<<< FOUND " + e + "[" + System.identityHashCode(e) + "]");
@@ -164,9 +166,9 @@ public class MemoryCache implements Library {
             }
           }
           
-          if(!needed.isEmpty()) {
-            cache.waitOn(new Resource(resource.getUrl(), needed), 0l);
-          }
+          //if(!needed.isEmpty()) {
+            cache.waitOn(new Resource(resource.getUrl(), needed), 1000l); 
+          //}
         }
                 
         out.close();

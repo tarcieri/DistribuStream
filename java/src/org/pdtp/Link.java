@@ -9,9 +9,11 @@ import java.util.Properties;
 import java.util.UUID;
 
 import org.pdtp.wire.ClientInfo;
+import org.pdtp.wire.Completed;
 import org.pdtp.wire.Range;
 import org.pdtp.wire.TellInfo;
 import org.pdtp.wire.Transfer;
+import static org.pdtp.Logger.info;
 
 public class Link extends Thread {
   public Link(Endpoint endpoint, int peerPort, UUID id) {
@@ -103,6 +105,13 @@ public class Link extends Thread {
           } else {
             response.data = Channels.newInputStream(ch);
           }
+          
+          String host = parms.getProperty("__host");
+          int port = Integer.parseInt(parms.getProperty("__port"));
+          String rPeerId = header.getProperty("X-PDTP-Peer-Id");
+          Completed tc = new Completed(r.getUrl(), host, port, "was_server", r.getRange(), rPeerId);
+          info("SCOMPLETE:" + tc);
+          send(tc);
           
           return response;
         } else {
