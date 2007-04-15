@@ -12,7 +12,7 @@ require File.dirname(__FILE__)+'/pdtp_protocol'
   :port=>6000, #server port
   :listen_port=> 8000, #client listen port
   :file_root=>File.dirname(__FILE__)+'/../../../testfiles',
-  :quiet=>false,
+  :quiet=>true,
   :chunk_size=>5000
 }
 

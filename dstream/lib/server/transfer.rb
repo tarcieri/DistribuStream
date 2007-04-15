@@ -4,12 +4,16 @@ class Transfer
   attr_reader :taker, :giver, :url, :chunkid
   attr_reader :connector, :acceptor, :byte_range
   attr_accessor :transfer_id
+  attr_accessor :creation_time
+  attr_accessor :verification_asked
  
 	@@config = ServerConfig.instance
 
   def initialize(taker,giver,url,chunkid,byte_range)
     @taker,@giver,@url,@chunkid,@byte_range=taker,giver,url,chunkid,byte_range
     
+    @verification_asked=false
+    @creation_time=Time.now
     #if FIREWALL global is set, assume taker is behind firewall
 		if @@config.firewall then
     	@connector=@giver

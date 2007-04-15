@@ -178,6 +178,7 @@ class Server
   #what this client has or wants
   def spawn_transfers_for_client(client_connection)
     info=client_info(client_connection)
+    info.clear_stalled_transfers
 
     while info.wants_download? do
       break if spawn_download_for_client(client_connection) == false
@@ -200,6 +201,7 @@ class Server
 
     connections.each do |c2|
       next if client_connection==c2
+      client_info(c2).clear_stalled_transfers
       next if client_info(c2).wants_upload? == false
       if client_info(c2).chunk_info.provided?(url,chunkid) then
         feasible_peers << c2
@@ -224,6 +226,7 @@ class Server
 
     connections.each do |c2|
       next if client_connection==c2
+      client_info(c2).clear_stalled_transfers
       next if client_info(c2).wants_download? == false
     
       begin
@@ -304,8 +307,8 @@ class Server
       my_id=client_info(connection).client_id
       transfer_id=Transfer::gen_transfer_id(my_id,message["peer_id"],message["url"],message["range"])
       ok= client_info(connection).transfers[transfer_id] ? true : false
- 
-      puts "Transfer not ok:\npeer: #{message['peer']}\nhash:#{hash}\ninfo: #{connection.get_peer_info[0]}\nrange: #{message['range']}" if ok == false
+      client_info(connection).transfers[transfer_id].verification_asked=true if ok
+      @@log.debug "Transfer not ok:\npeer: #{message['peer']}\nhash:#{hash}\ninfo: #{connection.get_peer_info[0]}\nrange: #{message['range']}" if ok == false
       response={
         "type"=>"tell_verify",
         "url"=>message["url"],
@@ -315,6 +318,9 @@ class Server
         "is_authorized"=>ok
       }
       connection.send_message(response)
+
+      
+
 		when "completed"
       my_id=client_info(connection).client_id
       transfer_id=Transfer::gen_transfer_id(my_id,message["peer_id"],message["url"],message["range"])

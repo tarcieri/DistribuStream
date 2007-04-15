@@ -20,6 +20,14 @@ class ClientInfo
     @trust=Trust.new
     @transfers=Hash.new
   end
+
+  def clear_stalled_transfers
+    timeout=2.0
+    now=Time.now
+    @transfers.delete_if { |key,t| 
+      now - t.creation_time > timeout and t.verification_asked == false 
+    }
+  end
  
 end
 
