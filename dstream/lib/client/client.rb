@@ -161,7 +161,8 @@ class Client < Mongrel::HttpHandler
     md5.update(String(now.usec))
     md5.update(String(rand(0)))
     md5.update(String($$))
-    return md5.hexdigest+":#{port}"
+    #return md5.hexdigest+":#{port}" # long id
+    return md5.hexdigest[0..5] # short id
   end
 
 end

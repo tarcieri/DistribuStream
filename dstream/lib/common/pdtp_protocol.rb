@@ -71,12 +71,19 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
   def receive_message message
       @@listener.dispatch_message(message,self) 
   end
+
+  #debug routine: returns id of remote peer on this connection
+  #
+  def remote_peer_id
+    ret= user_data.client_id rescue nil
+    return ( ret!=nil ? ret : "NOID")
+  end
    
   def receive_line line
     begin
       line.chomp!
 			id = @@listener.get_id(self)
-      @@log.debug("#{id} recv: "+line)
+      @@log.debug("(#{remote_peer_id}) recv: "+line)
       message=JSON.parse(line)rescue nil
       raise ProtocolError.new("JSON couldn't parse: #{line}") if message.nil?
 
@@ -138,7 +145,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
       range_to_hash(message)
       outstr=JSON.unparse(message)+"\n"
 			id = @@listener.get_id(self)
-      @@log.debug( "#{id} send: #{outstr.chomp}")
+      @@log.debug( "(#{remote_peer_id}) send: #{outstr.chomp}")
       send_data outstr  
     end
   end

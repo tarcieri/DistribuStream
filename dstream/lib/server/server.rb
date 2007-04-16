@@ -86,11 +86,11 @@ class Server
 
       end
 
-      outstr="#{@ids[transfer.giver]}->#{@ids[transfer.taker]} transfer completed: #{transfer}"
-      outstr=outstr+" t->g=#{c1.trust.weight(c2.trust)} g->t=#{c2.trust.weight(c1.trust)}" 
-      outstr=outstr+"sent_by: "+ ( connection==transfer.taker ? "taker" : "giver" )
-      outstr=outstr+" success=#{success} "
-      @@log.debug(outstr)
+      #outstr="#{@ids[transfer.giver]}->#{@ids[transfer.taker]} transfer completed: #{transfer}"
+      #outstr=outstr+" t->g=#{c1.trust.weight(c2.trust)} g->t=#{c2.trust.weight(c1.trust)}" 
+      #outstr=outstr+"sent_by: "+ ( connection==transfer.taker ? "taker" : "giver" )
+      #outstr=outstr+" success=#{success} "
+      #@@log.debug(outstr)
     
       #remove this transfer from whoever sent it
       client_info(connection).transfers.delete(transfer.transfer_id)
@@ -100,29 +100,20 @@ class Server
 
   #returns true on success, or false if the specified transfer is already in progress
   def begin_transfer(taker,giver,url,chunkid)
-    @@log.debug("#{@ids[giver]}->#{@ids[taker]} transfer starting: taker=#{taker} giver=#{giver} url=#{url}  chunkid=#{chunkid}")
+    #@@log.debug("#{@ids[giver]}->#{@ids[taker]} transfer starting: taker=#{taker} giver=#{giver} url=#{url}  chunkid=#{chunkid}")
     client_info(taker).chunk_info.transfer(url,chunkid..chunkid)
   
     byte_range=@file_service.get_info(url).chunk_range(chunkid) 
     t=Transfer.new(taker,giver,url,chunkid,byte_range)
 
-    #DEBUG make sure this transfer doesnt already exist
+    #make sure this transfer doesnt already exist
     t1=client_info(taker).transfers[t.transfer_id]
     t2=client_info(giver).transfers[t.transfer_id]
     if t1 != nil or t2 != nil then
       return false
-      #begin
-      #puts "BUG: transfer already exists"
-      #puts "newtrans=#{t.debug_str rescue nil}" 
-      #puts "oldtrans1=#{t1.debug_str rescue nil}"
-      #puts "oldtrans2=#{t2.debug_str rescue nil}"
-      #rescue Exception=>e
-      #  puts e
-      #  puts e.backtrace.join("\n")
-      #end
-      #exit!
     end
 
+    #@@log.debug("Transfer: taker=#{taker.user_data.client_id} giver=#{giver.user_data.client_id} id=#{t.transfer_id}")
 
     client_info(taker).transfers[t.transfer_id]=t
     client_info(giver).transfers[t.transfer_id]=t
@@ -366,8 +357,9 @@ class Server
   end
 
   def connection_name(c)
-    host,port=c.get_peer_info
-    return "#{get_id(c)}: #{host}:#{port}"
+    #host,port=c.get_peer_info
+    #return "#{get_id(c)}: #{host}:#{port}"
+    return client_info(c).client_id
   end
 
   def generate_html_stats

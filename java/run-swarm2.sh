@@ -4,7 +4,7 @@
 
 cd build
 
-MINPORT=7000
+MINPORT=9000
 MAXPORT=MINPORT+$1
 
 for (( port=MINPORT ; port < MAXPORT ; port++ ))
