@@ -102,7 +102,7 @@ public class Link extends Thread {
           TellInfo info = handler.getInfoCached(uri);          
           Response response = new Response();
           
-          response.header.setProperty("Content-Type", info.mimeType);
+          response.addHeader("Content-Type", info.mimeType);
           Range range = Range.parseHTTPRange(header.getProperty("Range"));          
           if(range == null) {
             if(info != null) {
@@ -111,7 +111,7 @@ public class Link extends Thread {
             }
           } else {
             response.status = "206 Partial Content";
-            response.header.setProperty("Content-Range",
+            response.addHeader("Content-Range",
                 "bytes " + range + "/" + (info != null ? info.size : "*")); 
           }
           
