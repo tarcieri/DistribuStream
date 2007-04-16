@@ -328,9 +328,6 @@ public class NanoHTTPD
 				}
 
 				// Ok, now do the serve()
-        parms.put("__host", mySocket.getRemoteSocketAddress().toString());
-        parms.put("__port", mySocket.getPort());
-        trace("parms.__port=" + parms.getProperty("__port"));        
 				Response r = serve( uri, method, header, parms );
 				if ( r == null )
 					sendError( HTTP_INTERNALERROR, "SERVER INTERNAL ERROR: Serve() returned a null response." );

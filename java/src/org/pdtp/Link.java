@@ -125,10 +125,10 @@ public class Link extends Thread {
             response.data = Channels.newInputStream(ch);
           }
           
-          String host = parms.getProperty("__host");
-          int port = Integer.parseInt(parms.getProperty("__port"));
+         // String host = parms.getProperty("__host");
+         // int port = Integer.parseInt(parms.getProperty("__port"));
           String rPeerId = header.getProperty("X-PDTP-Peer-Id");
-          Completed tc = new Completed(r.getUrl(), host, port, "was_server", r.getRange(), rPeerId);
+          Completed tc = new Completed(r.getUrl(), "was_server", r.getRange(), rPeerId);
           info("SCOMPLETE:" + tc);
           send(tc);
           

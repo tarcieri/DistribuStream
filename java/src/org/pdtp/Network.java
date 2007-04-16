@@ -309,7 +309,7 @@ public class Network implements ResourceHandler {
    * @param port the port the connection occurred on
    * @param id the id of the providing peer
    */
-  public void postComplete(ByteBuffer b, Resource r, String host, int port, String id) {
+  public void postComplete(ByteBuffer b, Resource r, String id) {
     try {
       MessageDigest digest = MessageDigest.getInstance("SHA-256");
       b.rewind();
@@ -327,7 +327,7 @@ public class Network implements ResourceHandler {
       
       info(r + " hash=" + hashStr);
       
-      Completed tc = new Completed(r.getUrl(), host, port, hashStr, r.getRange(), id);
+      Completed tc = new Completed(r.getUrl(), hashStr, r.getRange(), id);
       info("*** CHUNK TRANSFER SUCCESS: " + tc);      
       link.send(tc);
     } catch (NoSuchAlgorithmException e1) {
@@ -552,8 +552,7 @@ public class Network implements ResourceHandler {
           actualResource = new Resource(resource.getUrl(), actualRange);                    
         }        
         // if(!cache.contains(actualResource))
-        postComplete(data, actualResource, base.getHost(),
-            base.getPort(), peerId);
+        postComplete(data, actualResource, peerId);
         // }
 
         // Update the mime type and entity size information, possibly.
@@ -574,8 +573,7 @@ public class Network implements ResourceHandler {
       } catch(Throwable e) {
         e.printStackTrace();
         Range failedRange = resource.getRange() != null ? resource.getRange() : new Range(0, 0);
-        Completed tc = new Completed(resource.getUrl(),
-            base.getHost(), base.getPort(), e.toString(), failedRange, peerId);
+        Completed tc = new Completed(resource.getUrl(), e.toString(), failedRange, peerId);
         warn("*** CHUNK TRANSFER FAILED: " + tc);        
         try {
           link.send(tc);
