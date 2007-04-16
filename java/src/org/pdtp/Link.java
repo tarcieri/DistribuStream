@@ -101,9 +101,8 @@ public class Link extends Thread {
         
           TellInfo info = handler.getInfoCached(uri);          
           Response response = new Response();
-          
-          //response.addHeader("Content-Type", info.mimeType);
-          response.addHeader("Content-Type", "application/octet-stream");
+
+          response.addHeader("Content-Type", info != null ? info.mimeType : "application/octet-stream");
           
           Range range = Range.parseHTTPRange(header.getProperty("Range"));          
           if(range == null) {
