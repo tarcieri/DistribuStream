@@ -353,6 +353,9 @@ public class Network implements ResourceHandler {
    */
   public void infoReceived(TellInfo info) {
     synchronized(metadataCache) {
+      if(info.mimeType == null || "".equals(info.mimeType))
+        info.mimeType = "application/octet-stream";
+      
       metadataCache.put(info.url, info);
       metadataCache.notifyAll();
     }
