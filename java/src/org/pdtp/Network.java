@@ -30,7 +30,23 @@ import org.pdtp.wire.Request;
 import org.pdtp.wire.TellInfo;
 import org.pdtp.wire.Transfer;
 
+/**
+ * The Network class provides a convenient interface for applications to
+ * connect to PDTP networks.
+ * 
+ */
 public class Network implements ResourceHandler {
+  /**
+   * Connects to a peer network coordinated by the specified server,
+   * serving local data on the specified port. 
+   * 
+   * @param host the coordinating server hostname
+   * @param port the coordinating server port
+   * @param peerPort the local port to share data on
+   * @param cache a library that backs data downloaded by the library (required)
+   * @see Library
+   * @throws IOException
+   */
   public Network(String host, int port, int peerPort, Library cache) throws IOException {    
     this.cache = cache;
     this.metadataCache = new HashMap<String, TellInfo>();
@@ -46,10 +62,33 @@ public class Network implements ResourceHandler {
     this.link.start();
   }
   
+  /**
+   * Gets information about the specified URL. This function
+   * blocks until data is provided.
+   * 
+   * This is equivalent to getInfo(url, 0).
+   * 
+   * @param url the url to query
+   * @return a tellinfo data structure with information about
+   *         the url
+   * @see TellInfo
+   * @throws IOException
+   */
   public TellInfo getInfo(String url) throws IOException {
     return getInfo(url, 0);
   }
   
+  /**
+   * Gets information about the specified URL. This function
+   * blocks until data is provided, or until the specified timeout
+   * is reached. A timeout of zero blocks forever.
+   * 
+   * @param url the url to query
+   * @param timeout the query timeout
+   * @return timeout a tellinfo data structure with information about
+   *         the url
+   * @throws IOException
+   */
   public TellInfo getInfo(String url, long timeout) throws IOException {
     TellInfo info = null;
     synchronized(metadataCache) {
@@ -71,28 +110,85 @@ public class Network implements ResourceHandler {
     return info;
   }
   
+  /**
+   * As getInfo, but data is returned only if it has been cached
+   * this session.
+   *  
+   * @param url the url to query
+   * @returns information about the url, if cached. null otherwise.
+   */
   public TellInfo getInfoCached(String url) {
     return metadataCache.get(url);
   }
   
+  /**
+   * Returns a channel providing the specified data, but only
+   * if the data is already in the cache. Returns null otherwise.
+   * 
+   * @param res the resource to return
+   * @return a channel providing data for resource, or null.
+   */
   public ReadableByteChannel getCached(Resource res) throws IOException {
     return cache.getChannel(res, false);
   }
   
+  /**
+   * Returns a channel providing the specified URL. All network
+   * details are handled by lower layers.
+   * 
+   * This is equivalent to calling get(url, 0).
+   * 
+   * @param url the requested URL
+   * @return URL data provided by the peer network, or the source URL.
+   * @throws IOException
+   */
   public ReadableByteChannel get(String url) throws IOException {
     Resource r = new Resource(url, null);
     return get(r);
   }
   
+  /**
+   * Returns a channel providing the specified URL. All network
+   * details are handled by lower layers.
+   * 
+   * Timeout specifies, broadly, how long to wait for peers before
+   * giving up and downloading the original URL.
+   * 
+   * @param url the requested URL
+   * @param timeout a network timeout hint
+   * @return
+   * @throws IOException
+   */
   public ReadableByteChannel get(String url, long timeout) throws IOException {
     Resource r = new Resource(url, null);
     return get(r, timeout);
   }
   
+  /**
+   * Returns a channel providing the specified URL. All network
+   * details are handled by lower layers.
+   * 
+   * 
+   * @param res the requested resource
+   * @return
+   * @throws IOException
+   */
   public ReadableByteChannel get(Resource res) throws IOException {
     return get(res, 0);
   }
   
+  /**
+   * Returns a channel providing the specified URL. All network
+   * details are handled by lower layers.
+   * 
+   * Timeout specifies, broadly, how long to wait for peers before
+   * giving up and downloading the original URL.
+   * 
+   * @param res the requested resource
+   * @param timeout network timeout hint
+   * @return
+   * @throws IOException
+   */
   public ReadableByteChannel get(Resource res, long timeout) throws IOException {
     TellInfo info = getInfo(res.getUrl(), timeout);
     
@@ -106,22 +202,165 @@ public class Network implements ResourceHandler {
     return cache.getChannel(res, true);  
   }    
   
+  /**
+   * Equivalent to Channels.newInputStream(get(url)).
+   * 
+   * @param url the requested URL.
+   * @return an InputStream providing the data from url off the
+   *         peer network.
+   * @throws IOException
+   */
   public InputStream getStream(String url) throws IOException {
     Resource r = new Resource(url, null);
     return getStream(r);
   }
   
+  /**
+   * Equivalent to Channels.newInputStream(get(url, timeout)).
+   * 
+   * @param url the requested URL.
+   * @param timeout network timeout hint
+   * @return an InputStream providing the data from url off the
+   *         peer network.
+   * @throws IOException
+   */
   public InputStream getStream(String url, long timeout) throws IOException {
     Resource r = new Resource(url, null);
     return getStream(r, timeout);
   }
   
+  /**
+   * Equivalent to Channels.newInputStream(get(res)).
+   * 
+   * @param res the requested resource
+   * @return an InputStream providing the data from url off the
+   *         peer network.
+   * @throws IOException
+   */
   public InputStream getStream(Resource res) throws IOException {
     return getStream(res, 0);
   }
   
+  /**
+   * Equivalent to Channels.newInputStream(get(res)).
+   * 
+   * @param res the requested resource
+   * @return an InputStream providing the data from url off the
+   *         peer network.
+   * @throws IOException
+   */
   public InputStream getStream(Resource res, long timeout) throws IOException {    
     return Channels.newInputStream(get(res, timeout));
+  }
+  
+  /**
+   * Starts the specified transfer. 
+   * 
+   * @param t the transfer to initiate
+   */
+  public void transferCommand(Transfer t) {
+    try {
+      //URL u = new URL(t.transferUrl);
+      
+      String myurl = t.url;
+      if(myurl.startsWith("pdtp")) {
+        myurl = myurl.replaceFirst("pdtp", "http");
+      }
+      
+      String peerHost = t.host;
+      InetAddress addr = InetAddress.getByName(peerHost);
+      if(addr.isLoopbackAddress()) {
+        // Silly server. Loopbacks are for extremely flexible kids.
+        peerHost = serverHost;
+      }
+      
+      URL src = new URL(myurl);      
+      URL u = new URL("http://" + peerHost + ":" + t.port + src.getPath());            
+      
+      Resource r = new Resource(t.url, t.range);
+      info("Told to " + t.method + " " + r + " at " + u);
+      
+      if(!cache.contains(r)) {
+        Fetcher f = new Fetcher(r, u, src.getHost()
+            + (src.getPort() > 0
+                && src.getPort() != src.getDefaultPort()
+                ? ":" + src.getPort()
+                : ""), t.peerId);
+        f.start();
+      }
+    } catch (MalformedURLException e) {
+      // TODO Auto-generated catch block
+      //e.printStackTrace();
+    } catch (UnknownHostException e) {
+      // TODO Auto-generated catch block
+      //e.printStackTrace();
+    }
+  }
+
+  /**
+   * Indicates that new data has been received from the peer network.
+   * 
+   * This can also be called by clients or libraries to indicate changes
+   * in the data they have available.
+   * 
+   * @param b the raw data
+   * @param r the resource received
+   * @param host the host from which the data came
+   * @param port the port the connection occurred on
+   * @param id the id of the providing peer
+   */
+  public void postComplete(ByteBuffer b, Resource r, String host, int port, String id) {
+    try {
+      MessageDigest digest = MessageDigest.getInstance("SHA-256");
+      b.rewind();
+      digest.update(b);
+      byte[] hashBytes = digest.digest();
+      String hashStr = "";
+      for(byte hb : hashBytes) {
+        int i = (int) hb;
+        if(i < 0)
+          i = 256 + i;
+        
+        String bstr = Integer.toHexString(i);
+        hashStr += bstr.length() == 2 ? bstr : "0" + bstr; 
+      }
+      
+      info(r + " hash=" + hashStr);
+      
+      Completed tc = new Completed(r.getUrl(), host, port, hashStr, r.getRange(), id);
+      info("*** CHUNK TRANSFER SUCCESS: " + tc);      
+      link.send(tc);
+    } catch (NoSuchAlgorithmException e1) {
+      e1.printStackTrace();
+    } catch (IOException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+        
+    cache.write(r, b);
+    
+    try {
+      link.send(new Provide(r));
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+  
+  /**
+   * Injects the specified file information into the metadata cache.
+   * 
+   * This is used primarily by Link. Consumers should not use.
+   */
+  public void infoReceived(TellInfo info) {
+    synchronized(metadataCache) {
+      metadataCache.put(info.url, info);
+      metadataCache.notifyAll();
+    }
+  }
+
+  public ByteBuffer postRequested(Resource r) {
+    // TODO Auto-generated method stub
+    return null;
   }
   
   private class Requester extends Thread {
@@ -205,60 +444,6 @@ public class Network implements ResourceHandler {
         e.printStackTrace();
       }      
     }
-  }
-  
-  
-  private Map<String, TellInfo> metadataCache;
-  private Library cache;
-  private Link link;
-  
-  public void infoReceived(TellInfo info) {
-    synchronized(metadataCache) {
-      metadataCache.put(info.url, info);
-      metadataCache.notifyAll();
-    }
-  }
-
-  public void postComplete(ByteBuffer b, Resource r, String host, int port, String id) {
-    try {
-      MessageDigest digest = MessageDigest.getInstance("SHA-256");
-      b.rewind();
-      digest.update(b);
-      byte[] hashBytes = digest.digest();
-      String hashStr = "";
-      for(byte hb : hashBytes) {
-        int i = (int) hb;
-        if(i < 0)
-          i = 256 + i;
-        
-        String bstr = Integer.toHexString(i);
-        hashStr += bstr.length() == 2 ? bstr : "0" + bstr; 
-      }
-      
-      info(r + " hash=" + hashStr);
-      
-      Completed tc = new Completed(r.getUrl(), host, port, hashStr, r.getRange(), id);
-      info("*** CHUNK TRANSFER SUCCESS: " + tc);      
-      link.send(tc);
-    } catch (NoSuchAlgorithmException e1) {
-      e1.printStackTrace();
-    } catch (IOException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
-        
-    cache.write(r, b);
-    
-    try {
-      link.send(new Provide(r));
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-  }
-
-  public ByteBuffer postRequested(Resource r) {
-    // TODO Auto-generated method stub
-    return null;
   }
 
   private class Fetcher extends Thread {
@@ -402,45 +587,9 @@ public class Network implements ResourceHandler {
     private final Resource resource;
   }
   
-  public void transferCommand(Transfer t) {
-    try {
-      //URL u = new URL(t.transferUrl);
-      
-      String myurl = t.url;
-      if(myurl.startsWith("pdtp")) {
-        myurl = myurl.replaceFirst("pdtp", "http");
-      }
-      
-      String peerHost = t.host;
-      InetAddress addr = InetAddress.getByName(peerHost);
-      if(addr.isLoopbackAddress()) {
-        // Silly server. Loopbacks are for extremely flexible kids.
-        peerHost = serverHost;
-      }
-      
-      URL src = new URL(myurl);      
-      URL u = new URL("http://" + peerHost + ":" + t.port + src.getPath());            
-      
-      Resource r = new Resource(t.url, t.range);
-      info("Told to " + t.method + " " + r + " at " + u);
-      
-      if(!cache.contains(r)) {
-        Fetcher f = new Fetcher(r, u, src.getHost()
-            + (src.getPort() > 0
-                && src.getPort() != src.getDefaultPort()
-                ? ":" + src.getPort()
-                : ""), t.peerId);
-        f.start();
-      }
-    } catch (MalformedURLException e) {
-      // TODO Auto-generated catch block
-      //e.printStackTrace();
-    } catch (UnknownHostException e) {
-      // TODO Auto-generated catch block
-      //e.printStackTrace();
-    }
-  }
-  
+  private Map<String, TellInfo> metadataCache;
+  private Library cache;
+  private Link link;    
   private String serverHost;
   private final UUID id;
 }
