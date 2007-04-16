@@ -13,6 +13,7 @@ class Server
 		@id = 0
     @stats_mutex=Mutex.new
     @used_client_ids=Hash.new
+    @updated_clients=Hash.new #a set of clients that have been modified and need transfers spawned
 	end
 
   def connection_created(connection)
@@ -53,7 +54,7 @@ class Server
   end
 
   # called when a transfer either finishes, successfully or not
-  def transfer_completed(transfer,connection,chunk_hash)      
+  def transfer_completed(transfer,connection,chunk_hash,send_response=true)      
 
       # did the transfer complete successfully?
       local_hash=@file_service.get_chunk_hash(transfer.url,transfer.chunkid)
@@ -81,7 +82,7 @@ class Server
           "range"=>transfer.byte_range,
           "hash_ok"=>success
         }
-        transfer.taker.send_message(msg)
+        transfer.taker.send_message(msg) if send_response
 
       end
 
@@ -93,8 +94,8 @@ class Server
     
       #remove this transfer from whoever sent it
       client_info(connection).transfers.delete(transfer.transfer_id)
-      spawn_transfers_for_client(connection)     
-
+      #spawn_transfers_for_client(connection)     
+      @updated_clients[connection]=true
   end
 
   #returns true on success, or false if the specified transfer is already in progress
@@ -173,12 +174,20 @@ class Server
     return false
   end
 
+  def clear_stalled_transfers_for_client(client_connection)
+    info=client_info(client_connection)
+    info.get_stalled_transfers.each do |t|
+      transfer_completed(t,client_connection,nil,false)
+    end  
+  end
+
   #spawns uploads and downloads for this client.
   #should be called every time there is a change that would affect 
   #what this client has or wants
   def spawn_transfers_for_client(client_connection)
     info=client_info(client_connection)
-    info.clear_stalled_transfers
+    
+    clear_stalled_transfers_for_client(client_connection)
 
     while info.wants_download? do
       break if spawn_download_for_client(client_connection) == false
@@ -201,7 +210,7 @@ class Server
 
     connections.each do |c2|
       next if client_connection==c2
-      client_info(c2).clear_stalled_transfers
+      clear_stalled_transfers_for_client(c2)
       next if client_info(c2).wants_upload? == false
       if client_info(c2).chunk_info.provided?(url,chunkid) then
         feasible_peers << c2
@@ -226,7 +235,7 @@ class Server
 
     connections.each do |c2|
       next if client_connection==c2
-      client_info(c2).clear_stalled_transfers
+      clear_stalled_transfers_for_client(c2)
       next if client_info(c2).wants_download? == false
     
       begin
@@ -249,6 +258,16 @@ class Server
     end
   end
 
+  def spawn_all_transfers
+    while @updated_clients.size > 0 do
+      tmp=@updated_clients
+      @updated_clients=Hash.new
+      tmp.each do |client,true_key| 
+        spawn_transfers_for_client(client)
+      end
+    end    
+  end
+
   #handles the request, provide, unrequest, unprovide messages
   def handle_requestprovide(connection,message)
     type=message["type"]
@@ -261,7 +280,9 @@ class Server
 
     #call request, provide, unrequest, or unprovide
     client_info(connection).chunk_info.send( type.to_sym, url, range)
-    spawn_transfers_for_client(connection)
+    #spawn_transfers_for_client(connection)
+    @updated_clients[connection]=true
+    #spawn_all_transfers
   end
 
   def dispatch_message_needslock(message,connection)
@@ -308,7 +329,7 @@ class Server
       transfer_id=Transfer::gen_transfer_id(my_id,message["peer_id"],message["url"],message["range"])
       ok= client_info(connection).transfers[transfer_id] ? true : false
       client_info(connection).transfers[transfer_id].verification_asked=true if ok
-      @@log.debug "Transfer not ok:\npeer: #{message['peer']}\nhash:#{hash}\ninfo: #{connection.get_peer_info[0]}\nrange: #{message['range']}" if ok == false
+      @@log.debug "AskVerify not ok: id=#{transfer_id}" if ok == false
       response={
         "type"=>"tell_verify",
         "url"=>message["url"],
@@ -325,7 +346,7 @@ class Server
       my_id=client_info(connection).client_id
       transfer_id=Transfer::gen_transfer_id(my_id,message["peer_id"],message["url"],message["range"])
 		  transfer=client_info(connection).transfers[transfer_id]
-      @@log.debug("Completed: hash=#{transfer_id}")
+      @@log.debug("Completed: id=#{transfer_id} ok=#{transfer != nil}" )
       if transfer  then
         transfer_completed(transfer,connection,message["hash"])
       else
@@ -339,6 +360,8 @@ class Server
     else
       raise "Unhandled message type: #{message['type']}"
     end
+
+    spawn_all_transfers
 
   end
 
@@ -374,8 +397,8 @@ class Server
           peer=t.giver
         end
           
-        
-        str=str+"url=#{t.url} peer=#{connection_name(peer)} range=#{t.byte_range}"
+        str=str+" id=#{t.transfer_id}"
+        #str=str+"url=#{t.url} peer=#{connection_name(peer)} range=#{t.byte_range}"
         transfers=transfers+str+"<br>"
       end
 

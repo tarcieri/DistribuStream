@@ -7,11 +7,19 @@ class ClientInfo
 
   # returns true if this client wants the server to spawn a transfer for it
   def wants_download?
-    return @transfers.size< 5
+    # allow 5 in the transferring state, and 50 in the connecting state
+    transferring=0
+    @transfers.each do |key,t|
+      transferring=transferring+1 if t.verification_asked
+      return false if transferring >= 5
+    end
+    
+    return (@transfers.size < 10)
   end 
 
   def wants_upload?
-    return @transfers.size< 5
+    #this could have a different definition, but it works fine to use wants_download?
+    return wants_download?
   end 
   
   def initialize
@@ -21,13 +29,25 @@ class ClientInfo
     @transfers=Hash.new
   end
 
-  def clear_stalled_transfers
-    timeout=2.0
+  def get_stalled_transfers
+    stalled=[]
+    timeout=20.0
     now=Time.now
-    @transfers.delete_if { |key,t| 
-      now - t.creation_time > timeout and t.verification_asked == false 
-    }
+    @transfers.each do |key,t|
+      if now-t.creation_time > timeout and t.verification_asked==false then
+        stalled << t
+      end
+    end
+    return stalled
   end
+
+  #def clear_stalled_transfers
+  #  timeout=2.0
+  #  now=Time.now
+  #  @transfers.delete_if { |key,t| 
+  #    now - t.creation_time > timeout and t.verification_asked == false 
+  #  }
+  #end
  
 end
 
