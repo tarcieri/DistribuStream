@@ -146,7 +146,6 @@ class ClientTransferListener < ClientTransferBase
 			@response.start(206) do |head,out|
       	head['Content-Type'] = 'application/octet-stream'
         head['Content-Range'] = "bytes #{@byte_range.first}-#{@byte_range.last}/*"
-        head['X-PDTP-Peer-Id'] = @client.my_id
         #FIXME must include a DATE header according to http
 
       	out.write(data)
