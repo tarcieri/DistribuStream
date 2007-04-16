@@ -1,26 +1,26 @@
 package org.pdtp;
 
+import static org.pdtp.Logger.info;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.util.Properties;
-import java.util.UUID;
 
 import org.pdtp.wire.ClientInfo;
 import org.pdtp.wire.Completed;
 import org.pdtp.wire.Range;
 import org.pdtp.wire.TellInfo;
 import org.pdtp.wire.Transfer;
-import static org.pdtp.Logger.info;
 
 /**
  * The Link class takes an endpoint and handles asynchronous from the
  * endpoint along with incoming HTTP connections.
  */
 public class Link extends Thread {
-  public Link(Endpoint endpoint, int peerPort, UUID id) {
+  public Link(Endpoint endpoint, int peerPort, String id) {
     this.endpoint = endpoint;
     this.running = true;
     this.peerPort = peerPort;
@@ -29,7 +29,7 @@ public class Link extends Thread {
     if(peerPort > 0) {
       try {
         this.peerServer = new PeerServer(peerPort);
-        send(new ClientInfo(id.toString(), peerPort));
+        send(new ClientInfo(id, peerPort));
       } catch (IOException e) {
         e.printStackTrace();
       }
@@ -142,7 +142,7 @@ public class Link extends Thread {
     }
   }
 
-  private UUID id;
+  private String id;
   private boolean running;
   private Endpoint endpoint;
   private ResourceHandler handler;

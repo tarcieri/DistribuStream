@@ -54,7 +54,8 @@ public class Network implements ResourceHandler {
     this.serverHost = host;
     
     InetAddress addr = InetAddress.getByName(host);
-    this.id = UUID.randomUUID();
+    this.id = Long.toString(UUID.randomUUID().getLeastSignificantBits());    
+    
     this.link = new Link(new SocketEndpoint
         (new JSONSerializer("org.pdtp.wire"), addr, port), peerPort, id);
     link.setResourceHandler(this);
@@ -591,5 +592,5 @@ public class Network implements ResourceHandler {
   private Library cache;
   private Link link;    
   private String serverHost;
-  private final UUID id;
+  private final String id;
 }
