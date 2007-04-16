@@ -138,7 +138,7 @@ public class Link extends Thread {
         }
       } catch(Exception ex) {
         trace("!!500:" + ex.toString());
-        trace(ex);
+        ex.printStackTrace(System.err);
         
         return new Response(NanoHTTPD.HTTP_INTERNALERROR,
             "text/plain", ex.toString());
