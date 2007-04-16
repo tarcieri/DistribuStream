@@ -23,6 +23,8 @@ public class Range implements Comparable<Range> {
   }
   
   public static Range parseHTTPRange(String range) {
+    if(range == null) return null;
+    
     // Cut away "bytes "
     range = range.substring(6);
     
