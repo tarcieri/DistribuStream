@@ -3,13 +3,33 @@ package org.pdtp;
 import java.io.OutputStream;
 import java.io.PrintStream;
 
+/**
+ * Logger is a simple logging class.
+ * 
+ * By default, it logs to standard output. This can be changed by
+ * calling setOutputStream. If more customization is required,
+ * extend LogWriter.
+ * 
+ * @see LogWriter
+ */
 public class Logger {
   public static enum Level { TRACE, DEBUG, INFO, WARN, ERROR, FATAL, OFF };
   
+  /**
+   * Directs logging towards the specified output stream.
+   * 
+   * @param out
+   */
   public static void setOutputStream(OutputStream out) {
     writer = new OutputStreamWriter(out);
   }
   
+  /**
+   * Directs logging towards the specified writer.
+   * 
+   * @param w the log writer to handle logging
+   * @see LogWriter
+   */
   public static void setLogWriter(LogWriter w) {
     writer = w;
   }

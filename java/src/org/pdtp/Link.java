@@ -15,6 +15,10 @@ import org.pdtp.wire.TellInfo;
 import org.pdtp.wire.Transfer;
 import static org.pdtp.Logger.info;
 
+/**
+ * The Link class takes an endpoint and handles asynchronous from the
+ * endpoint along with incoming HTTP connections.
+ */
 public class Link extends Thread {
   public Link(Endpoint endpoint, int peerPort, UUID id) {
     this.endpoint = endpoint;
@@ -59,10 +63,23 @@ public class Link extends Thread {
     }
   }   
   
+  /**
+   * Send an packet to the server.
+   * 
+   * @param packet
+   * @throws IOException
+   */
   public void send(Object packet) throws IOException {
     endpoint.send(packet);
   }
   
+  /**
+   * Set this link's resource handler. The resouce handler is
+   * contacted whenever a GET request is made to the peer HTTP
+   * server.
+   * 
+   * @param handler
+   */
   public void setResourceHandler(ResourceHandler handler) {
     this.handler = handler;
   }

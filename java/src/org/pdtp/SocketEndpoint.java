@@ -6,6 +6,10 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 
+/**
+ * SocketEndpoint implements endpoint communications over TCP 
+ * sockets.
+ */
 public class SocketEndpoint implements Endpoint {
   public SocketEndpoint(Serializer serializer,
                         InetAddress address, int port) throws IOException {
@@ -36,6 +40,4 @@ public class SocketEndpoint implements Endpoint {
   private final Socket socket;
   private final InputStream in;
   private final OutputStream out;
-  // private final InetAddress address;
-  // private final int port;
 }

@@ -17,6 +17,10 @@ import java.util.TreeSet;
 import org.pdtp.wire.AskInfo;
 import org.pdtp.wire.Range;
 
+/**
+ * MemoryCache implements a library based completely on ByteBuffers
+ * stored in memory.
+ */
 public class MemoryCache implements Library {
   public MemoryCache() {
     catalogue = synchronizedMap(new HashMap<String, SortedSet<MemoryCacheElement>>());

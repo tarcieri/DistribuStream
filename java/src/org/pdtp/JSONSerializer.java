@@ -12,6 +12,11 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.pdtp.wire.Range;
 
+/**
+ * JSONSerializer implements JSON serialization using the OSS Java
+ * JSON library. 
+ * 
+ */
 public class JSONSerializer implements Serializer {
   public JSONSerializer(String basePackage) {
     this.basePackage = basePackage;    
