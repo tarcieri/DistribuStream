@@ -1,6 +1,7 @@
 package org.pdtp;
 
 import static org.pdtp.Logger.info;
+import static org.pdtp.Logger.trace;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -136,6 +137,9 @@ public class Link extends Thread {
               "text/plain", "Method " + method + "unsupported.");
         }
       } catch(Exception ex) {
+        trace("!!500:" + ex.toString());
+        trace(ex);
+        
         return new Response(NanoHTTPD.HTTP_INTERNALERROR,
             "text/plain", ex.toString());
       }

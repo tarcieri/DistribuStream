@@ -51,7 +51,7 @@ public class Network implements ResourceHandler {
     this.cache = cache;
     this.metadataCache = new HashMap<String, TellInfo>();
     
-    this.serverHost = host;
+    this.serverHost = host;    
     
     InetAddress addr = InetAddress.getByName(host);
     this.id = UUID.randomUUID().toString().substring(0, 5);    
