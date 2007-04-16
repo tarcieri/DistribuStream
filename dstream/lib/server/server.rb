@@ -101,8 +101,6 @@ class Server
   #returns true on success, or false if the specified transfer is already in progress
   def begin_transfer(taker,giver,url,chunkid)
     #@@log.debug("#{@ids[giver]}->#{@ids[taker]} transfer starting: taker=#{taker} giver=#{giver} url=#{url}  chunkid=#{chunkid}")
-    client_info(taker).chunk_info.transfer(url,chunkid..chunkid)
-  
     byte_range=@file_service.get_info(url).chunk_range(chunkid) 
     t=Transfer.new(taker,giver,url,chunkid,byte_range)
 
@@ -114,6 +112,8 @@ class Server
     end
 
     #@@log.debug("Transfer: taker=#{taker.user_data.client_id} giver=#{giver.user_data.client_id} id=#{t.transfer_id}")
+
+    client_info(taker).chunk_info.transfer(url,chunkid..chunkid) 
 
     client_info(taker).transfers[t.transfer_id]=t
     client_info(giver).transfers[t.transfer_id]=t
