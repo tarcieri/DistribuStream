@@ -98,7 +98,14 @@ public class Link extends Thread {
           // Cut away the leading '/'.      
           uri = uri.substring(1);
           uri = URLDecoder.decode(uri, "utf-8");
-        
+          String host = header.getProperty("Host");
+          if(host == null) {
+            return new Response(NanoHTTPD.HTTP_NOTIMPLEMENTED,
+                "text/plain", "Host header required.");            
+          }
+          
+          uri = "http://" + host + "/" + uri;
+          
           TellInfo info = handler.getInfoCached(uri);          
           Response response = new Response();
 
