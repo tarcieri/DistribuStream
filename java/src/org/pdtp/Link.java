@@ -106,6 +106,8 @@ public class Link extends Thread {
                 "text/plain", "Host header required.");            
           }
           
+          trace("Host header=" + host);
+          
           uri = "http://" + host + "/" + uri;
           
           TellInfo info = handler.getInfoCached(uri);          
