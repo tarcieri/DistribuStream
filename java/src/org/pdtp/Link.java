@@ -100,6 +100,8 @@ public class Link extends Thread {
           uri = URLDecoder.decode(uri, "utf-8");
           String host = header.getProperty("Host");
           if(host == null) {
+            trace("Error, dropping: no Host header found (host=" + host + ")");
+
             return new Response(NanoHTTPD.HTTP_NOTIMPLEMENTED,
                 "text/plain", "Host header required.");            
           }
