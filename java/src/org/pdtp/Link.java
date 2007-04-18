@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.net.URLDecoder;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
+import java.util.Enumeration;
 import java.util.Properties;
 
 import org.pdtp.wire.ClientInfo;
@@ -99,6 +100,15 @@ public class Link extends Thread {
           uri = uri.substring(1);
           uri = URLDecoder.decode(uri, "utf-8");
           String host = header.getProperty("HOST");
+          
+          Enumeration e = header.propertyNames();
+          while ( e.hasMoreElements())
+          {
+            String value = (String)e.nextElement();
+            trace( "  HTTPHDR: '" + value + "' = '" +
+                      header.getProperty( value ) + "'" );
+          }
+          
           if(host == null) {
             trace("Error, dropping: no Host header found (host=" + host + ")");
 
