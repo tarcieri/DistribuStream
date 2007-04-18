@@ -139,7 +139,7 @@ public class Link extends Thread {
           } else {
             response.status = "206 Partial Content";
             response.addHeader("Content-Range",
-                "bytes " + range + "/" + (info != null ? info.size : "*")); 
+                "bytes " + range.min() + "-" + (range.max() - 1) + "/" + (info != null ? info.size : "*")); 
           }
           
           Resource r = new Resource(uri, range);
