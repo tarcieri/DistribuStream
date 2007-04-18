@@ -99,7 +99,7 @@ public class Link extends Thread {
           // Cut away the leading '/'.      
           uri = uri.substring(1);
           uri = URLDecoder.decode(uri, "utf-8");
-          String host = header.getProperty("HOST");
+          String host = header.getProperty("host");
           
           Enumeration e = header.propertyNames();
           while ( e.hasMoreElements())
@@ -125,7 +125,7 @@ public class Link extends Thread {
 
           response.addHeader("Content-Type", info != null ? info.mimeType : "application/octet-stream");
           
-          Range range = Range.parseHTTPRange(header.getProperty("RANGE"));          
+          Range range = Range.parseHTTPRange(header.getProperty("range"));          
           if(range == null) {
             if(info != null) {
               response.status = NanoHTTPD.HTTP_OK;
