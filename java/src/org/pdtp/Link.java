@@ -148,7 +148,7 @@ public class Link extends Thread {
           
          // String host = parms.getProperty("__host");
          // int port = Integer.parseInt(parms.getProperty("__port"));
-          String rPeerId = header.getProperty("X-PDTP-PEER-ID");
+          String rPeerId = header.getProperty("x-pdtp-peer-id");
           Completed tc = new Completed(r.getUrl(), "was_server", r.getRange(), rPeerId);
           info("SCOMPLETE:" + tc);
           send(tc);
