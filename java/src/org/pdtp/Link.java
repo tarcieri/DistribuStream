@@ -98,7 +98,7 @@ public class Link extends Thread {
           // Cut away the leading '/'.      
           uri = uri.substring(1);
           uri = URLDecoder.decode(uri, "utf-8");
-          String host = header.getProperty("Host");
+          String host = header.getProperty("HOST");
           if(host == null) {
             trace("Error, dropping: no Host header found (host=" + host + ")");
 
@@ -115,7 +115,7 @@ public class Link extends Thread {
 
           response.addHeader("Content-Type", info != null ? info.mimeType : "application/octet-stream");
           
-          Range range = Range.parseHTTPRange(header.getProperty("Range"));          
+          Range range = Range.parseHTTPRange(header.getProperty("RANGE"));          
           if(range == null) {
             if(info != null) {
               response.status = NanoHTTPD.HTTP_OK;
@@ -138,7 +138,7 @@ public class Link extends Thread {
           
          // String host = parms.getProperty("__host");
          // int port = Integer.parseInt(parms.getProperty("__port"));
-          String rPeerId = header.getProperty("X-PDTP-Peer-Id");
+          String rPeerId = header.getProperty("X-PDTP-PEER-ID");
           Completed tc = new Completed(r.getUrl(), "was_server", r.getRange(), rPeerId);
           info("SCOMPLETE:" + tc);
           send(tc);
