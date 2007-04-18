@@ -34,6 +34,8 @@ class ClientInfo
     timeout=20.0
     now=Time.now
     @transfers.each do |key,t|
+      #only delete if we are the acceptor to prevent race conditions
+      next if t.acceptor.user_data != self 
       if now-t.creation_time > timeout and t.verification_asked==false then
         stalled << t
       end

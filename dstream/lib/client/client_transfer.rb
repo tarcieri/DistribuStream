@@ -78,7 +78,7 @@ class ClientTransferListener < ClientTransferBase
         out.write(e.to_s + "\n\n" + e.backtrace.join("\n") )
       end
     else
-      @@log.info ("MONGREL SERVER ERROR: exception:" + e.to_s+"\n\n"+e.backtrace.join("\n"))
+      @@log.info("MONGREL SERVER ERROR: exception:" + e.to_s+"\n\n"+e.backtrace.join("\n"))
       @response.start(500) do |head,out|
         out.write("Server error, unknown exception:"+e.to_s + "\n\n" + e.backtrace.join("\n") )
       end

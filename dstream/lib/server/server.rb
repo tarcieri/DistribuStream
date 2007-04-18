@@ -165,6 +165,16 @@ class Server
     return false
   end
 
+  #this function removes all stalled transfers from the list
+  #and spawns new transfers as appropriate
+  #it should be called in a periodic timer
+  def clear_all_stalled_transfers
+    @connections.each do |c|
+      clear_stalled_transfers_for_client(c)  
+    end
+    spawn_all_transfers    
+  end
+
   def clear_stalled_transfers_for_client(client_connection)
     info=client_info(client_connection)
     info.get_stalled_transfers.each do |t|
@@ -178,7 +188,7 @@ class Server
   def spawn_transfers_for_client(client_connection)
     info=client_info(client_connection)
     
-    clear_stalled_transfers_for_client(client_connection)
+    #clear_stalled_transfers_for_client(client_connection)
 
     while info.wants_download? do
       break if spawn_download_for_client(client_connection) == false
@@ -199,9 +209,9 @@ class Server
       return false
     end
 
-    connections.each do |c2|
+    @connections.each do |c2|
       next if client_connection==c2
-      clear_stalled_transfers_for_client(c2)
+      #clear_stalled_transfers_for_client(c2)
       next if client_info(c2).wants_upload? == false
       if client_info(c2).chunk_info.provided?(url,chunkid) then
         feasible_peers << c2
@@ -224,9 +234,9 @@ class Server
   def spawn_upload_for_client(client_connection)
     c1info=client_info(client_connection)
 
-    connections.each do |c2|
+    @connections.each do |c2|
       next if client_connection==c2
-      clear_stalled_transfers_for_client(c2)
+      #clear_stalled_transfers_for_client(c2)
       next if client_info(c2).wants_download? == false
     
       begin
@@ -372,7 +382,7 @@ class Server
 
     s=String.new
     s=s+"<html><head><title>PDTP Statistics</title></head>"
-    s=s+"<body>Time=#{Time.new.to_s} "
+    s=s+"<body>Time=#{Time.new.to_s}<br> Connected Clients=#{@connections.size}"
 
     s=s+"<center><table border=1>"
     s=s+"<tr><th>Client</th><th>Downloads</th><th>Files</th></tr>"

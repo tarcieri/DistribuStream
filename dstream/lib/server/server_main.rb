@@ -45,9 +45,15 @@ server.file_service.root=@@config[:file_root]
 server.file_service.default_chunk_size = @@config[:chunk_size]
 
 EventMachine::run {
+  
 	host,port="0.0.0.0", @@config[:port]
   EventMachine::start_server host,port,PDTPProtocol
   @@log.info("accepting connections with ev=#{EventMachine::VERSION}")
   @@log.info("host=#{host}  port=#{port}")
+
+  EventMachine::add_periodic_timer( 2 ) do
+    server.clear_all_stalled_transfers 
+    #puts "thread=#{Thread.current}"
+  end
 }
 
