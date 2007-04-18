@@ -10,6 +10,8 @@ rescue Exception
   require 'json'
 end
 
+PROTOCOL_DEBUG=true
+
 
 class ProtocolError < Exception
 end
@@ -56,8 +58,9 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
   attr_accessor :user_data #users of this class may store arbitrary data here
 
   def error_close_connection(error)
+   
     
-    if @@config.debug then
+    if PROTOCOL_DEBUG then
       msg={"type"=>"protocol_error","message"=>error}
       send_message msg 
       close_connection(true) # close after writing
