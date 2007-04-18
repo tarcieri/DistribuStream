@@ -15,8 +15,8 @@ public class PDTPFetch {
           Integer.parseInt(args[3]), new MemoryCache());
       ReadableByteChannel c = N.get(args[0], 1000);
 
-      ByteBuffer buf = ByteBuffer.allocate(1024);
-      int bytes = c.read(buf);
+      //ByteBuffer buf = ByteBuffer.allocate(1024);
+      //int bytes = c.read(buf);
       
       /*
       while(bytes != -1) {
