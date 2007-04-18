@@ -152,7 +152,7 @@ public class Link extends Thread {
           }
           
           Range reportedRange = new Range(r.getRange().min(),
-                                           r.getRange().max() - 1);
+                                           r.getRange().max());
           
           String rPeerId = header.getProperty("x-pdtp-peer-id");
           Completed tc = new Completed(r.getUrl(), "was_server", reportedRange, rPeerId);

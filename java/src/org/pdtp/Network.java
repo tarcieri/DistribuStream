@@ -511,9 +511,10 @@ public class Network implements ResourceHandler {
         
         Range actualRange = resource.getRange();
         if(conn.getResponseCode() == HttpURLConnection.HTTP_PARTIAL) {
-          info("RANGE: " + conn.getHeaderField("Content-Range"));
+          info("RANGE: " + conn.getHeaderField("Content-Range"));          
           actualRange = Range.parseHTTPRange(conn.getHeaderField("Content-Range"));           
-
+          info("Got Content-Range=" + actualRange);
+          
           if(actualRange == null) {
             actualRange = resource.getRange();
           }
