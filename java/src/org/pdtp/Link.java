@@ -25,8 +25,6 @@ public class Link extends Thread {
   public Link(Endpoint endpoint, int peerPort, String id) {
     this.endpoint = endpoint;
     this.running = true;
-    this.peerPort = peerPort;
-    this.id = id;
     
     if(peerPort > 0) {
       try {
@@ -47,13 +45,19 @@ public class Link extends Thread {
         dispatch(packet);        
       } catch (IOException e) {
         e.printStackTrace();
-        running = false;
+        if(!endpoint.isOpen())
+          running = false;
       }
     }
   }
   
+  /**
+   * Dispatch a packet once received.
+   * 
+   * @param packet
+   * @throws IOException
+   */
   private synchronized <X> void dispatch(X c) {
-    // System.out.println("Dispatching " + c);
     if(handler != null) {
       if(c instanceof TellInfo) {
         TellInfo inf = (TellInfo) c;
@@ -101,6 +105,8 @@ public class Link extends Thread {
           uri = URLDecoder.decode(uri, "utf-8");
           String host = header.getProperty("host");
           
+          /* For debugging, print all headers:
+          
           Enumeration e = header.propertyNames();
           while ( e.hasMoreElements())
           {
@@ -108,6 +114,7 @@ public class Link extends Thread {
             trace( "  HTTPHDR: '" + value + "' = '" +
                       header.getProperty( value ) + "'" );
           }
+          */
           
           if(host == null) {
             trace("Error, dropping: no Host header found (host=" + host + ")");
@@ -115,8 +122,6 @@ public class Link extends Thread {
             return new Response(NanoHTTPD.HTTP_NOTIMPLEMENTED,
                 "text/plain", "Host header required.");            
           }
-          
-          trace("Host header=" + host);
           
           uri = "http://" + host + "/" + uri;
           
@@ -146,10 +151,11 @@ public class Link extends Thread {
             response.data = Channels.newInputStream(ch);
           }
           
-         // String host = parms.getProperty("__host");
-         // int port = Integer.parseInt(parms.getProperty("__port"));
+          Range reportedRange = new Range(r.getRange().min(),
+                                           r.getRange().max() - 1);
+          
           String rPeerId = header.getProperty("x-pdtp-peer-id");
-          Completed tc = new Completed(r.getUrl(), "was_server", r.getRange(), rPeerId);
+          Completed tc = new Completed(r.getUrl(), "was_server", reportedRange, rPeerId);
           info("SCOMPLETE:" + tc);
           send(tc);
           
@@ -159,7 +165,6 @@ public class Link extends Thread {
               "text/plain", "Method " + method + "unsupported.");
         }
       } catch(Exception ex) {
-        trace("!!500:" + ex.toString());
         ex.printStackTrace(System.err);
         
         return new Response(NanoHTTPD.HTTP_INTERNALERROR,
@@ -168,10 +173,8 @@ public class Link extends Thread {
     }
   }
 
-  private String id;
   private boolean running;
   private Endpoint endpoint;
   private ResourceHandler handler;
-  private int peerPort;
   protected PeerServer peerServer;
 }

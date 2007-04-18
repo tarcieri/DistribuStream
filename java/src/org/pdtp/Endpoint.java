@@ -24,4 +24,11 @@ public interface Endpoint {
    * @throws IOException
    */
   public void send(Object packet) throws IOException;
+  
+  /**
+   * Returns true if the endpoint is open, false otherwise.
+   * 
+   * @return true if the endpoint is open.
+   */
+  public boolean isOpen();
 }

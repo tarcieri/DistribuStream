@@ -14,7 +14,6 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
-import org.pdtp.wire.AskInfo;
 import org.pdtp.wire.Range;
 
 /**
@@ -58,8 +57,6 @@ public class MemoryCache implements Library {
   }
   
   public synchronized void write(Resource resource, ByteBuffer buffer) {
-    System.err.println(" >>>>>>>>>> WRITE " + resource);
-    
     if(!catalogue.containsKey(resource.getUrl()))
       catalogue.put(resource.getUrl(),
           synchronizedSortedSet(new TreeSet<MemoryCacheElement>())); 
@@ -140,11 +137,8 @@ public class MemoryCache implements Library {
           MemoryCacheElement chain[] = elSet.toArray(new MemoryCacheElement[0]);
                    
           for(MemoryCacheElement e : chain) {
-            //System.err.println(">>>>> I NEED " + needed);
-            System.err.print(".");
             if(e.contains(needed.min())) {              
               Range i = needed.intersection(e);
-              System.err.println("<<<< FOUND " + e + "[" + System.identityHashCode(e) + "]");
               
               ByteBuffer buf = allocate(i.size());
               synchronized(e.buffer) {
@@ -152,27 +146,18 @@ public class MemoryCache implements Library {
                         (int) (i.min() - e.min()),
                         buf.remaining());
                 buf.rewind();
-              }
+              }              
+                            
+              while(buf.remaining() != 0)
+                out.write(buf);
               
-              System.err.println("CAP:" + buf.capacity());
-              
-              //for(int z = 0; z < buf.capacity(); ++z) {
-              //  System.out.write(buf.get(z));
-              //}
-              
-             while(buf.remaining() != 0)
-               out.write(buf);
-              
-              System.err.println("Needed, before=" + needed);
-              System.err.println("e=" + e);
               needed = needed.minus(e);
-              System.err.println("Needed, after=" + needed);              
             }
           }
           
-          //if(!needed.isEmpty()) {
+          if(!needed.isEmpty()) {
             cache.waitOn(new Resource(resource.getUrl(), needed), 1000l); 
-          //}
+          }
         }
                 
         out.close();

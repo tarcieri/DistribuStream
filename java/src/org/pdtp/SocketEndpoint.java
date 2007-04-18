@@ -35,6 +35,10 @@ public class SocketEndpoint implements Endpoint {
       return serializer.read(in);
     }
   }
+
+  public boolean isOpen() {
+    return socket.isConnected();
+  }
   
   private final Serializer serializer;
   private final Socket socket;
