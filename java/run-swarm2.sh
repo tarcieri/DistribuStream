@@ -9,5 +9,5 @@ MAXPORT=MINPORT+$1
 
 for (( port=MINPORT ; port < MAXPORT ; port++ ))
 do
-  java org.pdtp.PDTPFetch $2 dev.clickcaster.com 6000 $port >/dev/null 2> out.$port &
+  java org.pdtp.PDTPFetch $2 dougie 6000 $port >/dev/null 2> out.$port &
 done
