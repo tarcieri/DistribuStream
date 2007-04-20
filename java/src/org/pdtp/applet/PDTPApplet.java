@@ -11,27 +11,28 @@ public class PDTPApplet extends Applet {
     
     String server = getParameter("server");
     int serverPort = Integer.parseInt(getParameter("server-port"));
-    int sharePort = Integer.parseInt(getParameter("share-port"));
-    int localHttpPort = Integer.parseInt(getParameter("local-http-port"));
     long peerTimeout = Long.parseLong(getParameter("base-url-timeout"));
 
-    peerlet = Peerlet.getPeerlet(server, serverPort, sharePort,
-        localHttpPort, peerTimeout);
+    peerlet = Peerlet.getPeerlet(server, serverPort, peerTimeout);
   }
 
   public int getLocalHttpPort() {
     return peerlet.getLocalHttpPort();
   }
+
+  public int getSharePort() {
+    return peerlet.getSharePort();
+  }
   
   @Override
   public void start() {
     super.start();
-    peerlet.start();
+    if(!peerlet.isRunning())
+      peerlet.start();    
   }
 
   @Override
   public void stop() {
-    peerlet.stop();
     super.stop();
   }
 

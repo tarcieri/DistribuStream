@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.channels.Channels;
 import java.util.Properties;
+import java.util.Random;
 
 import org.pdtp.MemoryCache;
 import org.pdtp.NanoHTTPD;
@@ -13,12 +14,16 @@ import org.pdtp.wire.TellInfo;
 public class Peerlet {   
   private static final long serialVersionUID = 5379473051407182801L;
 
+  private static final int MIN_PORT = 2048;
+  private static final int MAX_PORT = 10000;
+  private static final int MAX_ATTEMPTS = 100;
+  
   public static Peerlet getPeerlet(String server, int serverPort,
-                                   int sharePort, int localHttpPort,
                                    long peerTimeout) {
     if(instance != null) return instance;
     
-    return instance = new Peerlet(server, serverPort, sharePort, localHttpPort, peerTimeout);
+    instance = new Peerlet(server, serverPort, peerTimeout);
+    return instance;
   }
   
   public static void killPeerlet() {
@@ -28,34 +33,69 @@ public class Peerlet {
     }
   }
   
-  public Peerlet(String server, int serverPort,
-                 int sharePort, int localHttpPort,
+  public Peerlet(String server, int serverPort,      
                  long peerTimeout) {
     this.server = server;
     this.serverPort = serverPort;
-    this.sharePort = sharePort;
-    this.localHttpPort = localHttpPort;
     this.timeout = peerTimeout;     
   }
 
-  public int start() {
-    try {
-      net = new Network(server, serverPort, sharePort, new MemoryCache());
-      localServer = new PeerletHTTP(localHttpPort);
-    } catch (IOException e) {
-      net = null;
-      e.printStackTrace();
+  public boolean isRunning() {
+    return running;
+  }
+  
+  public void start() {
+    Random portGen = new Random();
+    
+    boolean initializedNetwork = false;
+    int attempt = 0;    
+    while(!initializedNetwork && ++attempt <= MAX_ATTEMPTS) {
+      sharePort = MIN_PORT + portGen.nextInt(MAX_PORT - MIN_PORT);
+      
+      try {
+        net = new Network(server, serverPort, sharePort, new MemoryCache());
+        initializedNetwork = true;
+      } catch(IOException e) {
+        if(attempt == MAX_ATTEMPTS) {
+          System.err.println("Couldn't initialize connection to server. Tried "
+              + MAX_ATTEMPTS + " times.");        
+          e.printStackTrace();
+        }
+      }
     }
     
-    return localHttpPort;        
+    if(!initializedNetwork)
+      return;
+    
+    boolean initializedLocalServe = false;
+    attempt = 0;    
+    while(!initializedLocalServe && ++attempt <= MAX_ATTEMPTS) {
+      localHttpPort = MIN_PORT + portGen.nextInt(MAX_PORT - MIN_PORT);
+      
+      try {
+        localServer = new PeerletHTTP(localHttpPort);
+        initializedLocalServe = true;
+        running = true;
+      } catch(IOException e) {
+        if(attempt == MAX_ATTEMPTS) {
+          System.err.println("Couldn't initialize local HTTP. Tried "
+              + MAX_ATTEMPTS + " times.");        
+          e.printStackTrace();
+        }      
+      }
+    }    
   }
   
   public void stop() {
-    
+    running = false;
   }  
   
   public int getLocalHttpPort() {
     return this.localHttpPort;
+  }
+  
+  public int getSharePort() {
+    return this.sharePort;
   }
   
   private class PeerletHTTP extends NanoHTTPD {
@@ -91,6 +131,7 @@ public class Peerlet {
     }    
   }
   
+  private boolean running;
   private PeerletHTTP localServer;
   private long timeout;
   private Network net;  
