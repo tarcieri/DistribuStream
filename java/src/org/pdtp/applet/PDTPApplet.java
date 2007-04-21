@@ -24,11 +24,20 @@ public class PDTPApplet extends Applet {
     return peerlet.getSharePort();
   }
   
+  public boolean isRunning() {
+    return peerlet.isRunning();
+  }
+  
   @Override
   public void start() {
     super.start();
-    if(!peerlet.isRunning())
-      peerlet.start();    
+    if(!peerlet.isRunning()) {
+      new Thread() {
+        public void run() {
+          peerlet.start();
+        }
+      }.start();
+    }
   }
 
   @Override

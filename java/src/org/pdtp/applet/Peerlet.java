@@ -107,6 +107,8 @@ public class Peerlet {
     public Response serve(String uri, String method, Properties header, Properties parms) {
       try {
         String url = uri.substring(1);
+        System.err.println("Got HTTP Request: " + url);
+        
         InputStream is = null;
         if(timeout != 0)
           is = Channels.newInputStream(net.get(url, timeout));
@@ -118,7 +120,8 @@ public class Peerlet {
         if(inf != null && is != null) {
           r = new NanoHTTPD.Response(NanoHTTPD.HTTP_OK, inf.mimeType, is);
         }
-      
+        
+        System.err.println("Done with HTTP request: " + url);
         return r;
       } catch(Throwable t) {
         String err = "Internal error:" + t.toString() + "\n\n"; 

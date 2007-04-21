@@ -1,4 +1,5 @@
 function addVideo(localHttpPort, sharePort) {
+    console.log("addVideo(", localHttpPort, ", ", sharePort, ")" );
     $A(document.getElementsByTagName("video")).each(function(e) {
         var title = e.getAttribute("title");
         var src = e.getAttribute("src");
@@ -6,7 +7,7 @@ function addVideo(localHttpPort, sharePort) {
         var height = e.getAttribute("height");
         var description = e.getAttribute("title");
         
-        if(localHttpPort != -1 && e.getAttribute("usepeers") != "false") {
+        if(localHttpPort > 0 && e.getAttribute("usepeers") != "false") {
             src = "http://127.0.0.1:" + localHttpPort + "/" + escape(src);        
         }
         
@@ -29,16 +30,37 @@ function addVideo(localHttpPort, sharePort) {
     });
 }
 
+var CHECK_ATTEMPT_NUMBER = 0;
+var CHECK_ATTEMPT_MAX = 25;
 function checkForApplet() {
-  if(document.peerlet && document.peerlet.getLocalHttpPort) {
-    var localHttpPort = document.peerlet.getLocalHttpPort();
-    var sharePort = document.peerlet.getSharePort();
-    console.log("Local HTTP port=" + localHttpPort);
-    console.log("Sharing port=" + sharePort);
+  try {
+    if(document.peerlet &&
+       document.peerlet.isRunning &&
+       document.peerlet.isRunning()) {
+      var localHttpPort = document.peerlet.getLocalHttpPort();
+      var sharePort = document.peerlet.getSharePort();
+      console.log("Local HTTP port=" + localHttpPort);
+      console.log("Sharing port=" + sharePort);
 
-    addVideo(localHttpPort, sharePort);
-  } else {
-    setTimeout(checkForApplet, 200);
+      addVideo(localHttpPort, sharePort);
+    } else {
+      ++CHECK_ATTEMPT_NUMBER;
+      if(CHECK_ATTEMPT_NUMBER > CHECK_ATTEMPT_MAX) {
+        console.log("Applet apparently failed to initialize.");
+        addVideo(-1, -1);
+      } else {
+        setTimeout(checkForApplet, 200);
+      }
+    }
+  } catch(ex) {
+    console.log("Exception: " + ex);
+    ++CHECK_ATTEMPT_NUMBER;
+    if(CHECK_ATTEMPT_NUMBER > CHECK_ATTEMPT_MAX) {
+        console.log("Applet apparently failed to initialize.");    
+        addVideo(-1, -1);      
+    } else {
+        setTimeout(checkForApplet, 200);
+    }
   }
 }
     
