@@ -34,6 +34,7 @@ public class PDTPApplet extends Applet {
     if(!peerlet.isRunning()) {
       new Thread() {
         public void run() {
+          System.err.println("Starting PDTP...");
           peerlet.start();
         }
       }.start();
