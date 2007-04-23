@@ -74,7 +74,7 @@ class FileServiceProtocol < PDTPProtocol
     sfs.root=@@config[:file_root]
     client.file_service=sfs #give this client access to all data
 
-    hostname="bla.com"
+    hostname=@@config[:provide_hostname]
 
     #provide all the files in the root directory
     files=find_files(@@config[:file_root] )

@@ -13,7 +13,8 @@ require File.dirname(__FILE__)+'/pdtp_protocol'
   :listen_port=> 8000, #client listen port
   :file_root=>File.dirname(__FILE__)+'/../../../testfiles',
   :quiet=>true,
-  :chunk_size=>5000
+  :chunk_size=>5000,
+  :provide_hostname=>"clickcaster.com"
 }
 
 @types={
@@ -22,7 +23,8 @@ require File.dirname(__FILE__)+'/pdtp_protocol'
   :listen_port=>:int,
   :file_root=>:string,
   :quiet=>:bool,
-  :chunk_size=>:int
+  :chunk_size=>:int,
+  :provide_hostname=>:string
 }
 
 def common_init( program_name)
