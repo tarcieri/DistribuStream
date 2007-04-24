@@ -4,6 +4,9 @@ require 'optparse'
 require 'logger'
 require File.dirname(__FILE__)+'/pdtp_protocol'
 
+STDOUT.sync=true
+STDERR.sync=true
+
 @@log=Logger.new(STDOUT)
 @@log.datetime_format=""
 
