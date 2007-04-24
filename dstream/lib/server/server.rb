@@ -8,49 +8,31 @@ class Server
   attr_accessor :file_service
   def initialize()
     @connections = Array.new
-    #@transfers = Hash.new #keyed on Transfer::hash
-  	@ids = Hash.new
-		@id = 0
     @stats_mutex=Mutex.new
-    @used_client_ids=Hash.new
+    @used_client_ids=Hash.new #keeps a list of client ids in use, they must be unique
     @updated_clients=Hash.new #a set of clients that have been modified and need transfers spawned
 	end
 
+  #called by pdtp_protocol when a connection is created
   def connection_created(connection)
     @stats_mutex.synchronize do
-      @@log.info("#{@id} Client connected: #{connection.get_peer_info.inspect}")
+      @@log.info("Client connected: #{connection.get_peer_info.inspect}")
       connection.user_data=ClientInfo.new
       @connections << connection 
-		  @ids[connection] = @id
-		  @id += 1
     end
   end  
 
+  #called by pdtp_protocol when a connection is destroyed
   def connection_destroyed(connection)
     @stats_mutex.synchronize do
-      @@log.info("#{@ids[connection]} Client connection closed")
+      @@log.info("Client connection closed: #{connection.get_peer_info.inspect}")
       @connections.delete(connection)
     end
-  end
-
-  def get_id(connection)
-	  return @ids[connection]
-	end
-
-  def print_stats
-    puts "num_connections=#{@connections.size} num_transfers=#{@transfers.size}"
   end
   
   # returns the ClientInfo object associated with this connection
   def client_info(connection)
     return connection.user_data ||= ClientInfo.new
-  end
-
-  # runs through the list of requested chunks for each client and creates as many
-  # new transfers as it can
-  def spawn_transfers
-    while spawn_single_transfer_slow==true 
-    end
   end
 
   # called when a transfer either finishes, successfully or not
@@ -75,7 +57,6 @@ class Server
           c1.trust.failure(c2.trust)
         end 
       
-      
         msg={
           "type"=>"hash_verify",
           "url"=>transfer.url,
@@ -94,13 +75,12 @@ class Server
     
       #remove this transfer from whoever sent it
       client_info(connection).transfers.delete(transfer.transfer_id)
-      #spawn_transfers_for_client(connection)     
-      @updated_clients[connection]=true
+      @updated_clients[connection]=true #flag this client for transfer creation
   end
 
+  #Creates a new transfer between two peers
   #returns true on success, or false if the specified transfer is already in progress
   def begin_transfer(taker,giver,url,chunkid)
-    #@@log.debug("#{@ids[giver]}->#{@ids[taker]} transfer starting: taker=#{taker} giver=#{giver} url=#{url}  chunkid=#{chunkid}")
     byte_range=@file_service.get_info(url).chunk_range(chunkid) 
     t=Transfer.new(taker,giver,url,chunkid,byte_range)
 
@@ -110,8 +90,6 @@ class Server
     if t1 != nil or t2 != nil then
       return false
     end
-
-    #@@log.debug("Transfer: taker=#{taker.user_data.client_id} giver=#{giver.user_data.client_id} id=#{t.transfer_id}")
 
     client_info(taker).chunk_info.transfer(url,chunkid..chunkid) 
 
@@ -134,40 +112,9 @@ class Server
     return true
   end
 
-  # performs a brute force search to pair clients together, 
-  # creates a transfer if possible.
-  # returns true if a connection was created
-  def spawn_single_transfer_slow
-    feasible_peers=[]
-    connections.each do |c|
-      client=client_info(c)
-      client.chunk_info.each_chunk_of_type(:requested) do |url,chunkid|
-        #puts "#{a} : #{b}"
-        #look for another client that has this chunk
-        connections.each do |c2|
-          next if c2==c
-          if client_info(c2).chunk_info.provided?(url,chunkid) then
-            feasible_peers << c2 
-          end
-        end
-
-        # we now have a list of clients that have the requested chunk.
-        # pick one and start the transfer
-        if feasible_peers.size>0 then
-          giver=feasible_peers[rand(feasible_peers.size)]
-          return begin_transfer(c,giver,url,chunkid)
-          
-        end
-
-      end #requested chunks
-    end #clients
-
-    return false
-  end
-
   #this function removes all stalled transfers from the list
   #and spawns new transfers as appropriate
-  #it should be called in a periodic timer
+  #it must be called periodically by EventMachine
   def clear_all_stalled_transfers
     @connections.each do |c|
       clear_stalled_transfers_for_client(c)  
@@ -175,6 +122,7 @@ class Server
     spawn_all_transfers    
   end
 
+  #removes all stalled transfers that this client is a part of
   def clear_stalled_transfers_for_client(client_connection)
     info=client_info(client_connection)
     info.get_stalled_transfers.each do |t|
@@ -187,8 +135,6 @@ class Server
   #what this client has or wants
   def spawn_transfers_for_client(client_connection)
     info=client_info(client_connection)
-    
-    #clear_stalled_transfers_for_client(client_connection)
 
     while info.wants_download? do
       break if spawn_download_for_client(client_connection) == false
@@ -199,6 +145,8 @@ class Server
     end
   end
 
+  #creates a single download for the specified client
+  #returns true on success, false on failure
   def spawn_download_for_client(client_connection)
     feasible_peers=[]
 
@@ -211,7 +159,6 @@ class Server
 
     @connections.each do |c2|
       next if client_connection==c2
-      #clear_stalled_transfers_for_client(c2)
       next if client_info(c2).wants_upload? == false
       if client_info(c2).chunk_info.provided?(url,chunkid) then
         feasible_peers << c2
@@ -225,18 +172,19 @@ class Server
       #FIXME base this on the trust model
       giver=feasible_peers[rand(feasible_peers.size)]
       return begin_transfer(client_connection,giver,url,chunkid)
-      
+      #FIXME should we try again if begin_transfer fails?
     end
 
     return false
   end
 
+  #creates a single upload for the specified client
+  #returns true on success, false on failure
   def spawn_upload_for_client(client_connection)
     c1info=client_info(client_connection)
 
     @connections.each do |c2|
       next if client_connection==c2
-      #clear_stalled_transfers_for_client(c2)
       next if client_info(c2).wants_download? == false
     
       begin
@@ -253,12 +201,14 @@ class Server
     return false
   end
 
+  #called by pdtp_protocol for each message that comes in from the wire
   def dispatch_message(message,connection)
     @stats_mutex.synchronize do
       dispatch_message_needslock(message,connection)
     end
   end
 
+  #creates new transfers for all clients that have been updated
   def spawn_all_transfers
     while @updated_clients.size > 0 do
       tmp=@updated_clients
@@ -281,11 +231,10 @@ class Server
 
     #call request, provide, unrequest, or unprovide
     client_info(connection).chunk_info.send( type.to_sym, url, range)
-    #spawn_transfers_for_client(connection)
-    @updated_clients[connection]=true
-    #spawn_all_transfers
+    @updated_clients[connection]=true #add to the list of client that need new transfers
   end
 
+  #handles all incoming messages from clients
   def dispatch_message_needslock(message,connection)
     #require the client to be logged in with a client id
     if message["type"] != "client_info" and client_info(connection).client_id.nil? then
@@ -326,6 +275,7 @@ class Server
       handle_requestprovide(connection,message)
     when "ask_verify"
 
+      #check if the specified transfer is a real one
       my_id=client_info(connection).client_id
       transfer_id=Transfer::gen_transfer_id(my_id,message["peer_id"],message["url"],message["range"])
       ok= client_info(connection).transfers[transfer_id] ? true : false
@@ -340,8 +290,6 @@ class Server
         "is_authorized"=>ok
       }
       connection.send_message(response)
-
-      
 
 		when "completed"
       my_id=client_info(connection).client_id
@@ -359,13 +307,14 @@ class Server
     when "protocol_warn"
       #ignore	
     else
-      raise "Unhandled message type: #{message['type']}"
+      raise ProtocolError.new("Unhandled message type: #{message['type']}")
     end
 
     spawn_all_transfers
 
   end
 
+  #returns a string representing the specified connection
   def connection_name(c)
     #host,port=c.get_peer_info
     #return "#{get_id(c)}: #{host}:#{port}"
@@ -378,6 +327,7 @@ class Server
     end
   end
 
+  #builds an html page with information about the server's internal workings
   def generate_html_stats_needslock
 
     s=String.new
@@ -400,7 +350,6 @@ class Server
         end
           
         str=str+" id=#{t.transfer_id}"
-        #str=str+"url=#{t.url} peer=#{connection_name(peer)} range=#{t.byte_range}"
         transfers=transfers+str+"<br>"
       end
 
@@ -412,7 +361,10 @@ class Server
         files=files+" prov=#{fs.chunks_provided} transf=#{fs.chunks_transferring}<br>"    
       end      
 
-      s=s+"<tr><td>#{connection_name(c)}</td><td>#{transfers}</td><td>#{files}</td></tr>"
+      host,port=c.get_peer_info
+      client_name="#{connection_name(c)}<br>#{host}:#{port}"
+
+      s=s+"<tr><td>#{client_name}</td><td>#{transfers}</td><td>#{files}</td></tr>"
     end 
 
     s=s+"</table>"

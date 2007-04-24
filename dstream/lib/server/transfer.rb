@@ -1,5 +1,6 @@
 require File.dirname(__FILE__)+'/server_config'
 
+#stores information for the server about a specific transfer
 class Transfer
   attr_reader :taker, :giver, :url, :chunkid
   attr_reader :connector, :acceptor, :byte_range
@@ -26,12 +27,14 @@ class Transfer
     recompute_transfer_id
   end
 
+  #calculates the transfer id for this transfer based on the local data
   def recompute_transfer_id
     id1=connector.user_data.client_id
     id2=acceptor.user_data.client_id
     @transfer_id=Transfer::gen_transfer_id(id1,id2,@url,@byte_range)
   end
   
+  #generates a transfer id based on 2 client ids, a url, and a byte range
   def Transfer::gen_transfer_id(id1,id2,url,byte_range)
     a = id1<id2 ? id1 : id2
     b = id1<id2 ? id2 : id1

@@ -1,3 +1,4 @@
+#Provides functions used for initialization by both the client and server
 
 require 'optparse'
 require 'logger'
@@ -27,6 +28,7 @@ require File.dirname(__FILE__)+'/pdtp_protocol'
   :provide_hostname=>:string
 }
 
+#prints banner and loads config file
 def common_init( program_name)
   config_filename=nil
   OptionParser.new do |opts|
@@ -56,6 +58,7 @@ def common_init( program_name)
   handle_config_options
 end
 
+#loads a config file specified by config_filename
 def load_config_file(config_filename)
   if config_filename.nil? then
     puts "No config file specified. Using defaults."
@@ -101,6 +104,7 @@ def validate_config_options
 
 end
 
+#responds to config options that are used by both client and server
 def handle_config_options
   @@log.level=Logger::INFO if @@config[:quiet]  
   

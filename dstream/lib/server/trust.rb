@@ -1,3 +1,4 @@
+#maintains trust information for a single client
 class Trust
   class Edge
     attr_accessor :trust, :success, :transfers
@@ -17,6 +18,7 @@ class Trust
     @implicit = implicit
   end
 
+  #I have successfully downloaded a chunk from 'node'
   def success(node)
     if @outgoing[node].nil?
       @outgoing[node] = Edge.new
@@ -27,18 +29,21 @@ class Trust
     normalize
   end
 
+  #I have failed to download a chunk from 'node'
   def failure(node)
     @outgoing[node] = Edge.new if @outgoing[node].nil?
     @outgoing[node].transfers += 1.0
     normalize
   end
 
+  #returns a number from 0 to 1 saying how much I trust 'node'
   def weight(node)
     return @outgoing[node].trust unless @outgoing[node].nil?
     return @implicit[node].trust unless @implicit[node].nil?
     0
   end
 
+  # brings all trust values between 0 and 1
   def normalize
     total_success = 0
     total_transfers = 0

@@ -24,6 +24,7 @@ class ServerFileInfo < FileInfo
     end
   end
 
+  #reads the specified byte range from the file and returns it as a string
   def read(range)
     #puts "READING: range=#{range}"
     begin
@@ -65,12 +66,14 @@ class ServerFileService < FileServiceBase
 		return info
 	end	
 	
+  #returns the path of this file on the local filesystem
 	def get_local_path(url)
 		path=URI.split(url)[5]
     path=path[1..path.size-1] #remove leading /
 		return (Pathname.new(@root) + path).to_s	
 	end
 
+  #returns the SHA256 hash of the specified chunk
   def get_chunk_hash(url,chunk_id)
     return Digest::SHA256.hexdigest( get_info(url).chunk_data(chunk_id) ) rescue nil
   end

@@ -1,4 +1,5 @@
 
+#provides information about a single file on the network
 class FileInfo
   attr_accessor :file_size, :base_chunk_size, :streaming
 
@@ -31,6 +32,8 @@ class FileInfo
     return offset / @base_chunk_size
   end
 
+  #takes a byte_range in the file and returns an equivalent chunk range
+  #if exclude_partial is true, chunks that are not completely covered by the byte range are left out
   def chunk_range_from_byte_range(byte_range,exclude_partial=true)
     min=chunk_from_offset(byte_range.first)
     min+=1 if exclude_partial and byte_range.first > min*@base_chunk_size 
@@ -41,16 +44,6 @@ class FileInfo
     max-=1 if exclude_partial and max_byte<chunk_range(max).last
     return min..max
   end
-
-  #returns a range of bytes local to a chunk given a range of bytes in the file
-  # returns [chunk,internal_range]
-  #def internal_range(range)
-  #  chunkid=chunk_from_offset(range.first)
-  #  start=chunkid*@base_chunk_size
-  #  irange=(range.first-start)..(range.last-start)
-  #  raise "Invalid range #{range}" if irange.first<0 or irange.last>=chunk_size(chunkid)
-  #  return [chunkid,irange]
-  #end
 
   #returns a string containing the data for this chunk
   #range specifies a range of bytes local to this chunk

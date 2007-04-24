@@ -1,5 +1,6 @@
 require File.dirname(__FILE__)+'/trust.rb'
 
+#stores information about a single connected client
 class ClientInfo
   attr_accessor :chunk_info, :trust
   attr_accessor :listen_port, :client_id
@@ -7,14 +8,15 @@ class ClientInfo
 
   # returns true if this client wants the server to spawn a transfer for it
   def wants_download?
-    # allow 5 in the transferring state, and 50 in the connecting state
+    transfer_state_allowed=5
+    total_allowed=10
     transferring=0
     @transfers.each do |key,t|
       transferring=transferring+1 if t.verification_asked
-      return false if transferring >= 5
+      return false if transferring >= transfer_state_allowed
     end
     
-    return (@transfers.size < 10)
+    return (@transfers.size < total_allowed)
   end 
 
   def wants_upload?
@@ -29,6 +31,7 @@ class ClientInfo
     @transfers=Hash.new
   end
 
+  #returns a list of all the stalled transfers this client is a part of
   def get_stalled_transfers
     stalled=[]
     timeout=20.0
@@ -42,24 +45,16 @@ class ClientInfo
     end
     return stalled
   end
-
-  #def clear_stalled_transfers
-  #  timeout=2.0
-  #  now=Time.now
-  #  @transfers.delete_if { |key,t| 
-  #    now - t.creation_time > timeout and t.verification_asked == false 
-  #  }
-  #end
  
 end
 
+#stores information about the chunks requested or provided by a client
 class ChunkInfo
 	def initialize
 		@files={}
 	end
 
   #each chunk can either be provided, requested, transfer, or none
-
   def provide(filename,range); set(filename,range,:provided) ; end
   def unprovide(filename,range); set(filename,range, :none); end
   def request(filename,range); set(filename,range, :requested); end
@@ -80,6 +75,7 @@ class ChunkInfo
     return nil
   end
 
+  #calls a block for each chunk of the specified type
   def each_chunk_of_type(type)
      @files.each do |name,file|
       file.each_index do |i|

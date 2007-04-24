@@ -19,6 +19,7 @@ end
 class ProtocolWarn < Exception
 end
 
+#EventMachine handler class for the PDTP protocol
 class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
 	@@num_connections=0
   @@listener=nil
@@ -29,6 +30,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
     return @connection_open
   end
   
+  #sets the listener class (Server or Client)
   def PDTPProtocol::listener= listener
     @@listener=listener
   end
@@ -39,6 +41,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
     super
   end
 
+  #called by EventMachine after a connection has been established
   def post_init
 
     # a cache of the peer info because eventmachine seems to drop it before we want
@@ -57,8 +60,8 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
 
   attr_accessor :user_data #users of this class may store arbitrary data here
 
-  def error_close_connection(error)
-   
+  #close a connection, but first send the specified error message
+  def error_close_connection(error) 
     
     if PROTOCOL_DEBUG then
       msg={"type"=>"protocol_error","message"=>error}
@@ -69,23 +72,22 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
     end
   end
 
-
   #override this in a child class to handle messages
   def receive_message message
       @@listener.dispatch_message(message,self) 
   end
 
   #debug routine: returns id of remote peer on this connection
-  #
   def remote_peer_id
     ret= user_data.client_id rescue nil
     return ( ret!=nil ? ret : "NOID")
   end
    
+  #called for each line of text received over the wire
+  #parses the JSON message and dispatches the message
   def receive_line line
     begin
       line.chomp!
-			id = @@listener.get_id(self)
       @@log.debug("(#{remote_peer_id}) recv: "+line)
       message=JSON.parse(line)rescue nil
       raise ProtocolError.new("JSON couldn't parse: #{line}") if message.nil?
@@ -96,22 +98,23 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
       receive_message(message)
 
     rescue ProtocolError=>e
-      @@log.warn("#{id} PROTOCOL ERROR: #{e.to_s}")
+      @@log.warn("(#{remote_peer_id}) PROTOCOL ERROR: #{e.to_s}")
       @@log.debug(e.backtrace.join("\n"))
       error_close_connection(e.to_s)
     rescue ProtocolWarn=>e
       send_message( {"type"=>"protocol_warn", "message"=>e.to_s} )
     rescue Exception=>e
-      puts "SERVER GOT UNKNOWN EXCEPTION #{e}"
+      puts "(#{remote_peer_id}) UNKNOWN EXCEPTION #{e.to_s}"
       puts e.backtrace.join("\n")
     end
   end
   
   RANGENAMES=["chunk_range","range","byte_range"]
 
+
+  #converts Ruby Range classes in the message to PDTP protocol hashes with min and max
   # 0..-1 => nil  (entire file)
   # 10..-1 => {"min"=>10} (contents of file >= 10)
-  # 
   def range_to_hash(message)
     message.each do |key,value|
       if value.class==Range then
@@ -126,6 +129,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
     end
   end
 
+  #converts a PDTP protocol min and max hash to a Ruby Range class
   def hash_to_range(message)
     key="range"
     auto_types=["provide","request"] #these types assume a range if it isnt specified
@@ -143,16 +147,17 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
     end
   end
 
+  #sends a message, in the internal Hash format, over the wire
   def send_message message
     @mutex.synchronize do
       range_to_hash(message)
       outstr=JSON.unparse(message)+"\n"
-			id = @@listener.get_id(self)
       @@log.debug( "(#{remote_peer_id}) send: #{outstr.chomp}")
       send_data outstr  
     end
   end
 
+  #called by EventMachine when a connection is closed
   def unbind
     @@num_connections-=1
     @@listener.connection_destroyed(self) if @@listener.respond_to?(:connection_destroyed)
@@ -163,6 +168,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
     puts "num_connections=#{@@num_connections}"
   end
 
+  #returns the ip address and port in an array [ip, port]
   def get_peer_info
     return @cached_peer_info
   end
@@ -204,6 +210,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
     end
   end
 
+  #returns whether or not a given ruby object matches the specified type
   #available types:
   # :url, :range, :ip, :int, :bool, :string
   def PDTPProtocol::obj_matches_type?(obj,type)

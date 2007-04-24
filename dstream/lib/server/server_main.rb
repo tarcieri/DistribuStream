@@ -34,6 +34,7 @@ class MongrelServerHandler< Mongrel::HttpHandler
   end
 end
 
+#run the mongrel server
 mongrel_server=Mongrel::HttpServer.new("0.0.0.0",@@config[:port]+1)
 @@log.info("Mongrel server listening on port: #{@@config[:port]+1}")
 mongrel_server.register("/",MongrelServerHandler.new(server))
@@ -53,7 +54,6 @@ EventMachine::run {
 
   EventMachine::add_periodic_timer( 2 ) do
     server.clear_all_stalled_transfers 
-    #puts "thread=#{Thread.current}"
   end
 }
 
