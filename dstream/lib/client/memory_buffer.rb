@@ -1,11 +1,13 @@
-
+# Handle a memory buffer, which may be written to and read from randomly
 class MemoryBuffer
   def initialize
     @entries=Array.new
   end
 
+  # Write data starting at start_pos. Overwrites any existing data in that block
   def write(start_pos, data)
     return if data.size==0
+    # create and entry and attempt to combine it with old entries
     new_entry=Entry.new(start_pos,data)
     @entries.each do |e|
       union=combine(e,new_entry)
@@ -15,12 +17,12 @@ class MemoryBuffer
       end 
     end
 
-    #if we get here, it hasnt been combined with anything, so just add it
+    # if we get here, it hasnt been combined with anything, so just add it
     @entries << new_entry
   end
 
-  #returns a string containing the desired data
-  #or nil if the data is not all there
+  # Returns a string containing the desired data. 
+  # Returns nil if the data is not all there
   def read(range)
     return nil if range.first>range.last
     current_byte=range.first
@@ -47,16 +49,16 @@ class MemoryBuffer
     return buffer
   end
 
-
+  # Returns true if two entries intersect
   def intersects?(entry1, entry2)
     first,last=entry1,entry2
     first,last=last,first if last.start_pos<=first.start_pos
     return first.end_pos>=last.start_pos 
   end
 
-  #takes two Entries
-  #returns nil if there is no intersection
-  #returns the union if they intersect
+  # Takes two Entries
+  # Returns nil if there is no intersection
+  # Returns the union if they intersect
   def combine(old,new)
     return nil unless intersects?(old,new)
 
@@ -70,6 +72,7 @@ class MemoryBuffer
     return Entry.new(start,stringio.string)    
   end
 
+  # Return number of bytes currently in the buffer
   def bytes_stored
     bytes=0
     @entries.each do |e|
@@ -78,6 +81,7 @@ class MemoryBuffer
     return bytes
   end
 
+  # Container for an entry in the buffer
   class Entry
     def initialize(start_pos,data)
       @start_pos,@data=start_pos,data

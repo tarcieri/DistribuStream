@@ -3,14 +3,17 @@ require "pathname"
 require File.dirname(__FILE__) + '/../common/file_service_base.rb'
 require File.dirname(__FILE__) + '/memory_buffer.rb'    
     
-#The client specific file utilities.
+# The client specific file utilities. Most importantly, handling
+# the data buffer.
 class ClientFileInfo < FileInfo
 
+  # Write data into buffer starting at start_pos 
   def write(start_pos,data)
     @buffer||=MemoryBuffer.new
     @buffer.write(start_pos,data)
   end
 
+  # Read a range of data out of buffer. Takes a ruby Range object
   def read(range)
     begin
       @buffer||=MemoryBuffer.new
@@ -19,7 +22,8 @@ class ClientFileInfo < FileInfo
       return nil
     end
   end
-
+ 
+  # Return the number of bytes currently stored
   def bytes_downloaded
     @buffer||=MemoryBuffer.new
     return @buffer.bytes_stored
@@ -27,16 +31,16 @@ class ClientFileInfo < FileInfo
   
 end
 
-
+# Container class for file data
 class ClientFileService < FileServiceBase
 
-	def initialize     
-		@files = {}
-	end
+  def initialize
+    @files = {}
+  end
 
-	def get_info(url)
+  def get_info(url)
     return @files[url] rescue nil
-	end	
+  end	
 	
   def set_info(url,info)
     cinfo=ClientFileInfo.new

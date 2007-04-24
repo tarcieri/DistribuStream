@@ -1,4 +1,3 @@
-require File.dirname(__FILE__)+'/server_config'
 
 #stores information for the server about a specific transfer
 class Transfer
@@ -8,21 +7,18 @@ class Transfer
   attr_accessor :creation_time
   attr_accessor :verification_asked
  
-	@@config = ServerConfig.instance
-
-  def initialize(taker,giver,url,chunkid,byte_range)
+  def initialize(taker,giver,url,chunkid,byte_range,connector_receives=true)
     @taker,@giver,@url,@chunkid,@byte_range=taker,giver,url,chunkid,byte_range
     
     @verification_asked=false
     @creation_time=Time.now
-    #if FIREWALL global is set, assume taker is behind firewall
-		if @@config.firewall then
-    	@connector=@giver
-			@acceptor=@taker
-		else
-			@connector=@taker
-    	@acceptor=@giver
-		end
+    if !connector_receives then
+      @connector=@giver
+      @acceptor=@taker
+    else
+      @connector=@taker
+      @acceptor=@giver
+    end
     
     recompute_transfer_id
   end

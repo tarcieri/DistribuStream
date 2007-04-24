@@ -15,7 +15,8 @@ require File.dirname(__FILE__)+'/pdtp_protocol'
   :file_root=>File.dirname(__FILE__)+'/../../../testfiles',
   :quiet=>true,
   :chunk_size=>5000,
-  :provide_hostname=>"clickcaster.com"
+  :provide_hostname=>"clickcaster.com",
+  :request_url=>"http://clickcaster.com/test.mp3"
 }
 
 @types={
@@ -25,7 +26,8 @@ require File.dirname(__FILE__)+'/pdtp_protocol'
   :file_root=>:string,
   :quiet=>:bool,
   :chunk_size=>:int,
-  :provide_hostname=>:string
+  :provide_hostname=>:string,
+  :request_url=>:string
 }
 
 #prints banner and loads config file

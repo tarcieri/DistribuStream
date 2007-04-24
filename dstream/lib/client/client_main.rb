@@ -9,6 +9,7 @@ require File.dirname(__FILE__)+'/../common/common_init'
 
 common_init("dstream_client")
 
+# Fine all suitable files in the give path
 def find_files(base_path)
   require 'find'
 
@@ -32,12 +33,14 @@ def find_files(base_path)
   return found
 end
 
+# Implements the file service for the pdtp protocol
 class FileServiceProtocol < PDTPProtocol
   
   def initialize *args
     super
   end
 
+  # Called after a connection to the server has been established
   def connection_completed
 
     begin
@@ -50,7 +53,7 @@ class FileServiceProtocol < PDTPProtocol
     client.my_id=Client::generate_client_id(listen_port)
 
 
-    #start the mongrel server on the specified port.  If it isnt available, keep trying higher ports
+    # Start a mongrel server on the specified port.  If it isnt available, keep trying higher ports
     begin
       mongrel_server=Mongrel::HttpServer.new("0.0.0.0",listen_port)
     rescue Exception=>e
@@ -62,6 +65,7 @@ class FileServiceProtocol < PDTPProtocol
     mongrel_server.register("/",client)
     mongrel_server.run
 
+    # Tell the server a little bit about ourself
     request={
       "type"=>"client_info",
       "listen_port"=>listen_port,
@@ -76,7 +80,7 @@ class FileServiceProtocol < PDTPProtocol
 
     hostname=@@config[:provide_hostname]
 
-    #provide all the files in the root directory
+    # Provide all the files in the root directory
     files=find_files(@@config[:file_root] )
     files.each do |file|
       request={
@@ -102,12 +106,12 @@ class FileServiceProtocol < PDTPProtocol
     
 end
 
+# Run the main loop
 EventMachine::run {
-	host,port,listen_port = @@config[:host],@@config[:port],@@config[:listen_port]
+  host,port,listen_port = @@config[:host],@@config[:port],@@config[:listen_port]
   connection=EventMachine::connect host,port,FileServiceProtocol
   @@log.info("connecting with ev=#{EventMachine::VERSION}")
   @@log.info("host= #{host}  port=#{port}")
-  
 }
 
 
