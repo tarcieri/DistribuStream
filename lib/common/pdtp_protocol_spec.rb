@@ -1,43 +1,46 @@
 require File.dirname(__FILE__)+"/pdtp_protocol.rb"
 
-context "PDTPProtocol obj_matches_type? " do
+describe "PDTPProtocol obj_matches_type? " do
 
 
-  specify "type :url works" do
+  it "type :url works" do
     PDTPProtocol::obj_matches_type?("http://bla.com/test3.mp3",:url).should == true
     PDTPProtocol::obj_matches_type?(4,:url).should == false
   end
 
-  specify "type :range works" do
+  it "type :range works" do
     PDTPProtocol::obj_matches_type?(0..4,:range).should == true
     PDTPProtocol::obj_matches_type?(4,:range).should == false
     PDTPProtocol::obj_matches_type?( {"min"=>0,"max"=>4} , :range ).should == true
   end
 
-  specify "type :ip works" do
+  it "type :ip works" do
     PDTPProtocol::obj_matches_type?("127.0.0.1", :ip).should == true
     PDTPProtocol::obj_matches_type?("127.0.0.1.1", :ip).should == false
   end
 
-  specify "type :int works" do
+  it "type :int works" do
     PDTPProtocol::obj_matches_type?(4,:int).should == true
     PDTPProtocol::obj_matches_type?("hi",:int).should == false
   end
 
-  specify "type :bool works" do
+  it "type :bool works" do
     PDTPProtocol::obj_matches_type?(true, :bool).should == true
     PDTPProtocol::obj_matches_type?(0,:bool).should == false
   end
 
-  specify "type :string works" do
+  it "type :string works" do
     PDTPProtocol::obj_matches_type?("hi", :string).should == true
     PDTPProtocol::obj_matches_type?(6, :string).should == false
+  #it "type an_instance_of(String) works" do
+  #  PDTPProtocol::obj_matches_type?("hi", an_instance_of(String)).should == true
+  #  PDTPProtocol::obj_matches_type?(6, an_instance_of(String)).should == false
   end
 
 end
 
-context "PDTPProtocol validate_message" do
-  specify "optional params work" do
+describe "PDTPProtocol validate_message" do
+  it "optional params work" do
     msg1={"type"=>"request", "url"=>"pdtp://bla.com/test.txt", "range"=>0..4}
     msg2={"type"=>"request", "url"=>"pdtp://bla.com/test.txt" }
     msg3={"type"=>"request", "range"=> "hi", "url"=>"pdtp://bla.com/test.txt" }
@@ -47,7 +50,7 @@ context "PDTPProtocol validate_message" do
     lambda{ PDTPProtocol::validate_message(msg3)}.should raise_error
   end
 
-  specify "required params work" do
+  it "required params work" do
     msg1={"type"=>"ask_info"}
     msg2={"type"=>"ask_info", "url"=>"pdtp://bla.com/test.txt"}
     msg3={"type"=>"ask_info", "url"=>42 }
