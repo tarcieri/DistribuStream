@@ -20,7 +20,7 @@ require File.dirname(__FILE__) + '/../common/common_init'
 common_init("dstream_client")
 
 # Implementation of a ruby test client for the pdtp protocol
-class TestClientProtocol < PDTPProtocol
+class TestClientProtocol < PDTP::Protocol
   def initialize *args
     super
   end
@@ -32,7 +32,7 @@ class TestClientProtocol < PDTPProtocol
 
       #create the client
       client=PDTP::Client.new
-      PDTPProtocol::listener = client
+      PDTP::Protocol::listener = client
       client.server_connection = self
       client.generate_client_id listen_port
       client.file_service = ClientFileService.new

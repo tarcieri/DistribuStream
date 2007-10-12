@@ -45,7 +45,7 @@ def find_files(base_path)
 end
 
 # Implements the file service for the pdtp protocol
-class FileServiceProtocol < PDTPProtocol
+class FileServiceProtocol < PDTP::Protocol
   def initialize *args
     super
   end
@@ -57,7 +57,7 @@ class FileServiceProtocol < PDTPProtocol
 
       #create the client
       client = PDTP::Client.new
-      PDTPProtocol::listener = client
+      PDTP::Protocol.listener = client
       client.server_connection = self
       client.generate_client_id(listen_port)
 

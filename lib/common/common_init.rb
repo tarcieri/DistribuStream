@@ -107,7 +107,7 @@ def validate_config_options
       exit
     end
 
-    unless PDTPProtocol::obj_matches_type?(val,type) then
+    unless PDTP::Protocol.obj_matches_type?(val,type) then
       puts "Parameter: #{key} is not of type: #{type}"
       exit
     end

@@ -23,7 +23,7 @@ common_init("dstream_server")
 
 server=Server.new
 server.file_service=ServerFileService.new
-PDTPProtocol::listener=server
+PDTP::Protocol.listener=server
 
 #set up the mongrel server for serving the stats page
 class MongrelServerHandler< Mongrel::HttpHandler
@@ -56,7 +56,7 @@ server.file_service.default_chunk_size = @@config[:chunk_size]
 
 EventMachine::run do
   host,port="0.0.0.0", @@config[:port]
-  EventMachine::start_server host,port,PDTPProtocol
+  EventMachine::start_server host,port,PDTP::Protocol
   @@log.info("accepting connections with ev=#{EventMachine::VERSION}")
   @@log.info("host=#{host}  port=#{port}")
 
