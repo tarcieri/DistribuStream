@@ -1,3 +1,13 @@
+#--
+# Copyright (C) 2006-07 ClickCaster, Inc. (info@clickcaster.com)
+# All rights reserved.  See COPYING for permissions.
+# 
+# This source file is distributed as part of the 
+# DistribuStream file transfer system.
+#
+# See http://distribustream.rubyforge.org/
+#++
+
 #Provides functions used for initialization by both the client and server
 
 require 'optparse'
@@ -57,7 +67,7 @@ def common_init( program_name)
     puts "Invalid path specified for file_root"
     return
   end
-  
+
   puts "@@config=#{@@config.inspect}"
   validate_config_options
   handle_config_options
@@ -86,13 +96,10 @@ def load_config_file(config_filename)
   end
 
   puts "Loaded config file: #{config_filename}"
-    
 end
 
 #make sure all the config options are of the right type
 def validate_config_options
-  
-
   @@config.each do |key,val|
     type=@types[key]
     if type.nil? then
@@ -105,12 +112,9 @@ def validate_config_options
       exit
     end
   end
-
-
 end
 
 #responds to config options that are used by both client and server
 def handle_config_options
   @@log.level=Logger::INFO if @@config[:quiet]  
-  
 end

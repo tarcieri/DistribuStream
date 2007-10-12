@@ -1,3 +1,13 @@
+#--
+# Copyright (C) 2006-07 ClickCaster, Inc. (info@clickcaster.com)
+# All rights reserved.  See COPYING for permissions.
+# 
+# This source file is distributed as part of the 
+# DistribuStream file transfer system.
+#
+# See http://distribustream.rubyforge.org/
+#++
+
 require 'rubygems'
 require 'eventmachine'
 require 'optparse'
@@ -14,7 +24,6 @@ common_init("dstream_server")
 server=Server.new
 server.file_service=ServerFileService.new
 PDTPProtocol::listener=server
-
 
 #set up the mongrel server for serving the stats page
 class MongrelServerHandler< Mongrel::HttpHandler
@@ -39,21 +48,19 @@ mongrel_server=Mongrel::HttpServer.new("0.0.0.0",@@config[:port]+1)
 @@log.info("Mongrel server listening on port: #{@@config[:port]+1}")
 mongrel_server.register("/",MongrelServerHandler.new(server))
 mongrel_server.run
-                        
+
 
 #set root directory
 server.file_service.root=@@config[:file_root]
 server.file_service.default_chunk_size = @@config[:chunk_size]
 
-EventMachine::run {
-  
-	host,port="0.0.0.0", @@config[:port]
+EventMachine::run do
+  host,port="0.0.0.0", @@config[:port]
   EventMachine::start_server host,port,PDTPProtocol
   @@log.info("accepting connections with ev=#{EventMachine::VERSION}")
   @@log.info("host=#{host}  port=#{port}")
 
-  EventMachine::add_periodic_timer( 2 ) do
+  EventMachine::add_periodic_timer(2) do
     server.clear_all_stalled_transfers 
   end
-}
-
+end

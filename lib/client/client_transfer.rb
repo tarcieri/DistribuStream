@@ -1,4 +1,14 @@
-require File.dirname(__FILE__)+'/client_file_service'
+#--
+# Copyright (C) 2006-07 ClickCaster, Inc. (info@clickcaster.com)
+# All rights reserved.  See COPYING for permissions.
+# 
+# This source file is distributed as part of the 
+# DistribuStream file transfer system.
+#
+# See http://distribustream.rubyforge.org/
+#++
+
+require File.dirname(__FILE__) + '/client_file_service'
 require "thread"
 require "net/http"
 require "uri"
@@ -12,19 +22,19 @@ class HTTPException < Exception
     @code=code
   end
 end
-    
+
 # The base information and methods needed by client transfers
 class ClientTransferBase
   attr_reader :peer, :peer_id, :url, :byte_range
   attr_reader :server_connection, :file_service
   attr_reader :method, :client,:hash
- 
+
   # Returns true if a server message matches this transfer
   def matches_message?(message)
     return ( @peer=message["peer"] and
-             @url==message["url"] and
-             @byte_range==message["range"] and
-             @peer_id==message["peer_id"] )
+    @url==message["url"] and
+    @byte_range==message["range"] and
+    @peer_id==message["peer_id"] )
   end
 
   # Takes an HTTP range and returns a ruby Range object
@@ -67,7 +77,7 @@ end
 # Implements the listening end (the server) of a peer to peer http connection
 class ClientTransferListener < ClientTransferBase
   attr :request,:response
-  
+
   # Called with the request and response parameters given by Mongrel
   def initialize(request,response,server_connection,file_service,client)
     @request,@response=request,response
@@ -105,7 +115,7 @@ class ClientTransferListener < ClientTransferBase
     path=@request.params["REQUEST_PATH"]
     vhost=@request.params["HTTP_HOST"]
     @url="http://"+vhost+path
-    
+
     @byte_range=parse_http_range(request.params["HTTP_RANGE"])
     @peer_id=@request.params["HTTP_X_PDTP_PEER_ID"]
 
@@ -113,7 +123,7 @@ class ClientTransferListener < ClientTransferBase
     raise HTTPException.new(400, "Missing X-PDTP-Peer-Id header") if @peer_id.nil?
     raise HTTPException.new(400, "Missing Host header") if vhost.nil?
     raise HTTPException.new(400, "Missing Range header") if @byte_range.nil?
-   
+
     send_ask_verify_message
     Thread.stop
     after_verification
@@ -129,12 +139,12 @@ class ClientTransferListener < ClientTransferBase
 
   # Perform the transfer if verification was successful
   def after_verification
-    
+
     #check if the server authorized us
     if @authorized==false then
       raise HTTPException.new(403,"Forbidden: the server did not authorize this transfer")  
     end
- 
+
     info = @file_service.get_info(@url)
     if @method == "put" then
       #we are the taker
@@ -143,7 +153,7 @@ class ClientTransferListener < ClientTransferBase
       @file_service.set_info(FileInfo.new) if info.nil? 
       info.write(@byte_range.first, @request.body.read)
       @hash=Digest::SHA256.hexdigest(res.body) rescue nil
-      
+
       # Stock HTTP OK response
       @response.start(200) do |head,out| 
       end
@@ -151,15 +161,15 @@ class ClientTransferListener < ClientTransferBase
       #we are the giver
       raise HTTPException.new(404,"File not found: #{@url}") if info.nil?
       data=info.read(@byte_range)
-      raise HTTPException.new(416,"Invalid range: #{@byte_range.inspect}") if data.nil?		
+      raise HTTPException.new(416,"Invalid range: #{@byte_range.inspect}") if data.nil?   
 
       #Request was GET, so now we need to send the data
       @response.start(206) do |head,out|
-      	head['Content-Type'] = 'application/octet-stream'
+        head['Content-Type'] = 'application/octet-stream'
         head['Content-Range'] = "bytes #{@byte_range.first}-#{@byte_range.last}/*"
         #FIXME must include a DATE header according to http
 
-      	out.write(data)
+        out.write(data)
       end
     else
       raise HTTPException.new(405,"Invalid method: #{@method}")
@@ -180,19 +190,19 @@ class ClientTransferConnector < ClientTransferBase
     @peer_id=message["peer_id"]
     @client=client
   end
- 
+
   # Perform the transfer
   def run
     hash=nil
-    
+
     info=@file_service.get_info(@url)
-    
+
     #compute the vhost and path
     #FIXME work with ports
     uri=URI.split(@url)
     path=uri[5]
     vhost=uri[2]   
- 
+
     if @method == "get" then
       req = Net::HTTP::Get.new(path)
       body = nil
@@ -202,12 +212,12 @@ class ClientTransferConnector < ClientTransferBase
     else
       raise HTTPException.new(405,"Invalid method: #{@method}")
     end
-    
+
     req.add_field("Range", "bytes=#{@byte_range.begin}-#{@byte_range.end}")
     req.add_field("Host",vhost)
     req.add_field("X-PDTP-Peer-Id",@client.my_id)
     res = Net::HTTP.start(@peer,@port) {|http| http.request(req,body) }
-    
+
     if res.code=='206' and @method=="get" then
       #we are the taker
       @@log.debug("Body Downloaded: url=#{@url} range=#{@byte_range} peer=#{@peer}:#{@port}")
@@ -216,6 +226,5 @@ class ClientTransferConnector < ClientTransferBase
     else
       raise "HTTP RESPONSE: code=#{res.code} body=#{res.body}"
     end  
-
   end
 end

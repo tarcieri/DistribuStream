@@ -1,3 +1,13 @@
+#--
+# Copyright (C) 2006-07 ClickCaster, Inc. (info@clickcaster.com)
+# All rights reserved.  See COPYING for permissions.
+# 
+# This source file is distributed as part of the 
+# DistribuStream file transfer system.
+#
+# See http://distribustream.rubyforge.org/
+#++
+
 #maintains trust information for a single client
 class Trust
   class Edge
@@ -48,27 +58,13 @@ class Trust
     total_success = 0
     total_transfers = 0
 
-    @outgoing.each do |linkedge|    
-      link = linkedge[1]
+    @outgoing.each do |_, link|
       total_success += link.success
       total_transfers += link.transfers
-      #print "link.success = ", link.success, "\n"
-      #print "link.transfers = ", link.transfers, "\n"
     end
 
-    #print "total_transfers=", total_transfers, "\n"
-
-    @outgoing.each do |linkedge|
-      link = linkedge[1]
-      # link.trust = (link.success / total_success) * (link.transfers / total_transfers)
-      link.trust = (link.success / total_transfers)
-      #print "Trust: ", link.success, "/", total_success, "=",  link.trust, "\n"
-    end
-
-    @outgoing.each do |linkedge|
-      target = linkedge[0]
-      link = linkedge[1]
-
+    @outgoing.each { |_, link| link.trust = link.success / total_transfers }
+    @outgoing.each do |target, link|
       [target.outgoing, target.implicit].each do |links|
         links.each do |nextlinkedge|
           nextlinktarget = nextlinkedge[0]
@@ -76,7 +72,11 @@ class Trust
           next unless outgoing[nextlinktarget].nil?
 
           if implicit[nextlinktarget].nil? || implicit[nextlinktarget].trust < (link.trust * nextlink.trust)
-            implicit[nextlinktarget] = Edge.new(link.trust * nextlink.trust, nextlink.success, nextlink.transfers)
+            implicit[nextlinktarget] = Edge.new(
+              link.trust * nextlink.trust, 
+              nextlink.success, 
+              nextlink.transfers
+            )
           end
         end
       end

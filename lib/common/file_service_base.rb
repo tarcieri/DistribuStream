@@ -1,3 +1,12 @@
+#--
+# Copyright (C) 2006-07 ClickCaster, Inc. (info@clickcaster.com)
+# All rights reserved.  See COPYING for permissions.
+# 
+# This source file is distributed as part of the 
+# DistribuStream file transfer system.
+#
+# See http://distribustream.rubyforge.org/
+#++
 
 #provides information about a single file on the network
 class FileInfo
@@ -25,7 +34,7 @@ class FileInfo
     end_byte=start_byte+chunk_size(chunkid)-1
     return start_byte..end_byte
   end
-  
+
   #returns the chunkid that contains the requested byte offset
   def chunk_from_offset(offset)
     raise "Invalid offset #{offset}" if offset<0 or offset>=@file_size
@@ -37,7 +46,7 @@ class FileInfo
   def chunk_range_from_byte_range(byte_range,exclude_partial=true)
     min=chunk_from_offset(byte_range.first)
     min+=1 if exclude_partial and byte_range.first > min*@base_chunk_size 
-   
+
     max_byte=byte_range.last
     max_byte=@file_size-1 if max_byte==-1 or max_byte>=@file_size 
     max=chunk_from_offset(max_byte)

@@ -1,9 +1,18 @@
+#--
+# Copyright (C) 2006-07 ClickCaster, Inc. (info@clickcaster.com)
+# All rights reserved.  See COPYING for permissions.
+# 
+# This source file is distributed as part of the 
+# DistribuStream file transfer system.
+#
+# See http://distribustream.rubyforge.org/
+#++
+
 require File.dirname(__FILE__) + '/client_info'
 require File.dirname(__FILE__) +'/transfer'
 require "thread"
 
 class Server
- 
   attr_reader :connections
   attr_accessor :file_service
   def initialize()
@@ -11,7 +20,7 @@ class Server
     @stats_mutex=Mutex.new
     @used_client_ids=Hash.new #keeps a list of client ids in use, they must be unique
     @updated_clients=Hash.new #a set of clients that have been modified and need transfers spawned
-	end
+  end
 
   #called by pdtp_protocol when a connection is created
   def connection_created(connection)
@@ -29,7 +38,7 @@ class Server
       @connections.delete(connection)
     end
   end
-  
+
   # returns the ClientInfo object associated with this connection
   def client_info(connection)
     return connection.user_data ||= ClientInfo.new
@@ -38,44 +47,44 @@ class Server
   # called when a transfer either finishes, successfully or not
   def transfer_completed(transfer,connection,chunk_hash,send_response=true)      
 
-      # did the transfer complete successfully?
-      local_hash=@file_service.get_chunk_hash(transfer.url,transfer.chunkid)
+    # did the transfer complete successfully?
+    local_hash=@file_service.get_chunk_hash(transfer.url,transfer.chunkid)
 
-      c1=client_info(transfer.taker)
-      c2=client_info(transfer.giver)
+    c1=client_info(transfer.taker)
+    c2=client_info(transfer.giver)
 
-      if connection==transfer.taker then
-        success= (chunk_hash==local_hash)
+    if connection==transfer.taker then
+      success= (chunk_hash==local_hash)
 
-        if success then
-          #the taker now has the file, so he can provide it
-          client_info(transfer.taker).chunk_info.provide(transfer.url,transfer.chunkid..transfer.chunkid)
-          c1.trust.success(c2.trust)
-        else
-          #transfer failed, the client still wants the chunk
-          client_info(transfer.taker).chunk_info.request(transfer.url,transfer.chunkid..transfer.chunkid)
-          c1.trust.failure(c2.trust)
-        end 
-      
-        msg={
-          "type"=>"hash_verify",
-          "url"=>transfer.url,
-          "range"=>transfer.byte_range,
-          "hash_ok"=>success
-        }
-        transfer.taker.send_message(msg) if send_response
+      if success then
+        #the taker now has the file, so he can provide it
+        client_info(transfer.taker).chunk_info.provide(transfer.url,transfer.chunkid..transfer.chunkid)
+        c1.trust.success(c2.trust)
+      else
+        #transfer failed, the client still wants the chunk
+        client_info(transfer.taker).chunk_info.request(transfer.url,transfer.chunkid..transfer.chunkid)
+        c1.trust.failure(c2.trust)
+      end 
 
-      end
+      msg={
+        "type"=>"hash_verify",
+        "url"=>transfer.url,
+        "range"=>transfer.byte_range,
+        "hash_ok"=>success
+      }
+      transfer.taker.send_message(msg) if send_response
 
-      #outstr="#{@ids[transfer.giver]}->#{@ids[transfer.taker]} transfer completed: #{transfer}"
-      #outstr=outstr+" t->g=#{c1.trust.weight(c2.trust)} g->t=#{c2.trust.weight(c1.trust)}" 
-      #outstr=outstr+"sent_by: "+ ( connection==transfer.taker ? "taker" : "giver" )
-      #outstr=outstr+" success=#{success} "
-      #@@log.debug(outstr)
-    
-      #remove this transfer from whoever sent it
-      client_info(connection).transfers.delete(transfer.transfer_id)
-      @updated_clients[connection]=true #flag this client for transfer creation
+    end
+
+    #outstr="#{@ids[transfer.giver]}->#{@ids[transfer.taker]} transfer completed: #{transfer}"
+    #outstr=outstr+" t->g=#{c1.trust.weight(c2.trust)} g->t=#{c2.trust.weight(c1.trust)}" 
+    #outstr=outstr+"sent_by: "+ ( connection==transfer.taker ? "taker" : "giver" )
+    #outstr=outstr+" success=#{success} "
+    #@@log.debug(outstr)
+
+    #remove this transfer from whoever sent it
+    client_info(connection).transfers.delete(transfer.transfer_id)
+    @updated_clients[connection]=true #flag this client for transfer creation
   end
 
   #Creates a new transfer between two peers
@@ -186,7 +195,7 @@ class Server
     @connections.each do |c2|
       next if client_connection==c2
       next if client_info(c2).wants_download? == false
-    
+
       begin
         url,chunkid=client_info(c2).chunk_info.high_priority_chunk
       rescue
@@ -225,7 +234,7 @@ class Server
     url=message["url"]
     info=@file_service.get_info(url) rescue nil
     raise ProtocolWarn.new("Requested URL: '#{url}' not found") if info.nil?
-    
+
     exclude_partial= (type=="provide") #only exclude partial chunks from provides
     range=info.chunk_range_from_byte_range(message["range"],exclude_partial)
 
@@ -291,21 +300,21 @@ class Server
       }
       connection.send_message(response)
 
-		when "completed"
+    when "completed"
       my_id=client_info(connection).client_id
       transfer_id=Transfer::gen_transfer_id(my_id,message["peer_id"],message["url"],message["range"])
-		  transfer=client_info(connection).transfers[transfer_id]
+      transfer=client_info(connection).transfers[transfer_id]
       @@log.debug("Completed: id=#{transfer_id} ok=#{transfer != nil}" )
       if transfer  then
         transfer_completed(transfer,connection,message["hash"])
       else
         raise ProtocolWarn.new("You sent me a transfer completed message for unknown transfer: #{transfer_id}")
       end
-		
+
     when "protocol_error"
       #ignore
     when "protocol_warn"
-      #ignore	
+      #ignore 
     else
       raise ProtocolError.new("Unhandled message type: #{message['type']}")
     end
@@ -338,7 +347,7 @@ class Server
     s=s+"<tr><th>Client</th><th>Downloads</th><th>Files</th></tr>"
 
     @connections.each do |c|
-     
+
       transfers=""
       client_info(c).transfers.each do |key,t|
         if c==t.giver then
@@ -348,7 +357,7 @@ class Server
           str="DOWN: "
           peer=t.giver
         end
-          
+
         str=str+" id=#{t.transfer_id}"
         transfers=transfers+str+"<br>"
       end
@@ -356,7 +365,7 @@ class Server
       files=""
       stats=client_info(c).chunk_info.get_file_stats
       stats.each do |fs|
-        
+
         files=files+"#{fs.url} size=#{fs.file_chunks} req=#{fs.chunks_requested}"
         files=files+" prov=#{fs.chunks_provided} transf=#{fs.chunks_transferring}<br>"    
       end      
@@ -373,6 +382,4 @@ class Server
 
     return s
   end
-
 end
-    

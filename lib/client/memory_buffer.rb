@@ -1,3 +1,13 @@
+#--
+# Copyright (C) 2006-07 ClickCaster, Inc. (info@clickcaster.com)
+# All rights reserved.  See COPYING for permissions.
+# 
+# This source file is distributed as part of the 
+# DistribuStream file transfer system.
+#
+# See http://distribustream.rubyforge.org/
+#++
+
 # Handle a memory buffer, which may be written to and read from randomly
 class MemoryBuffer
   def initialize
@@ -26,16 +36,16 @@ class MemoryBuffer
   def read(range)
     return nil if range.first>range.last
     current_byte=range.first
-    
+
     buffer=String.new
 
     while current_byte <= range.last do
       # find an entry that contains this byte
-      
+
       found=false
       @entries.each do |e|
         if e.range.include?(current_byte)
-  
+
           internal_start=current_byte-e.start_pos #start position inside this entry's data
           internal_end=(range.last<e.end_pos ? range.last : e.end_pos) - e.start_pos 
           buffer << e.data[internal_start..internal_end]
@@ -63,7 +73,7 @@ class MemoryBuffer
     return nil unless intersects?(old,new)
 
     start= old.start_pos<new.start_pos ? old.start_pos: new.start_pos
-    
+
     stringio=StringIO.new
     stringio.seek(old.start_pos-start)
     stringio.write(old.data)
@@ -96,7 +106,5 @@ class MemoryBuffer
     def range
       Range.new(@start_pos,end_pos)
     end
-    
   end
-
 end

@@ -1,4 +1,14 @@
-require File.dirname(__FILE__)+"/memory_buffer.rb"
+#--
+# Copyright (C) 2006-07 ClickCaster, Inc. (info@clickcaster.com)
+# All rights reserved.  See COPYING for permissions.
+# 
+# This source file is distributed as part of the 
+# DistribuStream file transfer system.
+#
+# See http://distribustream.rubyforge.org/
+#++
+
+require File.dirname(__FILE__) + "/memory_buffer.rb"
 
 describe "A new memory buffer" do
   before(:each) do
@@ -13,7 +23,7 @@ end
 
 describe "A memory buffer with one entry" do
   before(:each) do
-    @mb=MemoryBuffer.new
+    @mb = MemoryBuffer.new
     @mb.write(0,"hello")
   end
 

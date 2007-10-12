@@ -1,3 +1,13 @@
+#--
+# Copyright (C) 2006-07 ClickCaster, Inc. (info@clickcaster.com)
+# All rights reserved.  See COPYING for permissions.
+# 
+# This source file is distributed as part of the 
+# DistribuStream file transfer system.
+#
+# See http://distribustream.rubyforge.org/
+#++
+
 require File.dirname(__FILE__)+'/trust.rb'
 
 #stores information about a single connected client
@@ -15,7 +25,7 @@ class ClientInfo
       transferring=transferring+1 if t.verification_asked
       return false if transferring >= transfer_state_allowed
     end
-    
+
     return (@transfers.size < total_allowed)
   end 
 
@@ -23,7 +33,7 @@ class ClientInfo
     #this could have a different definition, but it works fine to use wants_download?
     return wants_download?
   end 
-  
+
   def initialize
     @chunk_info=ChunkInfo.new
     @listen_port=6000 #default
@@ -45,14 +55,13 @@ class ClientInfo
     end
     return stalled
   end
- 
 end
 
 #stores information about the chunks requested or provided by a client
 class ChunkInfo
-	def initialize
-		@files={}
-	end
+  def initialize
+    @files={}
+  end
 
   #each chunk can either be provided, requested, transfer, or none
   def provide(filename,range); set(filename,range,:provided) ; end
@@ -60,10 +69,10 @@ class ChunkInfo
   def request(filename,range); set(filename,range, :requested); end
   def unrequest(filename,range); set(filename,range, :none); end
   def transfer(filename,range); set(filename,range, :transfer); end
-  
+
   def provided?(filename,chunk); get(filename,chunk) == :provided; end
-	def requested?(filename,chunk); get(filename,chunk) == :requested; end
- 
+  def requested?(filename,chunk); get(filename,chunk) == :requested; end
+
   #returns a high priority requested chunk
   def high_priority_chunk
     #right now return any chunk
@@ -77,7 +86,7 @@ class ChunkInfo
 
   #calls a block for each chunk of the specified type
   def each_chunk_of_type(type)
-     @files.each do |name,file|
+    @files.each do |name,file|
       file.each_index do |i|
         yield(name,i) if file[i]==type
       end
@@ -95,7 +104,7 @@ class ChunkInfo
       @chunks_transferring=0
     end
   end
-  
+
   #returns an array of FileStats objects for debug output
   def get_file_stats
     stats=[]
@@ -112,9 +121,11 @@ class ChunkInfo
     end
     return stats 
   end
-    
-protected
 
+  #########
+  protected
+  #########
+  
   def get(filename,chunk)
     return @files[filename][chunk] rescue :neither
   end
@@ -123,5 +134,4 @@ protected
     chunks=@files[filename]||=Array.new
     range.each { |i| chunks[i]=state }
   end
-
 end

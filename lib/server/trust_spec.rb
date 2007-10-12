@@ -1,3 +1,13 @@
+#--
+# Copyright (C) 2006-07 ClickCaster, Inc. (info@clickcaster.com)
+# All rights reserved.  See COPYING for permissions.
+# 
+# This source file is distributed as part of the 
+# DistribuStream file transfer system.
+#
+# See http://distribustream.rubyforge.org/
+#++
+
 require File.dirname(__FILE__) + '/trust'
 
 describe 'A new trust node' do
@@ -11,12 +21,12 @@ describe 'A new trust node' do
     @node.outgoing.should be_empty
     @node.implicit.should be_empty
   end
-  
+
   it 'should trust a node after a good transfer' do
     @node.success(@other)
     @node.outgoing.should_not be_empty
   end
-  
+
   it 'should normalize trusts across outgoing edges' do
     @node.success(@other)
     trust = @node.weight(@other)

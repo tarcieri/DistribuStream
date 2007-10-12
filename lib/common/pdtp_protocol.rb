@@ -1,3 +1,13 @@
+#--
+# Copyright (C) 2006-07 ClickCaster, Inc. (info@clickcaster.com)
+# All rights reserved.  See COPYING for permissions.
+# 
+# This source file is distributed as part of the 
+# DistribuStream file transfer system.
+#
+# See http://distribustream.rubyforge.org/
+#++
+
 require 'rubygems'
 require 'eventmachine'
 require 'thread'
@@ -12,7 +22,6 @@ end
 
 PROTOCOL_DEBUG=true
 
-
 class ProtocolError < Exception
 end
 
@@ -21,7 +30,7 @@ end
 
 #EventMachine handler class for the PDTP protocol
 class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
-	@@num_connections=0
+  @@num_connections=0
   @@listener=nil
   @@message_params=nil
   @connection_open=false
@@ -29,12 +38,12 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
   def connection_open?
     return @connection_open
   end
-  
+
   #sets the listener class (Server or Client)
   def PDTPProtocol::listener= listener
     @@listener=listener
   end
-  
+
   def initialize *args
     user_data=nil
     @mutex=Mutex.new
@@ -62,7 +71,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
 
   #close a connection, but first send the specified error message
   def error_close_connection(error) 
-    
+
     if PROTOCOL_DEBUG then
       msg={"type"=>"protocol_error","message"=>error}
       send_message msg 
@@ -74,7 +83,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
 
   #override this in a child class to handle messages
   def receive_message message
-      @@listener.dispatch_message(message,self) 
+    @@listener.dispatch_message(message,self) 
   end
 
   #debug routine: returns id of remote peer on this connection
@@ -82,7 +91,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
     ret= user_data.client_id rescue nil
     return ( ret!=nil ? ret : "NOID")
   end
-   
+
   #called for each line of text received over the wire
   #parses the JSON message and dispatches the message
   def receive_line line
@@ -93,7 +102,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
       raise ProtocolError.new("JSON couldn't parse: #{line}") if message.nil?
 
       PDTPProtocol::validate_message(message)
-      
+
       hash_to_range(message)
       receive_message(message)
 
@@ -108,9 +117,8 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
       puts e.backtrace.join("\n")
     end
   end
-  
-  RANGENAMES=["chunk_range","range","byte_range"]
 
+  RANGENAMES=["chunk_range","range","byte_range"]
 
   #converts Ruby Range classes in the message to PDTP protocol hashes with min and max
   # 0..-1 => nil  (entire file)
@@ -138,7 +146,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
         message[key]={} # assume entire file if not specified
       end
     end
-  
+
     if message[key] then
       raise if message[key].class!=Hash
       min=message[key]["min"] 
@@ -178,7 +186,6 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
     return "#{addr}:#{port}"
   end
 
-
   #makes sure that the message is valid.
   #if not, throws a ProtocolError
   def PDTPProtocol::validate_message(message)
@@ -197,9 +204,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
       if !obj_matches_type?(message[name],type) then
         raise ProtocolError.new("parameter: '#{name}' val='#{message[name]}' is not of type: '#{type}' for message type: '#{message["type"]}' ")
       end
-
     end    
-
   end
 
   # an optional field of the specified type
@@ -244,7 +249,7 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
       "client_id"=>:string,
       "listen_port"=>:int                  
     }
-      
+
     mp["ask_info"]={
       "url"=>:url
     }
@@ -333,6 +338,4 @@ class PDTPProtocol < EventMachine::Protocols::LineAndTextProtocol
 
     return mp
   end
-
 end
-

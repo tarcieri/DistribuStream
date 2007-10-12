@@ -2,17 +2,17 @@ require 'rubygems'
 require 'eventmachine'
 require 'optparse'
 require 'mongrel'
-require File.dirname(__FILE__)+'/../lib/client/client'
-require File.dirname(__FILE__)+'/../lib/client/client_file_service'
-require File.dirname(__FILE__)+'/../lib/server/server_file_service'
+require File.dirname(__FILE__) + '/../lib/client/client'
+require File.dirname(__FILE__) + '/../lib/client/client_file_service'
+require File.dirname(__FILE__) + '/../lib/server/server_file_service'
 require 'logger'
-require File.dirname(__FILE__)+'/../lib/client/client_config'
+#require File.dirname(__FILE__) + '/../lib/client/client_config'
 
-client=Client.new
-cfs=client.file_service=ClientFileService.new
-PDTPProtocol::listener=client
+client = PDTP::Client.new
+cfs = client.file_service=ClientFileService.new
+PDTPProtocol::listener = client
 
-@@config=ClientConfig.instance
+@@config = {} #ClientConfig.instance
 
 OptionParser.new do |opts|
   opts.banner = "Usage: testclient.rb [options]"
@@ -56,9 +56,9 @@ OptionParser.new do |opts|
 	end
 end.parse!
 
-@@log=Logger.new(@@config.log)
-@@log.level= @@config.debug_level
-@@log.datetime_format=""
+@@log = Logger.new(@@config.log)
+@@log.level = @@config.debug_level
+@@log.datetime_format = ""
 
 
 EventMachine::run {

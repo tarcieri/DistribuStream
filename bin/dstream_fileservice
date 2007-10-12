@@ -1,12 +1,12 @@
 #!/usr/bin/env ruby
 #--
-# Copyright 2006 by ClickCaster, Inc. (info@clickcaster.com)
-# All rights reserved.  See LICENSE.txt for permissions.
+# Copyright (C) 2006-07 ClickCaster, Inc. (info@clickcaster.com)
+# All rights reserved.  See COPYING for permissions.
 # 
 # This source file is distributed as part of the 
 # DistribuStream file transfer system.
 #
-# See http://pdtp.org/
+# See http://distribustream.rubyforge.org/
 #++
 
 require File.dirname(__FILE__) + '/../lib/client/client_main'

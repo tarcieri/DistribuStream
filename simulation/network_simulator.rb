@@ -85,7 +85,7 @@ end
 class BasicMessageHandler 
   def dispatch_message(message,connection)
     puts "dispatching message: #{message.inspect} from remote: #{connection.remote_address},#{connection.remote_port}"
-    connection.send_message ("Yo wassup?")
+    connection.send_message("Yo wassup?")
   end
 end
 
