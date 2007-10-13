@@ -72,7 +72,6 @@ module PDTP
 
     #close a connection, but first send the specified error message
     def error_close_connection(error) 
-
       if PROTOCOL_DEBUG then
         msg={"type"=>"protocol_error","message"=>error}
         send_message msg 

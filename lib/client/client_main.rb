@@ -59,19 +59,18 @@ class FileServiceProtocol < PDTP::Protocol
       client = PDTP::Client.new
       PDTP::Protocol.listener = client
       client.server_connection = self
-      client.generate_client_id(listen_port)
-
+      client.generate_client_id listen_port
 
       # Start a mongrel server on the specified port.  If it isnt available, keep trying higher ports
       begin
-        mongrel_server=Mongrel::HttpServer.new("0.0.0.0",listen_port)
+        mongrel_server=Mongrel::HttpServer.new '0.0.0.0', listen_port
       rescue Exception=>e
         listen_port+=1
         retry
       end
 
-      @@log.info("listening on port #{listen_port}")
-      mongrel_server.register("/",client)
+      @@log.info "listening on port #{listen_port}"
+      mongrel_server.register "/", client
       mongrel_server.run
 
       # Tell the server a little bit about ourself
@@ -80,23 +79,23 @@ class FileServiceProtocol < PDTP::Protocol
         "listen_port"=>listen_port,
         "client_id"=>client.my_id
       }
-      send_message(request)
+      send_message request
 
-      @@log.info("This client is providing")
-      sfs=ServerFileService.new
-      sfs.root=@@config[:file_root]
-      client.file_service=sfs #give this client access to all data
+      @@log.info 'This client is providing"'
+      sfs = PDTP::ServerFileService.new
+      sfs.root = @@config[:file_root]
+      client.file_service = sfs #give this client access to all data
 
-      hostname=@@config[:provide_hostname]
+      hostname = @@config[:provide_hostname]
 
       # Provide all the files in the root directory
-      files=find_files(@@config[:file_root] )
+      files = find_files(@@config[:file_root] )
       files.each do |file|
         request={
           "type"=>"provide",
           "url"=>"http://#{hostname}/#{file}"
         }
-        send_message(request)    
+        send_message request
       end
     rescue Exception => e
       puts "Exception in connection_completed: #{e}"

@@ -35,7 +35,7 @@ class TestClientProtocol < PDTP::Protocol
       PDTP::Protocol::listener = client
       client.server_connection = self
       client.generate_client_id listen_port
-      client.file_service = ClientFileService.new
+      client.file_service = PDTP::ClientFileService.new
 
       # Start a mongrel server on the specified port.  If it isnt available, keep trying higher ports
       begin
