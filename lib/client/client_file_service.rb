@@ -8,57 +8,55 @@
 # See http://distribustream.rubyforge.org/
 #++
 
-require "uri"    
-require "pathname"
+require 'uri'
+require 'pathname'
 require File.dirname(__FILE__) + '/../common/file_service_base.rb'
 require File.dirname(__FILE__) + '/memory_buffer.rb'    
 
 module PDTP
-  # The client specific file utilities. Most importantly, handling
-  # the data buffer.
-  class ClientFileInfo < FileInfo
+  class Client < Mongrel::HttpHandler
+    # The client specific file utilities. Most importantly, handling
+    # the data buffer.
+    class FileInfo < PDTP::FileInfo
+      # Write data into buffer starting at start_pos 
+      def write(start_pos,data)
+        @buffer ||= MemoryBuffer.new
+        @buffer.write start_pos, data
+      end
 
-    # Write data into buffer starting at start_pos 
-    def write(start_pos,data)
-      @buffer||=MemoryBuffer.new
-      @buffer.write(start_pos,data)
-    end
+      # Read a range of data out of buffer. Takes a ruby Range object
+      def read(range)
+        begin
+          @buffer ||= MemoryBuffer.new
+          @buffer.read range
+        rescue nil
+        end
+      end
 
-    # Read a range of data out of buffer. Takes a ruby Range object
-    def read(range)
-      begin
-        @buffer||=MemoryBuffer.new
-        return @buffer.read(range)
-      rescue
-        return nil
+      # Return the number of bytes currently stored
+      def bytes_downloaded
+        @buffer ||= MemoryBuffer.new
+        @buffer.bytes_stored
       end
     end
 
-    # Return the number of bytes currently stored
-    def bytes_downloaded
-      @buffer||=MemoryBuffer.new
-      return @buffer.bytes_stored
-    end
+    # Container class for file data
+    class FileService < FileServiceBase
+      def initialize
+        @files = {}
+      end
 
-  end
+      def get_info(url)
+        @files[url] rescue nil
+      end 
 
-  # Container class for file data
-  class ClientFileService < FileServiceBase
-
-    def initialize
-      @files = {}
-    end
-
-    def get_info(url)
-      return @files[url] rescue nil
-    end 
-
-    def set_info(url,info)
-      cinfo=ClientFileInfo.new
-      cinfo.file_size=info.file_size
-      cinfo.base_chunk_size=info.base_chunk_size
-      cinfo.streaming=info.streaming
-      @files[url]=cinfo
+      def set_info(url, info)
+        cinfo = FileInfo.new
+        cinfo.file_size = info.file_size
+        cinfo.base_chunk_size = info.base_chunk_size
+        cinfo.streaming = info.streaming
+        @files[url] = cinfo
+      end
     end
   end
 end
