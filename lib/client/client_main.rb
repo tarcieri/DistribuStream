@@ -81,8 +81,8 @@ class FileServiceProtocol < PDTP::Protocol
       }
       send_message request
 
-      @@log.info 'This client is providing"'
-      sfs = PDTP::ServerFileService.new
+      @@log.info 'This client is providing'
+      sfs = PDTP::Server::FileService.new
       sfs.root = @@config[:file_root]
       client.file_service = sfs #give this client access to all data
 

@@ -19,27 +19,25 @@ require File.dirname(__FILE__)+'/../common/common_init'
 
 require 'mongrel'
 
-common_init("dstream_server")
+common_init "dstream_server"
 
 server = PDTP::Server.new
-server.file_service = PDTP::ServerFileService.new
+server.file_service = PDTP::Server::FileService.new
 PDTP::Protocol.listener = server
 
 #set up the mongrel server for serving the stats page
 class MongrelServerHandler< Mongrel::HttpHandler
   def initialize(server)
-    @server=server
+    @server = server
   end
 
   def process(request,response)
     response.start(200) do |head, out|
-      begin
+      out.write begin
         outstr = @server.generate_html_stats
       rescue Exception=>e
         outstr = "Exception: #{e}\n#{e.backtrace.join("\n")}"
       end
-      
-      out.write(outstr)
     end    
   end
 end
