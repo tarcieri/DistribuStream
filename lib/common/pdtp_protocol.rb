@@ -83,7 +83,7 @@ module PDTP
 
     #override this in a child class to handle messages
     def receive_message message
-      @@listener.dispatch_message(message,self) 
+      @@listener.dispatch_message message, self 
     end
 
     #debug routine: returns id of remote peer on this connection
@@ -156,18 +156,27 @@ module PDTP
     end
 
     #sends a message, in the internal Hash format, over the wire
-    def send_message message
+    def send_message(command, opts = {})
+      # Legacy support for old #send_message API
+      message = case command
+      when Hash then command
+      when Symbol, String then opts.merge(:type => command)
+      end
+        
+      # Stringify all keys
+      message = message.map { |k,v| [k.to_s, v] }.inject({}) { |h,(k,v)| h[k] = v; h }
+      
       @mutex.synchronize do
-        range_to_hash(message)
-        outstr=JSON.unparse(message)+"\n"
-        @@log.debug( "(#{remote_peer_id}) send: #{outstr.chomp}")
+        range_to_hash message
+        outstr = JSON.unparse(message)+"\n"
+        @@log.debug"(#{remote_peer_id}) send: #{outstr.chomp}"
         send_data outstr  
       end
     end
 
     #called by EventMachine when a connection is closed
     def unbind
-      @@num_connections-=1
+      @@num_connections -= 1
       @@listener.connection_destroyed(self) if @@listener.respond_to?(:connection_destroyed)
       @connection_open=false
     end

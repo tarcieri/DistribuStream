@@ -18,14 +18,14 @@ require File.dirname(__FILE__) + '/client_file_service'
 require File.dirname(__FILE__) + '/../server/server_file_service'
 require File.dirname(__FILE__) + '/../common/common_init'
 
-common_init("dstream_client")
+common_init 'dstream_client'
 
 # Fine all suitable files in the give path
 def find_files(base_path)
   require 'find'
 
   found = []
-  excludes = %w{".svn CVS}
+  excludes = %w{.svn CVS}
   base_full = File.expand_path(base_path)
 
   Find.find(base_full) do |path|
@@ -43,7 +43,7 @@ end
 
 # Implements the file service for the pdtp protocol
 class FileServiceProtocol < PDTP::Protocol
-  def initialize *args
+  def initialize(*args)
     super
   end
 
@@ -71,12 +71,7 @@ class FileServiceProtocol < PDTP::Protocol
       mongrel_server.run
 
       # Tell the server a little bit about ourself
-      request={
-        "type"=>"client_info",
-        "listen_port"=>listen_port,
-        "client_id"=>client.my_id
-      }
-      send_message request
+      send_message :client_info, :listen_port => listen_port, :client_id => client.my_id
 
       @@log.info 'This client is providing'
       sfs = PDTP::Server::FileService.new
@@ -86,14 +81,8 @@ class FileServiceProtocol < PDTP::Protocol
       hostname = @@config[:provide_hostname]
 
       # Provide all the files in the root directory
-      files = find_files(@@config[:file_root] )
-      files.each do |file|
-        request={
-          "type"=>"provide",
-          "url"=>"http://#{hostname}/#{file}"
-        }
-        send_message request
-      end
+      files = find_files @@config[:file_root]
+      files.each { |file| send_message :provide, :url => "http://#{hostname}/#{file}" }
     rescue Exception => e
       puts "Exception in connection_completed: #{e}"
       puts e.backtrace.join("\n")
@@ -109,8 +98,8 @@ end
 
 # Run the EventMachine reactor loop
 EventMachine::run do
-  host,port,listen_port = @@config[:host],@@config[:port],@@config[:listen_port]
-  connection=EventMachine::connect host,port,FileServiceProtocol
-  @@log.info("connecting with ev=#{EventMachine::VERSION}")
-  @@log.info("host= #{host}  port=#{port}")
+  host, port, listen_port = @@config[:host], @@config[:port], @@config[:listen_port]
+  connection = EventMachine::connect host, port, FileServiceProtocol
+  @@log.info "connecting with ev=#{EventMachine::VERSION}"
+  @@log.info "host= #{host}  port=#{port}"
 end
