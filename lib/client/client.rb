@@ -40,12 +40,12 @@ module PDTP
     # This method is called after a connection to the server
     # has been successfully established.
     def connection_created(connection)
-      @@log.debug("[mongrel]Opened connection...");
+      @@log.debug("[mongrel] Opened connection...");
     end
 
     # This method is called when the server connection is destroyed
     def connection_destroyed(connection)
-      @@log.debug("[mongrel]Closed connection...")
+      @@log.debug("[mongrel] Closed connection...")
     end
 
     # Returns a transfer object if the given connection is a peer associated with 
@@ -61,21 +61,23 @@ module PDTP
     # a separate thread, one for each request.
     def process(request,response)
       begin
-        @@log.debug "Creating TransferListener"
-        transfer=ClientTransferListener.new(request,response,@server_connection,@file_service,self)
+        @@log.debug "Creating Transfer::Listener"
+        transfer = Transfer::Listener.new(
+          request, 
+          response, 
+          @server_connection, 
+          @file_service, 
+          self
+        )
 
         #Needs to be locked because multiple threads could attempt to append a transfer at once
-        @mutex.synchronize do
-          @transfers << transfer
-        end
-
+        @mutex.synchronize { @transfers << transfer }
         transfer.handle_header 
-
       rescue Exception=>e
         transfer.write_http_exception(e)
       end
 
-      transfer.send_completed_message(transfer.hash)   
+      transfer.send_completed_message transfer.hash
     end
 
     # Returns true if the given message refers to the given transfer  
@@ -94,16 +96,16 @@ module PDTP
         # Receive and store information for this url
       when "tell_info"
         info = FileInfo.new
-        info.file_size=message["size"]
-        info.base_chunk_size=message["chunk_size"]
-        info.streaming=message["streaming"]
+        info.file_size = message["size"]
+        info.base_chunk_size = message["chunk_size"]
+        info.streaming = message["streaming"]
         @file_service.set_info(message["url"], info)
 
         # Begin a transfer as a connector   
       when "transfer"
-        transfer=ClientTransferConnector.new(message,@server_connection,@file_service,self)
+        transfer = Transfer::Connector.new(message,@server_connection,@file_service,self)
 
-        @@log.debug("TRANSFER STARTING")
+        @@log.debug "TRANSFER STARTING"
 
         # Run each transfer in its own thread and notify the server upon completion
         Thread.new(transfer) do |t|
