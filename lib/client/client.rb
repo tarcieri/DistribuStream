@@ -123,7 +123,7 @@ module PDTP
       when "tell_verify"
         found=false
         @transfers.each do |t|
-          if t.matches_message?(message) then 
+          if t.matches_message?(message)
             finished(t)
             t.tell_verify(message["is_authorized"])
             found=true
@@ -131,7 +131,7 @@ module PDTP
           end
         end
 
-        if found==false then
+        unless found
           puts "BUG: Tell verify sent for an unknown transfer"
           exit!
         end

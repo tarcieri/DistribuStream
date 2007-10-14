@@ -22,7 +22,7 @@ module PDTP
       new_entry=Entry.new(start_pos,data)
       @entries.each do |e|
         union=combine(e,new_entry)
-        if union then
+        if union
           @entries.delete(e)
           new_entry=union
         end 

@@ -16,30 +16,26 @@ module PDTP
     #number of chunks in the file
     def num_chunks
       return 0 if @file_size==0
-      return (@file_size-1)/@base_chunk_size + 1  
+      (@file_size - 1) / @base_chunk_size + 1  
     end
 
     #size of the specified chunk
     def chunk_size(chunkid) 
       raise "Invalid chunkid #{chunkid}" if chunkid<0 or chunkid>=num_chunks
-      if chunkid==num_chunks-1 then
-        return @file_size-@base_chunk_size*chunkid 
-      else
-        return @base_chunk_size
-      end
+      chunkid == num_chunks - 1 ? @file_size - @base_chunk_size * chunkid : @base_chunk_size
     end
 
     #range of bytes taken up by this chunk in the entire file
     def chunk_range(chunkid)
-      start_byte=chunkid*@base_chunk_size
-      end_byte=start_byte+chunk_size(chunkid)-1
-      return start_byte..end_byte
+      start_byte = chunkid * @base_chunk_size
+      end_byte = start_byte + chunk_size(chunkid) - 1
+      start_byte..end_byte
     end
 
     #returns the chunkid that contains the requested byte offset
     def chunk_from_offset(offset)
-      raise "Invalid offset #{offset}" if offset<0 or offset>=@file_size
-      return offset / @base_chunk_size
+      raise "Invalid offset #{offset}" if offset < 0 or offset >= @file_size
+      offset / @base_chunk_size
     end
 
     #takes a byte_range in the file and returns an equivalent chunk range
@@ -52,7 +48,7 @@ module PDTP
       max_byte=@file_size-1 if max_byte==-1 or max_byte>=@file_size 
       max=chunk_from_offset(max_byte)
       max-=1 if exclude_partial and max_byte<chunk_range(max).last
-      return min..max
+      min..max
     end
 
     #returns a string containing the data for this chunk
@@ -60,7 +56,6 @@ module PDTP
     #implemented in Client and Server file services
     def chunk_data(chunkid,range=nil)
     end
-
   end
 
   # base class for ClientFileService and ServerFileService.

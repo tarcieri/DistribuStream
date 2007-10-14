@@ -55,10 +55,10 @@ module PDTP
       c1=client_info(transfer.taker)
       c2=client_info(transfer.giver)
 
-      if connection==transfer.taker then
+      if connection==transfer.taker
         success= (chunk_hash==local_hash)
 
-        if success then
+        if success
           #the taker now has the file, so he can provide it
           client_info(transfer.taker).chunk_info.provide(transfer.url,transfer.chunkid..transfer.chunkid)
           c1.trust.success(c2.trust)
@@ -98,12 +98,9 @@ module PDTP
       #make sure this transfer doesnt already exist
       t1=client_info(taker).transfers[t.transfer_id]
       t2=client_info(giver).transfers[t.transfer_id]
-      if t1 != nil or t2 != nil then
-        return false
-      end
+      return false unless t1.nil? and t2.nil?
 
       client_info(taker).chunk_info.transfer(url,chunkid..chunkid) 
-
       client_info(taker).transfers[t.transfer_id]=t
       client_info(giver).transfers[t.transfer_id]=t
 
@@ -171,7 +168,7 @@ module PDTP
       @connections.each do |c2|
         next if client_connection==c2
         next if client_info(c2).wants_upload? == false
-        if client_info(c2).chunk_info.provided?(url,chunkid) then
+        if client_info(c2).chunk_info.provided?(url,chunkid)
           feasible_peers << c2
           break if feasible_peers.size > 5
         end
@@ -179,7 +176,7 @@ module PDTP
 
       # we now have a list of clients that have the requested chunk.
       # pick one and start the transfer
-      if feasible_peers.size>0 then
+      if feasible_peers.size > 0
         #FIXME base this on the trust model
         giver=feasible_peers[rand(feasible_peers.size)]
         return begin_transfer(client_connection,giver,url,chunkid)
@@ -204,7 +201,7 @@ module PDTP
           next
         end
 
-        if c1info.chunk_info.provided?(url,chunkid) then
+        if c1info.chunk_info.provided?(url,chunkid)
           return begin_transfer(c2,client_connection,url,chunkid)
         end
       end
@@ -248,7 +245,7 @@ module PDTP
     #handles all incoming messages from clients
     def dispatch_message_needslock(message,connection)
       #require the client to be logged in with a client id
-      if message["type"] != "client_info" and client_info(connection).client_id.nil? then
+      if message["type"] != "client_info" and client_info(connection).client_id.nil?
         raise ProtocolError.new("You need to send a 'client_info' message first")
       end 
 
@@ -256,11 +253,11 @@ module PDTP
       when "client_info"
         cid=message["client_id"]
         #make sure this id isnt in use
-        if @used_client_ids[cid] then
+        if @used_client_ids[cid]
           raise ProtocolError.new("Your client id: #{cid} is already in use.")   
-        else
-          @used_client_ids[cid]=true
-        end    
+        end
+        
+        @used_client_ids[cid]=true 
         client_info(connection).listen_port=message["listen_port"]
         client_info(connection).client_id=cid
       when "ask_info"
@@ -307,7 +304,7 @@ module PDTP
         transfer_id=Transfer::gen_transfer_id(my_id,message["peer_id"],message["url"],message["range"])
         transfer=client_info(connection).transfers[transfer_id]
         @@log.debug("Completed: id=#{transfer_id} ok=#{transfer != nil}" )
-        if transfer  then
+        if transfer
           transfer_completed(transfer,connection,message["hash"])
         else
           raise ProtocolWarn.new("You sent me a transfer completed message for unknown transfer: #{transfer_id}")
@@ -352,7 +349,7 @@ module PDTP
 
         transfers=""
         client_info(c).transfers.each do |key,t|
-          if c==t.giver then
+          if c==t.giver
             str="UP: "
             peer=t.taker
           else

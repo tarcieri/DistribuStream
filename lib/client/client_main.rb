@@ -30,18 +30,15 @@ def find_files(base_path)
 
   Find.find(base_full) do |path|
     if FileTest.directory?(path)
-      if excludes.include?(File.basename(path)) then
-        Find.prune
-      else
-        next
-      end
+      next unless excludes.include?(File.basename(path))
+      Find.prune
     else
       filename = path[(base_path.size - path.size + 1)..-1] #the entire file path after the base_path
       found << filename
     end
   end
 
-  return found
+  found
 end
 
 # Implements the file service for the pdtp protocol

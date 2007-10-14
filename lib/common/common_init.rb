@@ -75,13 +75,13 @@ end
 
 #loads a config file specified by config_filename
 def load_config_file(config_filename)
-  if config_filename.nil? then
+  if config_filename.nil?
     puts "No config file specified. Using defaults."
     return
   end
 
   confstr=File.read(config_filename) rescue nil
-  if confstr.nil? then
+  if confstr.nil?
     puts "Unable to open config file: #{config_filename}"
     exit
   end
@@ -102,12 +102,12 @@ end
 def validate_config_options
   @@config.each do |key,val|
     type=@types[key]
-    if type.nil? then
+    if type.nil?
       puts "Unknown parameter: #{key}"
       exit
     end
 
-    unless PDTP::Protocol.obj_matches_type?(val,type) then
+    unless PDTP::Protocol.obj_matches_type?(val,type)
       puts "Parameter: #{key} is not of type: #{type}"
       exit
     end

@@ -15,26 +15,8 @@ module PDTP
   class ClientInfo
     attr_accessor :chunk_info, :trust
     attr_accessor :listen_port, :client_id
-    attr_accessor :transfers  
-
-    # returns true if this client wants the server to spawn a transfer for it
-    def wants_download?
-      transfer_state_allowed=5
-      total_allowed=10
-      transferring=0
-      @transfers.each do |key,t|
-        transferring=transferring+1 if t.verification_asked
-        return false if transferring >= transfer_state_allowed
-      end
-
-      return (@transfers.size < total_allowed)
-    end 
-
-    def wants_upload?
-      #this could have a different definition, but it works fine to use wants_download?
-      return wants_download?
-    end 
-
+    attr_accessor :transfers
+    
     def initialize
       @chunk_info=ChunkInfo.new
       @listen_port=6000 #default
@@ -42,6 +24,22 @@ module PDTP
       @transfers=Hash.new
     end
 
+    # returns true if this client wants the server to spawn a transfer for it
+    def wants_download?
+      transfer_state_allowed=5
+      total_allowed=10
+      transferring=0
+      @transfers.each do |key, t|
+        transferring=transferring+1 if t.verification_asked
+        return false if transferring >= transfer_state_allowed
+      end
+
+      @transfers.size < total_allowed
+    end 
+
+    #this could have a different definition, but it works fine to use wants_download?
+    alias_method :wants_upload?, :wants_download?
+    
     #returns a list of all the stalled transfers this client is a part of
     def get_stalled_transfers
       stalled=[]
@@ -50,11 +48,11 @@ module PDTP
       @transfers.each do |key,t|
         #only delete if we are the acceptor to prevent race conditions
         next if t.acceptor.user_data != self 
-        if now-t.creation_time > timeout and t.verification_asked==false then
+        if now-t.creation_time > timeout and not t.verification_asked
           stalled << t
         end
       end
-      return stalled
+      stalled
     end
   end
 
@@ -82,7 +80,8 @@ module PDTP
           return [name,i] if file[i]==:requested
         end
       end  
-      return nil
+      
+      nil
     end
 
     #calls a block for each chunk of the specified type
@@ -97,6 +96,7 @@ module PDTP
     class FileStats
       attr_accessor :file_chunks, :chunks_requested,:url
       attr_accessor :chunks_provided, :chunks_transferring
+      
       def initialize
         @url=""
         @file_chunks=0
@@ -120,7 +120,8 @@ module PDTP
         end
         stats << fs
       end
-      return stats 
+      
+      stats 
     end
 
     #########
@@ -128,7 +129,7 @@ module PDTP
     #########
 
     def get(filename,chunk)
-      return @files[filename][chunk] rescue :neither
+      @files[filename][chunk] rescue :neither
     end
 
     def set(filename,range,state)

@@ -56,7 +56,7 @@ module PDTP
 
       # a cache of the peer info because eventmachine seems to drop it before we want
       peername=get_peername
-      if peername.nil? then
+      if peername.nil?
         @cached_peer_info="<Peername nil!!!>",91119 if peername.nil?
       else
         port,addr= Socket.unpack_sockaddr_in(peername)
@@ -72,7 +72,7 @@ module PDTP
 
     #close a connection, but first send the specified error message
     def error_close_connection(error) 
-      if PROTOCOL_DEBUG then
+      if PROTOCOL_DEBUG
         msg={"type"=>"protocol_error","message"=>error}
         send_message msg 
         close_connection(true) # close after writing
@@ -125,10 +125,10 @@ module PDTP
     # 10..-1 => {"min"=>10} (contents of file >= 10)
     def range_to_hash(message)
       message.each do |key,value|
-        if value.class==Range then
-          if value==(0..-1) then
+        if value.class==Range
+          if value==(0..-1)
             message.delete(key)
-          elsif value.last==-1 then
+          elsif value.last==-1 
             message[key]={"min"=>value.first}
           else
             message[key]={"min"=>value.first,"max"=>value.last}
@@ -142,12 +142,12 @@ module PDTP
       key="range"
       auto_types=["provide","request"] #these types assume a range if it isnt specified
       auto_types.each do |type|
-        if message["type"]==type and message[key]==nil then
+        if message["type"]==type and message[key].nil?
           message[key]={} # assume entire file if not specified
         end
       end
 
-      if message[key] then
+      if message[key]
         raise if message[key].class!=Hash
         min=message[key]["min"] 
         max=message[key]["max"]
@@ -195,13 +195,13 @@ module PDTP
       raise ProtocolError.new("Invalid message type: #{message["type"]}") if params.nil?
 
       params.each do |name,type|
-        if type.class==Optional then
+        if type.class==Optional
           next if message[name].nil? #dont worry about it if they dont have this param
           type=type.type #grab the real type from within the optional class
         end
 
         raise ProtocolError.new("required parameter: '#{name}' missing for message type: '#{message["type"]}'") if message[name].nil?
-        if !obj_matches_type?(message[name],type) then
+        if !obj_matches_type?(message[name],type)
           raise ProtocolError.new("parameter: '#{name}' val='#{message[name]}' is not of type: '#{type}' for message type: '#{message["type"]}' ")
         end
       end    

@@ -22,7 +22,7 @@ module PDTP
         attr_accessor :code
         def initialize(code,message)
           super(message)
-          @code=code
+          @code = code
         end
       end
 
@@ -34,10 +34,10 @@ module PDTP
 
         # Returns true if a server message matches this transfer
         def matches_message?(message)
-          return ( @peer=message["peer"] and
-          @url==message["url"] and
-          @byte_range==message["range"] and
-          @peer_id==message["peer_id"] )
+          @peer == message["peer"] and
+          @url == message["url"] and
+          @byte_range == message["range"] and
+          @peer_id == message["peer_id"] 
         end
 
         # Takes an HTTP range and returns a ruby Range object
@@ -91,7 +91,7 @@ module PDTP
 
         # Send an HTTP error response to requester
         def write_http_exception(e)
-          if e.class==HTTPException then
+          if e.class == HTTPException
             @response.start(e.code) do |head,out|
               out.write(e.to_s + "\n\n" + e.backtrace.join("\n") )
             end
@@ -144,12 +144,12 @@ module PDTP
         def after_verification
 
           #check if the server authorized us
-          if @authorized==false then
+          unless @authorized
             raise HTTPException.new(403,"Forbidden: the server did not authorize this transfer")  
           end
 
           info = @file_service.get_info(@url)
-          if @method == "put" then
+          if @method == "put"
             #we are the taker
             @@log.debug("Body Downloaded: url=#{@url} range=#{@byte_range} peer=#{@peer}")      
 
@@ -160,7 +160,7 @@ module PDTP
             # Stock HTTP OK response
             @response.start(200) do |head,out| 
             end
-          elsif @method=="get" then
+          elsif @method=="get"
             #we are the giver
             raise HTTPException.new(404,"File not found: #{@url}") if info.nil?
             data=info.read(@byte_range)
@@ -206,10 +206,10 @@ module PDTP
           path=uri[5]
           vhost=uri[2]   
 
-          if @method == "get" then
+          if @method == "get"
             req = Net::HTTP::Get.new(path)
             body = nil
-          elsif @method == "put" then 
+          elsif @method == "put"
             req = Net::HTTP::Put.new(path)
             body = info.read(@byte_range)
           else
@@ -221,7 +221,7 @@ module PDTP
           req.add_field("X-PDTP-Peer-Id",@client.my_id)
           res = Net::HTTP.start(@peer,@port) {|http| http.request(req,body) }
 
-          if res.code=='206' and @method=="get" then
+          if res.code == '206' and @method == 'get'
             #we are the taker
             @@log.debug("Body Downloaded: url=#{@url} range=#{@byte_range} peer=#{@peer}:#{@port}")
             info.write(@byte_range.first,res.body)
