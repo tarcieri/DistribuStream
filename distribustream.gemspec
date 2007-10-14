@@ -16,4 +16,5 @@ GEMSPEC = Gem::Specification.new do |s|
   s.executables = ["dstream_client", "dstream_fileservice", "dstream_server"]
   s.add_dependency("eventmachine", ">= 0.9.0")
   s.add_dependency("mongrel", ">= 1.0.1")
+  s.add_dependency("json", ">= 1.1.0")
 end
