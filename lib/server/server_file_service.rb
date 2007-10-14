@@ -47,7 +47,7 @@ module PDTP
     end
 
     #The file service provides utilities for determining various information about files.
-    class FileService < FileServiceBase
+    class FileService < PDTP::FileService
       attr_accessor :root,:default_chunk_size
 
       def initialize     

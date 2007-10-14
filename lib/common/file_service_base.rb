@@ -66,7 +66,7 @@ module PDTP
   # base class for ClientFileService and ServerFileService.
   # provides shared functionality
 
-  class FileServiceBase
+  class FileService
     #returns a FileInfo class associated with the url, or nil if the file isnt known
     def get_info(url)
     end

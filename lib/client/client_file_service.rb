@@ -41,7 +41,7 @@ module PDTP
     end
 
     # Container class for file data
-    class FileService < FileServiceBase
+    class FileService < PDTP::FileService
       def initialize
         @files = {}
       end
