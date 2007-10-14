@@ -12,9 +12,9 @@ require File.dirname(__FILE__) + '/trust'
 
 describe 'A new trust node' do
   before(:each) do
-    @node = Trust.new
-    @other = Trust.new
-    @distant = Trust.new
+    @node = PDTP::Trust.new
+    @other = PDTP::Trust.new
+    @distant = PDTP::Trust.new
   end
 
   it 'should be empty' do

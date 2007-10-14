@@ -12,7 +12,7 @@ require File.dirname(__FILE__) + "/memory_buffer.rb"
 
 describe "A new memory buffer" do
   before(:each) do
-    @mb=MemoryBuffer.new
+    @mb=PDTP::MemoryBuffer.new
   end
 
   it "has 0 bytes stored, read fails" do
@@ -23,7 +23,7 @@ end
 
 describe "A memory buffer with one entry" do
   before(:each) do
-    @mb = MemoryBuffer.new
+    @mb = PDTP::MemoryBuffer.new
     @mb.write(0,"hello")
   end
 
@@ -41,7 +41,7 @@ end
 
 describe "A memory buffer with two overlapping entries" do
   before(:each) do
-    @mb=MemoryBuffer.new
+    @mb=PDTP::MemoryBuffer.new
     @mb.write(3,"hello")
     @mb.write(7,"World")
   end
@@ -61,7 +61,7 @@ end
 
 describe "A memory buffer with three overlapping entries" do
   before(:each) do
-    @mb=MemoryBuffer.new
+    @mb=PDTP::MemoryBuffer.new
     @mb.write(3,"hello")
     @mb.write(7,"World")
     @mb.write(2,"123456789ABCDEF")
@@ -79,7 +79,7 @@ end
 
 describe "A memory buffer with two touching entries" do
   before(:each) do
-    @mb=MemoryBuffer.new
+    @mb=PDTP::MemoryBuffer.new
     @mb.write(3,"hello")
     @mb.write(8,"World")
   end
@@ -95,7 +95,7 @@ end
 
 describe "A memory buffer with a chain of overlapping entries" do
   before(:each) do
-    @mb=MemoryBuffer.new
+    @mb=PDTP::MemoryBuffer.new
     @mb.write(3,"a123")
     @mb.write(4,"b4")
     @mb.write(0,"012c")

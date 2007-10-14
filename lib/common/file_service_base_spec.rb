@@ -12,7 +12,7 @@ require File.dirname(__FILE__)+"/file_service_base.rb"
 
 describe "A FileInfo with chunk_size=1" do
   before(:each) do
-    @fi=FileInfo.new
+    @fi=PDTP::FileInfo.new
     @fi.file_size=5
     @fi.base_chunk_size=1
   end
@@ -46,7 +46,7 @@ end
 
 describe "A FileInfo with chunk_size=256 and file_size=768" do
   before(:each) do
-    @fi=FileInfo.new
+    @fi=PDTP::FileInfo.new
     @fi.base_chunk_size=256
     @fi.file_size=768
   end  
@@ -76,7 +76,7 @@ end
 
 describe "A FileInfo with chunk_size=256 and file_size=255" do
   before(:each) do
-    @fi=FileInfo.new
+    @fi=PDTP::FileInfo.new
     @fi.base_chunk_size=256
     @fi.file_size=255
   end
