@@ -30,7 +30,7 @@ module PDTP
       class Base
         attr_reader :peer, :peer_id, :url, :byte_range
         attr_reader :server_connection, :file_service
-        attr_reader :method, :client,:hash
+        attr_reader :method, :client, :hash
 
         # Returns true if a server message matches this transfer
         def matches_message?(message)
@@ -44,42 +44,36 @@ module PDTP
         def parse_http_range(string)
           begin
             raise "Can't parse range string: #{string}" unless string =~ /bytes=([0-9]+)-([0-9]+)/
-            return (($1).to_i)..(($2).to_i)
-          rescue
-            return nil
+            (($1).to_i)..(($2).to_i)
+          rescue nil
           end
         end
 
         # Notify the server of transfer completion.
         # Hash field is used to denote success or failure
         def send_completed_message(hash)
-          message={
-            "type"=>"completed",
-            "url"=>@url,
-            "peer"=>@peer,
-            "range"=>@byte_range,
-            "peer_id"=>@peer_id,
-            "hash"=>hash
-          }
-          @server_connection.send_message(message)
+          @server_connection.send_message(:completed,
+            :url => @url,
+            :peer => @peer,
+            :range => @byte_range,
+            :peer_id => @peer_id,
+            :hash => hash
+          )
         end
 
         def send_ask_verify_message
-          message={
-            "type"=>"ask_verify",
-            "url"=>@url,
-            "peer"=>@peer,
-            "range"=>@byte_range,
-            "peer_id"=>@peer_id
-          }
-          @server_connection.send_message(message)
+          @server_connection.send_message(:ask_verify,
+            :url => @url,
+            :peer => @peer,
+            :range => @byte_range,
+            :peer_id => @peer_id
+          )
         end
-
       end
 
       # Implements the listening end (the server) of a peer to peer http connection
       class Listener < Base
-        attr :request,:response
+        attr :request, :response
 
         # Called with the request and response parameters given by Mongrel
         def initialize(request,response,server_connection,file_service,client)
