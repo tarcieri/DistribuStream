@@ -16,7 +16,7 @@ require 'ipaddr'
 
 begin
   require 'fjson'
-rescue Exception
+rescue LoadError
   require 'json'
 end
 

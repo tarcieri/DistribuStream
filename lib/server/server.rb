@@ -68,14 +68,11 @@ module PDTP
           c1.trust.failure(c2.trust)
         end 
 
-        msg={
-          "type"=>"hash_verify",
-          "url"=>transfer.url,
-          "range"=>transfer.byte_range,
-          "hash_ok"=>success
-        }
-        transfer.taker.send_message(msg) if send_response
-
+        transfer.taker.send_message(:hash_verify, 
+          :url => transfer.url, 
+          :range => transfer.byte_range, 
+          :hash_ok => success
+        ) if send_response
       end
 
       #outstr="#{@ids[transfer.giver]}->#{@ids[transfer.taker]} transfer completed: #{transfer}"
@@ -91,50 +88,45 @@ module PDTP
 
     #Creates a new transfer between two peers
     #returns true on success, or false if the specified transfer is already in progress
-    def begin_transfer(taker,giver,url,chunkid)
-      byte_range=@file_service.get_info(url).chunk_range(chunkid) 
-      t=Transfer.new(taker,giver,url,chunkid,byte_range)
+    def begin_transfer(taker, giver, url, chunkid)
+      byte_range = @file_service.get_info(url).chunk_range(chunkid) 
+      t = Transfer.new(taker, giver, url, chunkid, byte_range)
 
       #make sure this transfer doesnt already exist
-      t1=client_info(taker).transfers[t.transfer_id]
-      t2=client_info(giver).transfers[t.transfer_id]
+      t1 = client_info(taker).transfers[t.transfer_id]
+      t2 = client_info(giver).transfers[t.transfer_id]
       return false unless t1.nil? and t2.nil?
 
-      client_info(taker).chunk_info.transfer(url,chunkid..chunkid) 
-      client_info(taker).transfers[t.transfer_id]=t
-      client_info(giver).transfers[t.transfer_id]=t
+      client_info(taker).chunk_info.transfer(url, chunkid..chunkid) 
+      client_info(taker).transfers[t.transfer_id] = t
+      client_info(giver).transfers[t.transfer_id] = t
 
       #send transfer message to the connector
-      addr,port=t.acceptor.get_peer_info
-      request={
-        "type"=>"transfer",
-        "host"=>addr,
-        "port"=>t.acceptor.user_data.listen_port,
-        "method"=> (t.connector == t.taker ? "get" : "put"),
-        "url"=>url,
-        "range"=>byte_range,
-        "peer_id"=>client_info(t.acceptor).client_id
-      }
-
-      t.connector.send_message(request)
-      return true
+      addr, port = t.acceptor.get_peer_info
+      
+      t.connector.send_message(:transfer,
+        :host => addr,
+        :port => t.acceptor.user_data.listen_port,
+        :method => t.connector == t.taker ? "get" : "put",
+        :url => url,
+        :range => byte_range,
+        :peer_id => client_info(t.acceptor).client_id
+      )
+      true
     end
 
     #this function removes all stalled transfers from the list
     #and spawns new transfers as appropriate
     #it must be called periodically by EventMachine
     def clear_all_stalled_transfers
-      @connections.each do |c|
-        clear_stalled_transfers_for_client(c)  
-      end
-      spawn_all_transfers    
+      @connections.each { |connection| clear_stalled_transfers_for_client connection }  
+      spawn_all_transfers
     end
 
     #removes all stalled transfers that this client is a part of
     def clear_stalled_transfers_for_client(client_connection)
-      info=client_info(client_connection)
-      info.get_stalled_transfers.each do |t|
-        transfer_completed(t,client_connection,nil,false)
+      client_info(client_connection).get_stalled_transfers.each do |transfer|
+        transfer_completed transfer, client_connection, nil, false
       end  
     end
 
@@ -142,7 +134,7 @@ module PDTP
     #should be called every time there is a change that would affect 
     #what this client has or wants
     def spawn_transfers_for_client(client_connection)
-      info=client_info(client_connection)
+      info = client_info client_connection
 
       while info.wants_download? do
         break if spawn_download_for_client(client_connection) == false
