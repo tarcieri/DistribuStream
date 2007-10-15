@@ -161,8 +161,8 @@ module PDTP
       
       @mutex.synchronize do
         range_to_hash message
-        outstr = JSON.unparse(message)+"\n"
-        @@log.debug"(#{remote_peer_id}) send: #{outstr.chomp}"
+        outstr = JSON.unparse(message) + "\n"
+        @@log.debug "(#{remote_peer_id}) send: #{outstr.chomp}"
         send_data outstr  
       end
     end
@@ -171,7 +171,7 @@ module PDTP
     def unbind
       @@num_connections -= 1
       @@listener.connection_destroyed(self) if @@listener.respond_to?(:connection_destroyed)
-      @connection_open=false
+      @connection_open = false
     end
 
     def self.print_info
