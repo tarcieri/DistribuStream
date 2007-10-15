@@ -29,42 +29,41 @@ module PDTP
   class ProtocolWarn < Exception
   end
 
-  #EventMachine handler class for the PDTP protocol
+  # EventMachine handler class for the PDTP protocol
   class Protocol < EventMachine::Protocols::LineAndTextProtocol
-    @@num_connections=0
-    @@listener=nil
-    @@message_params=nil
-    @connection_open=false
+    @@num_connections = 0
+    @@listener = nil
+    @@message_params = nil
+    @connection_open = false
 
     def connection_open?
-      return @connection_open
+      @connection_open
     end
 
     #sets the listener class (Server or Client)
-    def self.listener= listener
-      @@listener=listener
+    def self.listener=(listener)
+      @@listener = listener
     end
 
-    def initialize *args
-      user_data=nil
-      @mutex=Mutex.new
+    def initialize(*args)
+      user_data = nil
+      @mutex = Mutex.new
       super
     end
 
     #called by EventMachine after a connection has been established
     def post_init
-
       # a cache of the peer info because eventmachine seems to drop it before we want
-      peername=get_peername
+      peername = get_peername
       if peername.nil?
-        @cached_peer_info="<Peername nil!!!>",91119 if peername.nil?
+        @cached_peer_info = ["<Peername nil!!!>", 91119] if peername.nil?
       else
-        port,addr= Socket.unpack_sockaddr_in(peername)
-        @cached_peer_info=[addr.to_s,port.to_i]
+        port, addr = Socket.unpack_sockaddr_in(peername)
+        @cached_peer_info = [addr.to_s, port.to_i]
       end
 
-      @@num_connections+=1
-      @connection_open=true
+      @@num_connections += 1
+      @connection_open = true
       @@listener.connection_created(self) if @@listener.respond_to?(:connection_created)
     end
 
@@ -73,8 +72,7 @@ module PDTP
     #close a connection, but first send the specified error message
     def error_close_connection(error) 
       if PROTOCOL_DEBUG
-        msg={"type"=>"protocol_error","message"=>error}
-        send_message msg 
+        send_message :protocol_error, :message => msg 
         close_connection(true) # close after writing
       else
         close_connection
@@ -88,8 +86,8 @@ module PDTP
 
     #debug routine: returns id of remote peer on this connection
     def remote_peer_id
-      ret= user_data.client_id rescue nil
-      return ( ret!=nil ? ret : "NOID")
+      ret = user_data.client_id rescue nil
+      ret || 'NOID'
     end
 
     #called for each line of text received over the wire
@@ -97,28 +95,27 @@ module PDTP
     def receive_line line
       begin
         line.chomp!
-        @@log.debug("(#{remote_peer_id}) recv: "+line)
-        message=JSON.parse(line)rescue nil
+        @@log.debug "(#{remote_peer_id}) recv: " + line
+        message = JSON.parse(line) rescue nil
         raise ProtocolError.new("JSON couldn't parse: #{line}") if message.nil?
 
-        Protocol.validate_message(message)
+        Protocol.validate_message message
 
-        hash_to_range(message)
-        receive_message(message)
-
-      rescue ProtocolError=>e
-        @@log.warn("(#{remote_peer_id}) PROTOCOL ERROR: #{e.to_s}")
-        @@log.debug(e.backtrace.join("\n"))
-        error_close_connection(e.to_s)
-      rescue ProtocolWarn=>e
-        send_message( {"type"=>"protocol_warn", "message"=>e.to_s} )
-      rescue Exception=>e
+        hash_to_range message
+        receive_message message
+      rescue ProtocolError => e
+        @@log.warn "(#{remote_peer_id}) PROTOCOL ERROR: #{e.to_s}"
+        @@log.debug e.backtrace.join("\n")
+        error_close_connection e.to_s
+      rescue ProtocolWarn => e
+        send_message :protocol_warn, :message => e.to_s
+      rescue Exception => e
         puts "(#{remote_peer_id}) UNKNOWN EXCEPTION #{e.to_s}"
         puts e.backtrace.join("\n")
       end
     end
 
-    RANGENAMES=["chunk_range","range","byte_range"]
+    RANGENAMES = %w{chunk_range range byte_range}
 
     #converts Ruby Range classes in the message to PDTP protocol hashes with min and max
     # 0..-1 => nil  (entire file)
@@ -187,12 +184,12 @@ module PDTP
 
     #returns the ip address and port in an array [ip, port]
     def get_peer_info
-      return @cached_peer_info
+      @cached_peer_info
     end
 
     def to_s
       addr,port = get_peer_info
-      return "#{addr}:#{port}"
+      "#{addr}:#{port}"
     end
 
     #makes sure that the message is valid.
@@ -229,21 +226,14 @@ module PDTP
     # :url, :range, :ip, :int, :bool, :string
     def self.obj_matches_type?(obj,type)
       case type
-      when :url
-        return obj.class==String
-        #uri=URI::parse(obj) rescue nil
-        #return uri ? true : false
-      when :range
-        return (obj.class==Range or obj.class==Hash)
+      when :url then obj.class == String
+      when :range then obj.class == Range or obj.class == Hash
+      when :int then obj.class == Fixnum
+      when :bool then obj == true or obj == false
+      when :string then obj.class == String
       when :ip
-        ip=IPAddr.new(obj) rescue nil
-        return ip!=nil 
-      when :int
-        return obj.class==Fixnum
-      when :bool
-        return (obj==true or obj==false)
-      when :string
-        return obj.class==String
+        ip = IPAddr.new(obj) rescue nil
+        !ip.nil?
       else 
         raise "Invalid type specified: #{type}"
       end 
@@ -251,7 +241,7 @@ module PDTP
 
     #this function defines the required fields for each message
     def self.define_message_params
-      mp={}
+      mp = {}
 
       #must be the first message the client sends
       mp["client_info"]={
@@ -345,7 +335,7 @@ module PDTP
         "message"=>Optional.new(:string)
       }
 
-      return mp
+      mp
     end
   end
 end
