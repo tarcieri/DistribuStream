@@ -329,13 +329,14 @@ module PDTP
 
     #builds an html page with information about the server's internal workings
     def generate_html_stats_needslock
-
-      s=String.new
-      s=s+"<html><head><title>PDTP Statistics</title></head>"
-      s=s+"<body>Time=#{Time.new.to_s}<br> Connected Clients=#{@connections.size}"
-
-      s=s+"<center><table border=1>"
-      s=s+"<tr><th>Client</th><th>Downloads</th><th>Files</th></tr>"
+      require 'erb'
+      s = ERB.new <<EOF
+<html><head><title>PDTP Statistics</title></head>
+<body>Time=<%= Time.new %><br> Connected Clients=<%= @connections.size %>
+<center><table border=1>
+<tr><th>Client</th><th>Downloads</th><th>Files</th></tr>
+EOF
+      s=s.result(binding)
 
       @connections.each do |c|
 
