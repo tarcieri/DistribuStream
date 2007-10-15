@@ -10,7 +10,8 @@
 
 require File.dirname(__FILE__) + '/client_info'
 require File.dirname(__FILE__) +'/transfer'
-require "thread"
+require 'thread'
+require 'erb'
 
 module PDTP
   # PDTP server implementation
@@ -309,15 +310,20 @@ module PDTP
 
     #builds an html page with information about the server's internal workings
     def generate_html_stats_needslock
-      require 'erb'
       s = ERB.new <<EOF
 <html><head><title>DistribuStream Statistics</title></head>
-<body>Time=<%= Time.new %><br> Connected Clients=<%= @connections.size %>
+<body>
+<h1>DistribuStream Statistics</h1>
+Time=<%= Time.new %><br> Connected Clients=<%= @connections.size %>
 <center><table border=1>
 <tr><th>Client</th><th>Downloads</th><th>Files</th></tr>
-<%
-@connections.each do |c|
-  transfers=''
+<% @connections.each do |c| %>
+  <tr><td>
+  <% host, port = c.get_peer_info %>
+  <%= connection_name(c) %><br><%= host %>:<%= port %>
+  </td>
+  <td>
+  <%
   client_info(c).transfers.each do |key,t|
     if c==t.giver
       type="UP: "
@@ -326,23 +332,22 @@ module PDTP
       type="DOWN: "
       peer=t.giver
     end
-    
-    str=type+" id=\#{t.transfer_id}"
-    transfers=transfers+str+"<br>"
+    %>
+    <%= type %> id=<%= t.transfer_id %><br>
+    <%
   end
-
-  files = ''
-  stats = client_info(c).chunk_info.get_file_stats
-  stats.each do |fs|
-    files += "\#{fs.url} size=\#{fs.file_chunks} req=\#{fs.chunks_requested}"
-    files += " prov=\#{fs.chunks_provided} transf=\#{fs.chunks_transferring}<br>"    
-  end      
-
-  host, port = c.get_peer_info
-  client_name="\#{connection_name(c)}<br>\#{host}:\#{port}"
-  
   %>
-  <tr><td><%= client_name %></td><td><%= transfers %></td><td><%= files %></td></tr>
+  </td>
+  <td>
+  <%
+  client_info(c).chunk_info.get_file_stats.each do |fs|
+    %>
+    <%= fs.url %> size=<%= fs.file_chunks %> req=<%= fs.chunks_requested %>
+    prov=<%= fs.chunks_provided %> transf=<%= fs.chunks_transferring %><br>    
+    <%
+  end      
+  %>
+  </td></tr>
   <%
 end
 %>
