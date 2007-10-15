@@ -8,7 +8,7 @@
 # See http://distribustream.rubyforge.org/
 #++
 
-require File.dirname(__FILE__)+"/file_service_base.rb"
+require File.dirname(__FILE__) + '/file_service'
 
 describe "A FileInfo with chunk_size=1" do
   before(:each) do

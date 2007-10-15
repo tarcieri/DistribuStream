@@ -8,7 +8,7 @@
 # See http://distribustream.rubyforge.org/
 #++
 
-require File.dirname(__FILE__) + "/memory_buffer.rb"
+require File.dirname(__FILE__) + '/memory_buffer'
 
 describe "A new memory buffer" do
   before(:each) do

@@ -8,7 +8,7 @@
 # See http://distribustream.rubyforge.org/
 #++
 
-require File.dirname(__FILE__)+"/pdtp_protocol.rb"
+require File.dirname(__FILE__) + '/protocol'
 
 describe "PDTP::Protocol obj_matches_type? " do
   it "type :url works" do
