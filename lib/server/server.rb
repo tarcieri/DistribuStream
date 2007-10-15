@@ -311,48 +311,45 @@ module PDTP
     def generate_html_stats_needslock
       require 'erb'
       s = ERB.new <<EOF
-<html><head><title>PDTP Statistics</title></head>
+<html><head><title>DistribuStream Statistics</title></head>
 <body>Time=<%= Time.new %><br> Connected Clients=<%= @connections.size %>
 <center><table border=1>
 <tr><th>Client</th><th>Downloads</th><th>Files</th></tr>
+<%
+@connections.each do |c|
+  transfers=''
+  client_info(c).transfers.each do |key,t|
+    if c==t.giver
+      type="UP: "
+      peer=t.taker
+    else
+      type="DOWN: "
+      peer=t.giver
+    end
+    
+    str=type+" id=\#{t.transfer_id}"
+    transfers=transfers+str+"<br>"
+  end
+
+  files = ''
+  stats = client_info(c).chunk_info.get_file_stats
+  stats.each do |fs|
+    files += "\#{fs.url} size=\#{fs.file_chunks} req=\#{fs.chunks_requested}"
+    files += " prov=\#{fs.chunks_provided} transf=\#{fs.chunks_transferring}<br>"    
+  end      
+
+  host, port = c.get_peer_info
+  client_name="\#{connection_name(c)}<br>\#{host}:\#{port}"
+  
+  %>
+  <tr><td><%= client_name %></td><td><%= transfers %></td><td><%= files %></td></tr>
+  <%
+end
+%>
+</table>
+</body></html>
 EOF
-      s=s.result(binding)
-
-      @connections.each do |c|
-
-        transfers=""
-        client_info(c).transfers.each do |key,t|
-          if c==t.giver
-            str="UP: "
-            peer=t.taker
-          else
-            str="DOWN: "
-            peer=t.giver
-          end
-
-          str=str+" id=#{t.transfer_id}"
-          transfers=transfers+str+"<br>"
-        end
-
-        files=""
-        stats=client_info(c).chunk_info.get_file_stats
-        stats.each do |fs|
-
-          files=files+"#{fs.url} size=#{fs.file_chunks} req=#{fs.chunks_requested}"
-          files=files+" prov=#{fs.chunks_provided} transf=#{fs.chunks_transferring}<br>"    
-        end      
-
-        host,port=c.get_peer_info
-        client_name="#{connection_name(c)}<br>#{host}:#{port}"
-
-        s=s+"<tr><td>#{client_name}</td><td>#{transfers}</td><td>#{files}</td></tr>"
-      end 
-
-      s=s+"</table>"
-
-      s=s+"</body></html>"
-
-      return s
+      s.result binding
     end
   end
 end
