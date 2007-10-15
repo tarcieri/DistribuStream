@@ -243,54 +243,41 @@ module PDTP
 
       case message["type"] 
       when "client_info"
-        cid=message["client_id"]
+        cid = message["client_id"]
         #make sure this id isnt in use
         if @used_client_ids[cid]
           raise ProtocolError.new("Your client id: #{cid} is already in use.")   
         end
         
-        @used_client_ids[cid]=true 
-        client_info(connection).listen_port=message["listen_port"]
-        client_info(connection).client_id=cid
+        @used_client_ids[cid] = true 
+        client_info(connection).listen_port = message["listen_port"]
+        client_info(connection).client_id = cid
       when "ask_info"
-        info=file_service.get_info(message["url"])
-        response={
-          "type"=>"tell_info",
-          "url"=>message["url"]
-        }
+        info = file_service.get_info(message["url"])
+        response = { :url => message["url"] }
         unless info.nil?
-          response["size"]=info.file_size
-          response["chunk_size"]=info.base_chunk_size
-          response["streaming"]=info.streaming
+          response[:size] = info.file_size
+          response[:chunk_size] = info.base_chunk_size
+          response[:streaming] = info.streaming
         end
-        connection.send_message(response)
-
-      when "request"
-        handle_requestprovide(connection,message)
-      when "provide"
-        handle_requestprovide(connection,message)
-      when "unrequest"
-        handle_requestprovide(connection,message)
-      when "unprovide"
-        handle_requestprovide(connection,message)
+        connection.send_message :tell_info, response
+      when "request", "provide", "unrequest", "unprovide"
+        handle_requestprovide connection, message
       when "ask_verify"
 
         #check if the specified transfer is a real one
         my_id=client_info(connection).client_id
-        transfer_id=Transfer::gen_transfer_id(my_id,message["peer_id"],message["url"],message["range"])
-        ok= client_info(connection).transfers[transfer_id] ? true : false
+        transfer_id=Transfer.gen_transfer_id(my_id,message["peer_id"],message["url"],message["range"])
+        ok = !!client_info(connection).transfers[transfer_id]
         client_info(connection).transfers[transfer_id].verification_asked=true if ok
-        @@log.debug "AskVerify not ok: id=#{transfer_id}" if ok == false
-        response={
-          "type"=>"tell_verify",
-          "url"=>message["url"],
-          "peer_id"=>message["peer_id"],
-          "range"=>message["range"],
-          "peer"=>message["peer"],
-          "is_authorized"=>ok
-        }
-        connection.send_message(response)
-
+        @@log.debug "AskVerify not ok: id=#{transfer_id}" unless ok
+        connection.send_message(:tell_verify,
+          :url     => message["url"],
+          :peer_id => message["peer_id"],
+          :range   => message["range"],
+          :peer    => message["peer"],
+          :is_authorized=>ok
+        )
       when "completed"
         my_id=client_info(connection).client_id
         transfer_id=Transfer::gen_transfer_id(my_id,message["peer_id"],message["url"],message["range"])
@@ -302,29 +289,24 @@ module PDTP
           raise ProtocolWarn.new("You sent me a transfer completed message for unknown transfer: #{transfer_id}")
         end
 
-      when "protocol_error"
+      when "protocol_error", "protocol_warn"
         #ignore
-      when "protocol_warn"
-        #ignore 
       else
         raise ProtocolError.new("Unhandled message type: #{message['type']}")
       end
 
       spawn_all_transfers
-
     end
 
     #returns a string representing the specified connection
     def connection_name(c)
       #host,port=c.get_peer_info
       #return "#{get_id(c)}: #{host}:#{port}"
-      return client_info(c).client_id
+      client_info(c).client_id
     end
 
     def generate_html_stats
-      @stats_mutex.synchronize do
-        return generate_html_stats_needslock
-      end
+      @stats_mutex.synchronize { generate_html_stats_needslock }
     end
 
     #builds an html page with information about the server's internal workings
