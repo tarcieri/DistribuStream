@@ -11,7 +11,7 @@
 require "uri"    
 require "pathname"
 require "digest/sha2"
-require File.dirname(__FILE__)+'/../common/file_service_base.rb'    
+require File.dirname(__FILE__) + '/../common/file_service.rb'    
 
 module PDTP
   class Server

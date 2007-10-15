@@ -10,7 +10,7 @@
 
 require 'uri'
 require 'pathname'
-require File.dirname(__FILE__) + '/../common/file_service_base.rb'
+require File.dirname(__FILE__) + '/../common/file_service.rb'
 require File.dirname(__FILE__) + '/memory_buffer.rb'    
 
 module PDTP

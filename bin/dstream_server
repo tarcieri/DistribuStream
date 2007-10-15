@@ -9,16 +9,13 @@
 # See http://distribustream.rubyforge.org/
 #++
 
-#require File.dirname(__FILE__) + '/../lib/server/server_main'
 require 'rubygems'
 require 'eventmachine'
 require 'optparse'
 require 'logger'
 require 'mongrel'
-require File.dirname(__FILE__)+'/../lib/pdtp/server'
-#require File.dirname(__FILE__)+'/server_file_service'
-#require File.dirname(__FILE__)+'/../common/pdtp_protocol'
-#require File.dirname(__FILE__)+'/../common/common_init'
+
+require File.dirname(__FILE__) + '/../lib/pdtp/server'
 
 common_init "dstream_server"
 

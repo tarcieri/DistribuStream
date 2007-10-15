@@ -8,9 +8,9 @@
 # See http://distribustream.rubyforge.org/
 #++
 
-require File.dirname(__FILE__) + '/common/pdtp_protocol'
+require File.dirname(__FILE__) + '/common/protocol'
 require File.dirname(__FILE__) + '/common/common_init'
-require File.dirname(__FILE__) + '/server/server_file_service'
+require File.dirname(__FILE__) + '/server/file_service'
 require File.dirname(__FILE__) + '/server/client_info'
 require File.dirname(__FILE__) + '/server/transfer'
 require 'thread'

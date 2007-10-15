@@ -9,7 +9,6 @@
 # See http://distribustream.rubyforge.org/
 #++
 
-#require File.dirname(__FILE__) + '/../lib/client/client_test.rb'
 require 'rubygems'
 require 'eventmachine'
 require 'mongrel'

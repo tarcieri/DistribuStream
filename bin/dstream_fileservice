@@ -9,16 +9,12 @@
 # See http://distribustream.rubyforge.org/
 #++
 
-#require File.dirname(__FILE__) + '/../lib/client/client_main'
 require 'optparse'
 require 'rubygems'
 require 'eventmachine'
 require 'mongrel'
 
 require File.dirname(__FILE__) + '/../lib/pdtp/client'
-#require File.dirname(__FILE__) + '/client_file_service'
-#require File.dirname(__FILE__) + '/../server/server_file_service'
-#require File.dirname(__FILE__) + '/../common/common_init'
 
 common_init 'dstream_client'
 

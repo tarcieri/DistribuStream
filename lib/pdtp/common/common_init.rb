@@ -12,14 +12,14 @@
 
 require 'optparse'
 require 'logger'
-require File.dirname(__FILE__)+'/pdtp_protocol'
+
+require File.dirname(__FILE__) + '/protocol'
 
 STDOUT.sync=true
 STDERR.sync=true
 
 @@log=Logger.new(STDOUT)
 @@log.datetime_format=""
-
 
 @@config={
   :host=>"127.0.0.1", #server host

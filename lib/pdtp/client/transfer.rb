@@ -8,7 +8,7 @@
 # See http://distribustream.rubyforge.org/
 #++
 
-require File.dirname(__FILE__) + '/client_file_service'
+require File.dirname(__FILE__) + '/file_service'
 require "thread"
 require "net/http"
 require "uri"

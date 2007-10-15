@@ -16,10 +16,10 @@ require 'thread'
 require 'digest/md5'
 
 require File.dirname(__FILE__) + '/common/common_init'
-require File.dirname(__FILE__) + '/common/pdtp_protocol'
-require File.dirname(__FILE__) + '/client/client_file_service'
-require File.dirname(__FILE__) + '/client/client_transfer'
-require File.dirname(__FILE__) + '/server/server_file_service'
+require File.dirname(__FILE__) + '/common/protocol'
+require File.dirname(__FILE__) + '/client/file_service'
+require File.dirname(__FILE__) + '/client/transfer'
+require File.dirname(__FILE__) + '/server/file_service'
 
 module PDTP
   # This is the main driver for the client-side implementation
