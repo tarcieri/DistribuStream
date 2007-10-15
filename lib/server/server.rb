@@ -17,7 +17,7 @@ module PDTP
   class Server
     attr_reader :connections
     attr_accessor :file_service
-    def initialize()
+    def initialize
       @connections = Array.new
       @stats_mutex=Mutex.new
       @used_client_ids=Hash.new #keeps a list of client ids in use, they must be unique
@@ -27,8 +27,8 @@ module PDTP
     #called by pdtp_protocol when a connection is created
     def connection_created(connection)
       @stats_mutex.synchronize do
-        @@log.info("Client connected: #{connection.get_peer_info.inspect}")
-        connection.user_data=ClientInfo.new
+        @@log.info "Client connected: #{connection.get_peer_info.inspect}"
+        connection.user_data = ClientInfo.new
         @connections << connection 
       end
     end  
@@ -36,19 +36,18 @@ module PDTP
     #called by pdtp_protocol when a connection is destroyed
     def connection_destroyed(connection)
       @stats_mutex.synchronize do
-        @@log.info("Client connection closed: #{connection.get_peer_info.inspect}")
-        @connections.delete(connection)
+        @@log.info "Client connection closed: #{connection.get_peer_info.inspect}"
+        @connections.delete connection
       end
     end
 
     # returns the ClientInfo object associated with this connection
     def client_info(connection)
-      return connection.user_data ||= ClientInfo.new
+      connection.user_data ||= ClientInfo.new
     end
 
     # called when a transfer either finishes, successfully or not
     def transfer_completed(transfer,connection,chunk_hash,send_response=true)      
-
       # did the transfer complete successfully?
       local_hash=@file_service.get_chunk_hash(transfer.url,transfer.chunkid)
 
@@ -264,9 +263,8 @@ module PDTP
       when "request", "provide", "unrequest", "unprovide"
         handle_requestprovide connection, message
       when "ask_verify"
-
         #check if the specified transfer is a real one
-        my_id=client_info(connection).client_id
+        my_id = client_info(connection).client_id
         transfer_id=Transfer.gen_transfer_id(my_id,message["peer_id"],message["url"],message["range"])
         ok = !!client_info(connection).transfers[transfer_id]
         client_info(connection).transfers[transfer_id].verification_asked=true if ok
