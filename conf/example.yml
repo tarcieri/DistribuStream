@@ -1,0 +1,18 @@
+---
+# Virtual hostname server identifies itself as
+:provide_hostname: example.com
+
+# Hostname or IP address to bind to
+:host: 0.0.0.0
+
+# Base port the server listens on
+:port: 6086
+
+# Run in quiet mode
+:quiet: true
+
+# Base directory from which files are served
+:file_root: /Users/tony/dstest/files
+
+# Size of segments to be distributed (in bytes)
+:chunk_size: 5000

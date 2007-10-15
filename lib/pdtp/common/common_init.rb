@@ -25,8 +25,9 @@ STDERR.sync=true
   :host             => '0.0.0.0',
   :port             => 6086, #server port
   :listen_port      => 8000, #client listen port
-  :quiet            => true,
-  :chunk_size       => 5000
+  :file_root        => '.',
+  :chunk_size       => 5000,
+  :quiet            => true
 }
 
 @types = {
