@@ -136,7 +136,6 @@ module PDTP
 
         # Perform the transfer if verification was successful
         def after_verification
-
           #check if the server authorized us
           unless @authorized
             raise HTTPException.new(403,"Forbidden: the server did not authorize this transfer")  
@@ -161,7 +160,7 @@ module PDTP
             raise HTTPException.new(416,"Invalid range: #{@byte_range.inspect}") if data.nil?   
 
             #Request was GET, so now we need to send the data
-            @response.start(206) do |head,out|
+            @response.start(206) do |head, out|
               head['Content-Type'] = 'application/octet-stream'
               head['Content-Range'] = "bytes #{@byte_range.first}-#{@byte_range.last}/*"
               #FIXME must include a DATE header according to http

@@ -80,8 +80,8 @@ module PDTP
     end
 
     #override this in a child class to handle messages
-    def receive_message message
-      @@listener.dispatch_message message, self 
+    def receive_message(command, message)
+      @@listener.dispatch_message command, message, self 
     end
 
     #debug routine: returns id of remote peer on this connection
@@ -100,9 +100,10 @@ module PDTP
         raise ProtocolError.new("JSON couldn't parse: #{line}") if message.nil?
 
         Protocol.validate_message message
-
         hash_to_range message
-        receive_message message
+        
+        command = message.delete('type')
+        receive_message command, message
       rescue ProtocolError => e
         @@log.warn "(#{remote_peer_id}) PROTOCOL ERROR: #{e.to_s}"
         @@log.debug e.backtrace.join("\n")

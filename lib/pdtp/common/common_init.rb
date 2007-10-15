@@ -32,12 +32,12 @@ STDERR.sync=true
 
 @types = {
   :host             => :string,
+  :vhost            => :string,
   :port             => :int,
   :listen_port      => :int,
   :file_root        => :string,
   :quiet            => :bool,
   :chunk_size       => :int,
-  :provide_hostname => :string,
   :request_url      => :string
 }
 
@@ -87,7 +87,7 @@ def load_config_file(config_filename)
   begin
     new_config = YAML.load confstr
     @@config.merge!(new_config)
-    @@config[:provide_hostname] ||= @@config[:host] # Use host as vhost unless specified
+    @@config[:vhost] ||= @@config[:host] # Use host as vhost unless specified
   rescue Exception => e
     puts "Error parsing config file: #{config_filename}"
     puts e

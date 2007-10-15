@@ -16,7 +16,7 @@ require 'mongrel'
 
 require File.dirname(__FILE__) + '/../lib/pdtp/client'
 
-common_init 'dstream_client'
+common_init 'dsseed'
 
 # Fine all suitable files in the give path
 def find_files(base_path)
@@ -76,7 +76,7 @@ class FileServiceProtocol < PDTP::Protocol
       sfs.root = @@config[:file_root]
       client.file_service = sfs #give this client access to all data
 
-      hostname = @@config[:provide_hostname]
+      hostname = @@config[:vhost]
 
       # Provide all the files in the root directory
       files = find_files @@config[:file_root]

@@ -205,9 +205,9 @@ module PDTP
     end
 
     #called by pdtp_protocol for each message that comes in from the wire
-    def dispatch_message(message,connection)
+    def dispatch_message(command, message, connection)
       @stats_mutex.synchronize do
-        dispatch_message_needslock(message,connection)
+        dispatch_message_needslock command, message, connection
       end
     end
 
@@ -238,13 +238,16 @@ module PDTP
     end
 
     #handles all incoming messages from clients
-    def dispatch_message_needslock(message,connection)
+    def dispatch_message_needslock(command, message, connection)
+      # store the command in the message hash
+      message["type"] = command
+      
       #require the client to be logged in with a client id
-      if message["type"] != "client_info" and client_info(connection).client_id.nil?
+      if command != "client_info" and client_info(connection).client_id.nil?
         raise ProtocolError.new("You need to send a 'client_info' message first")
       end 
 
-      case message["type"] 
+      case command
       when "client_info"
         cid = message["client_id"]
         #make sure this id isnt in use
@@ -319,7 +322,7 @@ module PDTP
 <h1>DistribuStream Statistics</h1>
 Time=<%= Time.new %><br> Connected Clients=<%= @connections.size %>
 <center><table border=1>
-<tr><th>Client</th><th>Downloads</th><th>Files</th></tr>
+<tr><th>Client</th><th>Transfers</th><th>Files</th></tr>
 <% @connections.each do |c| %>
   <tr><td>
   <% host, port = c.get_peer_info %>

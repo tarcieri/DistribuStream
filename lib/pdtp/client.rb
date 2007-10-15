@@ -54,10 +54,8 @@ module PDTP
     # Returns a transfer object if the given connection is a peer associated with 
     # that transfer. Otherwise returns nil.
     def get_transfer(connection)
-      @transfers.each do |t|
-        return t if t.peer == connection
-      end
-      return nil
+      @transfers.each { |t| return t if t.peer == connection }
+      nil
     end
 
     # This method is called when an HTTP request is received. It is called in 
@@ -85,27 +83,23 @@ module PDTP
 
     # Returns true if the given message refers to the given transfer  
     def transfer_matches?(transfer, message)
-      return( transfer.peer == message["peer"] and 
+      transfer.peer == message["peer"] and 
       transfer.url == message["url"] and
       transfer.byte_range == message["range"] and
-      transfer.peer_id == message["peer_id"] )
+      transfer.peer_id == message["peer_id"]
     end
 
     # Called when any server message is received. This is the brains of
     # the client's protocol handling.
-    def dispatch_message(message,connection)
-      case message["type"]
-
-        # Receive and store information for this url
-      when "tell_info"
+    def dispatch_message(command, message, connection)
+      case command
+      when "tell_info" # Receive and store information for this url
         info = FileInfo.new
         info.file_size = message["size"]
         info.base_chunk_size = message["chunk_size"]
         info.streaming = message["streaming"]
-        @file_service.set_info(message["url"], info)
-
-        # Begin a transfer as a connector   
-      when "transfer"
+        @file_service.set_info(message["url"], info)   
+      when "transfer" # Begin a transfer as a connector
         transfer = Transfer::Connector.new(message,@server_connection,@file_service,self)
 
         @@log.debug "TRANSFER STARTING"
@@ -119,11 +113,11 @@ module PDTP
           end
           t.send_completed_message(t.hash)
         end
-
+      when "tell_verify"
         # We are a listener, and asked for verification of a transfer from a server.
         # After asking for verification, we stopped running, and must be restarted
         # if verification is successful
-      when "tell_verify"
+        
         found=false
         @transfers.each do |t|
           if t.matches_message?(message)
@@ -138,16 +132,10 @@ module PDTP
           puts "BUG: Tell verify sent for an unknown transfer"
           exit!
         end
-
       when "hash_verify"
-        @@log.debug("Hash verified for url=#{message["url"]} range=#{message["range"]} hash_ok=#{message["hash_ok"]}")
-
-      when "protocol_error"
-        #ignore
-      when "protocol_warn"
-        #ignore
-      else
-        raise "Server sent an unknown message type: #{message['type']} "
+        @@log.debug "Hash verified for url=#{message["url"]} range=#{message["range"]} hash_ok=#{message["hash_ok"]}"
+      when "protocol_error", "protocol_warn" #ignore
+      else raise "Server sent an unknown message type: #{command} "
       end
     end
 

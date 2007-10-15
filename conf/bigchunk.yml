@@ -1,6 +1,6 @@
 ---
 # Virtual hostname server identifies itself as
-:provide_hostname: example.com
+:vhost: example.com
 
 # Hostname or IP address to bind to
 :host: 0.0.0.0

@@ -16,7 +16,7 @@ require 'optparse'
 
 require File.dirname(__FILE__) + '/../lib/pdtp/client'
 
-common_init("dstream_client")
+common_init 'dsclient'
 
 # Implementation of a ruby test client for the pdtp protocol
 class ClientProtocol < PDTP::Protocol
