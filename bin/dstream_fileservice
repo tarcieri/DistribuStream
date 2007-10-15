@@ -9,5 +9,99 @@
 # See http://distribustream.rubyforge.org/
 #++
 
-require File.dirname(__FILE__) + '/../lib/client/client_main'
+#require File.dirname(__FILE__) + '/../lib/client/client_main'
+require 'optparse'
+require 'rubygems'
+require 'eventmachine'
+require 'mongrel'
 
+require File.dirname(__FILE__) + '/../lib/pdtp/client'
+#require File.dirname(__FILE__) + '/client_file_service'
+#require File.dirname(__FILE__) + '/../server/server_file_service'
+#require File.dirname(__FILE__) + '/../common/common_init'
+
+common_init 'dstream_client'
+
+# Fine all suitable files in the give path
+def find_files(base_path)
+  require 'find'
+
+  found = []
+  excludes = %w{.svn CVS}
+  base_full = File.expand_path(base_path)
+
+  Find.find(base_full) do |path|
+    if FileTest.directory?(path)
+      next unless excludes.include?(File.basename(path))
+      Find.prune
+    else
+      filename = path[(base_path.size - path.size + 1)..-1] #the entire file path after the base_path
+      found << filename
+    end
+  end
+
+  found
+end
+
+# Implements the file service for the pdtp protocol
+class FileServiceProtocol < PDTP::Protocol
+  def initialize(*args)
+    super
+  end
+
+  # Called after a connection to the server has been established
+  def connection_completed
+    begin
+      listen_port = @@config[:listen_port]
+
+      #create the client
+      client = PDTP::Client.new
+      PDTP::Protocol.listener = client
+      client.server_connection = self
+      client.generate_client_id listen_port
+
+      # Start a mongrel server on the specified port.  If it isnt available, keep trying higher ports
+      begin
+        mongrel_server=Mongrel::HttpServer.new '0.0.0.0', listen_port
+      rescue Exception=>e
+        listen_port+=1
+        retry
+      end
+
+      @@log.info "listening on port #{listen_port}"
+      mongrel_server.register "/", client
+      mongrel_server.run
+
+      # Tell the server a little bit about ourself
+      send_message :client_info, :listen_port => listen_port, :client_id => client.my_id
+
+      @@log.info 'This client is providing'
+      sfs = PDTP::Server::FileService.new
+      sfs.root = @@config[:file_root]
+      client.file_service = sfs #give this client access to all data
+
+      hostname = @@config[:provide_hostname]
+
+      # Provide all the files in the root directory
+      files = find_files @@config[:file_root]
+      files.each { |file| send_message :provide, :url => "http://#{hostname}/#{file}" }
+    rescue Exception => e
+      puts "Exception in connection_completed: #{e}"
+      puts e.backtrace.join("\n")
+      exit
+    end
+  end  
+
+  def unbind
+    super
+    puts "Disconnected from PDTP server."
+  end
+end
+
+# Run the EventMachine reactor loop
+EventMachine::run do
+  host, port, listen_port = @@config[:host], @@config[:port], @@config[:listen_port]
+  connection = EventMachine::connect host, port, FileServiceProtocol
+  @@log.info "connecting with ev=#{EventMachine::VERSION}"
+  @@log.info "host= #{host}  port=#{port}"
+end
