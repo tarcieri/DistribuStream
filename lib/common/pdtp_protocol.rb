@@ -154,11 +154,7 @@ module PDTP
 
     #sends a message, in the internal Hash format, over the wire
     def send_message(command, opts = {})
-      # Legacy support for old #send_message API
-      message = case command
-      when Hash then command
-      when Symbol, String then opts.merge(:type => command)
-      end
+      message = opts.merge(:type => command.to_s)
         
       # Stringify all keys
       message = message.map { |k,v| [k.to_s, v] }.inject({}) { |h,(k,v)| h[k] = v; h }
