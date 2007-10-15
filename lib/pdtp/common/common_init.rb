@@ -21,26 +21,23 @@ STDERR.sync=true
 @@log=Logger.new(STDOUT)
 @@log.datetime_format=""
 
-@@config={
-  :host=>"127.0.0.1", #server host
-  :port=>6000, #server port
-  :listen_port=> 8000, #client listen port
-  :file_root=>File.dirname(__FILE__)+'/../../../testfiles',
-  :quiet=>true,
-  :chunk_size=>5000,
-  :provide_hostname=>"clickcaster.com",
-  :request_url=>"http://clickcaster.com/test.mp3"
+@@config = {
+  :host             => '0.0.0.0',
+  :port             => 6086, #server port
+  :listen_port      => 8000, #client listen port
+  :quiet            => true,
+  :chunk_size       => 5000
 }
 
-@types={
-  :host=>:string,
-  :port=>:int,
-  :listen_port=>:int,
-  :file_root=>:string,
-  :quiet=>:bool,
-  :chunk_size=>:int,
-  :provide_hostname=>:string,
-  :request_url=>:string
+@types = {
+  :host             => :string,
+  :port             => :int,
+  :listen_port      => :int,
+  :file_root        => :string,
+  :quiet            => :bool,
+  :chunk_size       => :int,
+  :provide_hostname => :string,
+  :request_url      => :string
 }
 
 #prints banner and loads config file
@@ -87,9 +84,10 @@ def load_config_file(config_filename)
   end
 
   begin
-    new_config=eval(confstr)
+    new_config = YAML.load confstr
     @@config.merge!(new_config)
-  rescue Exception=>e
+    @@config[:provide_hostname] ||= @@config[:host] # Use host as vhost unless specified
+  rescue Exception => e
     puts "Error parsing config file: #{config_filename}"
     puts e
     exit
