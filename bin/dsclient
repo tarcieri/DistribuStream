@@ -13,10 +13,42 @@ require 'rubygems'
 require 'eventmachine'
 require 'mongrel'
 require 'optparse'
+require 'uri'
 
 require File.dirname(__FILE__) + '/../lib/pdtp/client'
 
-common_init 'dsclient'
+uri = nil
+listen_port = 8000
+
+OptionParser.new do |opts|
+  opts.banner = "Usage: #{$0} [options]"
+  opts.on("--url URL", "Fetch from the specified URL") do |u|
+    uri = URI.parse u
+  end
+  opts.on("--help", "Prints this usage info.") do
+    puts opts
+    exit
+  end
+  opts.on("--listen PORT", "Port to listen on") do |l|
+    listen_port = l.to_i
+  end
+end.parse!
+
+raise "Please specify a URL in the form --url URL" unless uri
+raise "Only pdtp:// URLs are supported" unless uri.scheme == 'pdtp'
+
+uri.scheme = 'http'
+
+config = {
+  :file_root => '.',
+  :quiet => true,
+  :host => uri.host,
+  :port => uri.port || 6086,
+  :request_url => uri.to_s,
+  :listen_port => listen_port
+}
+
+common_init 'dsclient', config
 
 # Implementation of a ruby test client for the pdtp protocol
 class ClientProtocol < PDTP::Protocol

@@ -296,10 +296,10 @@ module PDTP
         if transfer
           transfer_completed(transfer,connection,message["hash"])
         else
-          raise ProtocolWarn.new "You sent me a transfer completed message for unknown transfer: #{transfer_id}"
+          raise ProtocolWarn.new("You sent me a transfer completed message for unknown transfer: #{transfer_id}")
         end
       when 'protocol_error', 'protocol_warn' #ignore
-      else raise ProtocolError.new "Unhandled message type: #{command}"
+      else raise ProtocolError.new("Unhandled message type: #{command}")
       end
 
       spawn_all_transfers

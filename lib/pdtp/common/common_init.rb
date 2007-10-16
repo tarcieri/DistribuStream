@@ -44,20 +44,23 @@ def common_init(program_name, config = nil)
   }
   
   config_filename=nil
-  OptionParser.new do |opts|
-    opts.banner = "Usage: #{program_name} [options]"
-    opts.on("--config CONFIGFILE", "Load specified config file.") do |c|
-      config_filename=c
-    end
-    opts.on("--help", "Prints this usage info.") do
-      puts opts
-      exit
-    end
-  end.parse!      
-
+  
+  unless config
+    OptionParser.new do |opts|
+      opts.banner = "Usage: #{program_name} [options]"
+      opts.on("--config CONFIGFILE", "Load specified config file.") do |c|
+        config_filename=c
+      end
+      opts.on("--help", "Prints this usage info.") do
+        puts opts
+        exit
+      end
+    end.parse!      
+  end
+  
   puts "#{program_name} starting. Run '#{program_name} --help' for more info."
 
-  load_config_file(config_filename)
+  load_config_file(config_filename) unless config
 
   begin
     @@config[:file_root]=File.expand_path(@@config[:file_root])
