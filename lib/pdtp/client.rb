@@ -83,10 +83,10 @@ module PDTP
 
     # Returns true if the given message refers to the given transfer  
     def transfer_matches?(transfer, message)
-      transfer.peer == message["peer"] and 
-      transfer.url == message["url"] and
+      transfer.peer       == message["peer"] and 
+      transfer.url        == message["url"] and
       transfer.byte_range == message["range"] and
-      transfer.peer_id == message["peer_id"]
+      transfer.peer_id    == message["peer_id"]
     end
 
     # Called when any server message is received. This is the brains of
