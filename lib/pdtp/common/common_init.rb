@@ -21,16 +21,7 @@ STDERR.sync=true
 @@log=Logger.new(STDOUT)
 @@log.datetime_format=""
 
-@@config = {
-  :host             => '0.0.0.0',
-  :port             => 6086, #server port
-  :listen_port      => 8000, #client listen port
-  :file_root        => '.',
-  :chunk_size       => 5000,
-  :quiet            => true
-}
-
-@types = {
+CONFIG_TYPES = {
   :host             => :string,
   :vhost            => :string,
   :port             => :int,
@@ -42,7 +33,16 @@ STDERR.sync=true
 }
 
 #prints banner and loads config file
-def common_init( program_name)
+def common_init(program_name, config = nil)
+  @@config = config || {
+    :host             => '0.0.0.0',
+    :port             => 6086, #server port
+    :listen_port      => 8000, #client listen port
+    :file_root        => '.',
+    :chunk_size       => 5000,
+    :quiet            => true
+  }
+  
   config_filename=nil
   OptionParser.new do |opts|
     opts.banner = "Usage: #{program_name} [options]"
@@ -100,7 +100,7 @@ end
 #make sure all the config options are of the right type
 def validate_config_options
   @@config.each do |key,val|
-    type=@types[key]
+    type=CONFIG_TYPES[key]
     if type.nil?
       puts "Unknown parameter: #{key}"
       exit

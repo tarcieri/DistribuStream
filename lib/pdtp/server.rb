@@ -13,6 +13,7 @@ require File.dirname(__FILE__) + '/common/common_init'
 require File.dirname(__FILE__) + '/server/file_service'
 require File.dirname(__FILE__) + '/server/client_info'
 require File.dirname(__FILE__) + '/server/transfer'
+
 require 'thread'
 require 'erb'
 
@@ -178,7 +179,7 @@ module PDTP
         #FIXME should we try again if begin_transfer fails?
       end
 
-      return false
+      false
     end
 
     #creates a single upload for the specified client
@@ -201,7 +202,7 @@ module PDTP
         end
       end
 
-      return false
+      false
     end
 
     #called by pdtp_protocol for each message that comes in from the wire
@@ -284,20 +285,21 @@ module PDTP
           :is_authorized=>ok
         )
       when "completed"
-        my_id=client_info(connection).client_id
-        transfer_id=Transfer::gen_transfer_id(my_id,message["peer_id"],message["url"],message["range"])
+        my_id = client_info(connection).client_id
+        transfer_id=  Transfer::gen_transfer_id(
+          my_id,message["peer_id"],
+          message["url"],
+          message["range"]
+        )
         transfer=client_info(connection).transfers[transfer_id]
         @@log.debug("Completed: id=#{transfer_id} ok=#{transfer != nil}" )
         if transfer
           transfer_completed(transfer,connection,message["hash"])
         else
-          raise ProtocolWarn.new("You sent me a transfer completed message for unknown transfer: #{transfer_id}")
+          raise ProtocolWarn.new "You sent me a transfer completed message for unknown transfer: #{transfer_id}"
         end
-
-      when "protocol_error", "protocol_warn"
-        #ignore
-      else
-        raise ProtocolError.new("Unhandled message type: #{message['type']}")
+      when 'protocol_error', 'protocol_warn' #ignore
+      else raise ProtocolError.new "Unhandled message type: #{command}"
       end
 
       spawn_all_transfers

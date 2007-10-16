@@ -10,42 +10,42 @@
 
 require File.dirname(__FILE__) + '/protocol'
 
-describe "PDTP::Protocol obj_matches_type? " do
-  it "type :url works" do
+describe PDTP::Protocol, 'obj_matches_type?' do
+  it "identifies :url objects" do
     PDTP::Protocol.obj_matches_type?("http://bla.com/test3.mp3",:url).should == true
     PDTP::Protocol.obj_matches_type?(4,:url).should == false
   end
 
-  it "type :range works" do
+  it "identifies :range objects" do
     PDTP::Protocol.obj_matches_type?(0..4,:range).should == true
     PDTP::Protocol.obj_matches_type?(4,:range).should == false
     PDTP::Protocol.obj_matches_type?( {"min"=>0,"max"=>4} , :range ).should == true
   end
 
-  it "type :ip works" do
+  it "identifies :ip objects" do
     PDTP::Protocol.obj_matches_type?("127.0.0.1", :ip).should == true
     PDTP::Protocol.obj_matches_type?("127.0.0.1.1", :ip).should == false
   end
 
-  it "type :int works" do
+  it "identifies :int objects" do
     PDTP::Protocol.obj_matches_type?(4,:int).should == true
     PDTP::Protocol.obj_matches_type?("hi",:int).should == false
   end
 
-  it "type :bool works" do
+  it "identifies :bool objects" do
     PDTP::Protocol.obj_matches_type?(true, :bool).should == true
     PDTP::Protocol.obj_matches_type?(0,:bool).should == false
   end
 
-  it "type :string works" do
+  it "identifies :string objects" do
     PDTP::Protocol.obj_matches_type?("hi", :string).should == true
     PDTP::Protocol.obj_matches_type?(6, :string).should == false
   end
 
 end
 
-describe "PDTP::Protocol validate_message" do
-  it "optional params work" do
+describe PDTP::Protocol, 'validate_message' do
+  it "supports optional parameters" do
     msg1 = {"type"=>"request", "url"=>"pdtp://bla.com/test.txt", "range"=>0..4}
     msg2 = {"type"=>"request", "url"=>"pdtp://bla.com/test.txt" }
     msg3 = {"type"=>"request", "range"=> "hi", "url"=>"pdtp://bla.com/test.txt" }
@@ -55,7 +55,7 @@ describe "PDTP::Protocol validate_message" do
     proc { PDTP::Protocol.validate_message(msg3)}.should raise_error
   end
 
-  it "required params work" do
+  it "validates required parameters" do
     msg1 = {"type"=>"ask_info"}
     msg2 = {"type"=>"ask_info", "url"=>"pdtp://bla.com/test.txt"}
     msg3 = {"type"=>"ask_info", "url"=>42 }
