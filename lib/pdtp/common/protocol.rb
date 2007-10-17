@@ -98,12 +98,11 @@ module PDTP
         @@log.debug "(#{remote_peer_id}) recv: " + line
         message = JSON.parse(line) rescue nil
         raise ProtocolError.new("JSON couldn't parse: #{line}") if message.nil?
-
         Protocol.validate_message message
-        hash_to_range message
         
-        command = message.delete('type')
-        receive_message command, message
+        command, options = message
+        hash_to_range command, options
+        receive_message command, options
       rescue ProtocolError => e
         @@log.warn "(#{remote_peer_id}) PROTOCOL ERROR: #{e.to_s}"
         @@log.debug e.backtrace.join("\n")
@@ -136,11 +135,11 @@ module PDTP
     end
 
     #converts a PDTP protocol min and max hash to a Ruby Range class
-    def hash_to_range(message)
+    def hash_to_range(command, message)
       key="range"
       auto_types=["provide","request"] #these types assume a range if it isnt specified
       auto_types.each do |type|
-        if message["type"]==type and message[key].nil?
+        if command == type and message[key].nil?
           message[key]={} # assume entire file if not specified
         end
       end
@@ -155,13 +154,19 @@ module PDTP
 
     #sends a message, in the internal Hash format, over the wire
     def send_message(command, opts = {})
-      message = opts.merge(:type => command.to_s)
-        
-      # Stringify all keys
-      message = message.map { |k,v| [k.to_s, v] }.inject({}) { |h,(k,v)| h[k] = v; h }
+      #message = opts.merge(:type => command.to_s)
+
+      # Stringify all option keys
+      opts = opts.map { |k,v| [k.to_s, v] }.inject({}) { |h,(k,v)| h[k] = v; h }
+      
+      # Convert all Ruby ranges to JSON objects representing them
+      range_to_hash opts
+      
+      # Message format is a JSON array with the command (string) as the first entry
+      # Second entry is an options hash/object
+      message = [command.to_s, opts]
       
       @mutex.synchronize do
-        range_to_hash message
         outstr = JSON.unparse(message) + "\n"
         @@log.debug "(#{remote_peer_id}) send: #{outstr.chomp}"
         send_data outstr  
@@ -192,20 +197,23 @@ module PDTP
     #makes sure that the message is valid.
     #if not, throws a ProtocolError
     def self.validate_message(message)
-      @@message_params||=define_message_params
+      raise ProtocolError.new("Message is not a JSON array") unless message.is_a? Array
+      command, options = message
+      
+      @@message_params ||= define_message_params
 
-      params=@@message_params[message["type"]] rescue nil
-      raise ProtocolError.new("Invalid message type: #{message["type"]}") if params.nil?
+      params = @@message_params[command] rescue nil
+      raise ProtocolError.new("Invalid message type: #{command}") if params.nil?
 
       params.each do |name,type|
-        if type.class==Optional
-          next if message[name].nil? #dont worry about it if they dont have this param
-          type=type.type #grab the real type from within the optional class
+        if type.class == Optional
+          next if options[name].nil? #dont worry about it if they dont have this param
+          type = type.type #grab the real type from within the optional class
         end
 
-        raise ProtocolError.new("required parameter: '#{name}' missing for message type: '#{message["type"]}'") if message[name].nil?
-        if !obj_matches_type?(message[name],type)
-          raise ProtocolError.new("parameter: '#{name}' val='#{message[name]}' is not of type: '#{type}' for message type: '#{message["type"]}' ")
+        raise ProtocolError.new("required parameter: '#{name}' missing for message: '#{command}'") if options[name].nil?
+        unless obj_matches_type?(options[name], type)
+          raise ProtocolError.new("parameter: '#{name}' val='#{options[name]}' is not of type: '#{type}' for message: '#{command}' ")
         end
       end    
     end

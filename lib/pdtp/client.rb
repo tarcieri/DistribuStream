@@ -59,7 +59,7 @@ module PDTP
     end
 
     def initialize
-      @transfers = Array.new
+      @transfers = []
       @mutex = Mutex.new
     end
 
