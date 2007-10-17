@@ -16,7 +16,7 @@ require 'mongrel'
 
 require File.dirname(__FILE__) + '/../lib/pdtp/client'
 
-common_init 'dsseed'
+common_init $0
 
 # Fine all suitable files in the give path
 def find_files(base_path)

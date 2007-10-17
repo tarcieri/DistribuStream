@@ -17,6 +17,7 @@ require 'digest/md5'
 
 require File.dirname(__FILE__) + '/common/common_init'
 require File.dirname(__FILE__) + '/common/protocol'
+require File.dirname(__FILE__) + '/client/protocol'
 require File.dirname(__FILE__) + '/client/file_service'
 require File.dirname(__FILE__) + '/client/transfer'
 require File.dirname(__FILE__) + '/server/file_service'
@@ -34,6 +35,28 @@ module PDTP
     attr_accessor :file_service
     attr_accessor :server_connection
     attr_accessor :my_id
+    
+    def self.get(host, path, options = {})
+      path = '/' + path unless path[0] == ?/
+      
+      opts = {
+        :host => host,
+        :port => 6086,
+        :file_root => '.',
+        :quiet => true,
+        :listen_port => 8000,
+        :request_url => "http://#{host}#{path}"
+      }.merge(options)
+      
+      common_init $0, opts
+      
+      # Run the EventMachine reactor loop
+      EventMachine::run do
+        connection = EventMachine::connect host, opts[:port], Client::Protocol
+        @@log.info "connecting with ev=#{EventMachine::VERSION}"
+        @@log.info "host= #{host} port=#{opts[:port]}"
+      end
+    end
 
     def initialize
       @transfers = Array.new

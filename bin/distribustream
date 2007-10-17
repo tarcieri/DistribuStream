@@ -17,7 +17,7 @@ require 'mongrel'
 
 require File.dirname(__FILE__) + '/../lib/pdtp/server'
 
-common_init 'distribustream'
+common_init $0
 
 server = PDTP::Server.new
 server.file_service = PDTP::Server::FileService.new
