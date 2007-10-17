@@ -46,9 +46,9 @@ end
 
 describe PDTP::Protocol, 'validate_message' do
   it "supports optional parameters" do
-    msg1 = {"type"=>"request", "url"=>"pdtp://bla.com/test.txt", "range"=>0..4}
-    msg2 = {"type"=>"request", "url"=>"pdtp://bla.com/test.txt" }
-    msg3 = {"type"=>"request", "range"=> "hi", "url"=>"pdtp://bla.com/test.txt" }
+    msg1 = ["request", {"url"=>"pdtp://bla.com/test.txt", "range"=>0..4 }]
+    msg2 = ["request", {"url"=>"pdtp://bla.com/test.txt" }]
+    msg3 = ["request", {"range"=> "hi", "url"=>"pdtp://bla.com/test.txt" }]
 
     proc { PDTP::Protocol.validate_message(msg1)}.should_not raise_error
     proc { PDTP::Protocol.validate_message(msg2)}.should_not raise_error
@@ -56,9 +56,9 @@ describe PDTP::Protocol, 'validate_message' do
   end
 
   it "validates required parameters" do
-    msg1 = {"type"=>"ask_info"}
-    msg2 = {"type"=>"ask_info", "url"=>"pdtp://bla.com/test.txt"}
-    msg3 = {"type"=>"ask_info", "url"=>42 }
+    msg1 = ["ask_info", {}]
+    msg2 = ["ask_info", {"url"=>"pdtp://bla.com/test.txt"}]
+    msg3 = ["ask_info", {"url"=>42 }]
 
     proc { PDTP::Protocol.validate_message(msg1)}.should raise_error
     proc { PDTP::Protocol.validate_message(msg2)}.should_not raise_error
