@@ -27,78 +27,78 @@ describe PDTP::FileBuffer, "with one entry" do
     @b.write 0, 'hello'
   end
 
-  it "calculates #bytes_stored correctly" do
-    @mb.bytes_stored.should == 5
+  it "calculates bytes stored correctly" do
+    @b.bytes_stored.should == 5
   end
 
   it "reads stored data correctly" do
-    @mb.read(0..4).should == "hello"
-    @mb.read(1..1).should == "e"
-    @mb.read(-1..2).should == nil
-    @mb.read(0..5).should == nil
+    @b.read(0..4).should == "hello"
+    @b.read(1..1).should == "e"
+    @b.read(-1..2).should == nil
+    @b.read(0..5).should == nil
   end
 end
 
-describe "A memory buffer with two overlapping entries" do
+describe PDTP::FileBuffer, "with two overlapping entries" do
   before(:each) do
-    @mb=PDTP::MemoryBuffer.new
-    @mb.write(3,"hello")
-    @mb.write(7,"World")
+    @b = PDTP::FileBuffer.new
+    @b.write(3,"hello")
+    @b.write(7,"World")
   end
   
-  it "bytes_stored works" do
-    @mb.bytes_stored.should == 9
+  it "calculates bytes stored correctly" do
+    @b.bytes_stored.should == 9
   end
 
-  it "read works" do
-    @mb.read(3..12).should == nil
-    @mb.read(3..11).should == "hellWorld"
-    @mb.read(3..1).should == nil
-    @mb.read(2..4).should == nil
+  it "reads stored data correctly" do
+    @b.read(3..12).should == nil
+    @b.read(3..11).should == "hellWorld"
+    @b.read(3..1).should == nil
+    @b.read(2..4).should == nil
   end
 
 end
 
-describe "A memory buffer with three overlapping entries" do
+describe PDTP::FileBuffer, "with three overlapping entries" do
   before(:each) do
-    @mb=PDTP::MemoryBuffer.new
-    @mb.write(3,"hello")
-    @mb.write(7,"World")
-    @mb.write(2,"123456789ABCDEF")
+    @b = PDTP::FileBuffer.new
+    @b.write(3,"hello")
+    @b.write(7,"World")
+    @b.write(2,"123456789ABCDEF")
   end
 
-  it "bytes_stored works" do
-    @mb.bytes_stored.should == 15
+  it "calculates bytes stored correctly" do
+    @b.bytes_stored.should == 15
   end
 
-  it "read works" do
-    @mb.read(2..16).should == "123456789ABCDEF"
-    @mb.read(2..17).should == nil
+  it "reads stored data correctly" do
+    @b.read(2..16).should == "123456789ABCDEF"
+    @b.read(2..17).should == nil
   end
 end
 
-describe "A memory buffer with two touching entries" do
+describe PDTP::FileBuffer, "with two tangential entries" do
   before(:each) do
-    @mb=PDTP::MemoryBuffer.new
-    @mb.write(3,"hello")
-    @mb.write(8,"World")
+    @b = PDTP::FileBuffer.new
+    @b.write(3,"hello")
+    @b.write(8,"World")
   end
 
-  it "bytes_stored works" do
-    @mb.bytes_stored.should == 10
+  it "calculates bytes stored correctly" do
+    @b.bytes_stored.should == 10
   end
   
-  it "read works" do
-    @mb.read(3..12).should == "helloWorld"
+  it "reads stored data correctly" do
+    @b.read(3..12).should == "helloWorld"
   end
 end
 
-describe "A memory buffer with a chain of overlapping entries" do
+describe PDTP::FileBuffer, "with a chain of overlapping entries" do
   before(:each) do
-    @mb=PDTP::MemoryBuffer.new
-    @mb.write(3,"a123")
-    @mb.write(4,"b4")
-    @mb.write(0,"012c")
+    @b = PDTP::FileBuffer.new
+    @b.write(3,"a123")
+    @b.write(4,"b4")
+    @b.write(0,"012c")
   
     #___a123
     #___ab43
@@ -106,12 +106,12 @@ describe "A memory buffer with a chain of overlapping entries" do
 
   end
 
-  it "bytes_stored works" do
-    @mb.bytes_stored.should == 7
+  it "calculates bytes stored correctly" do
+    @b.bytes_stored.should == 7
   end
 
-  it "read works" do
-    @mb.read(0..6).should == "012cb43"
-    @mb.read(3..6).should == "cb43"
+  it "reads stored data correctly" do
+    @b.read(0..6).should == "012cb43"
+    @b.read(3..6).should == "cb43"
   end
 end
