@@ -56,7 +56,7 @@ describe PDTP::Protocol, 'validate_message' do
   end
 
   it "validates required parameters" do
-    msg1 = ["ask_info", {}]
+    msg1 = ["ask_info"]
     msg2 = ["ask_info", {"url"=>"pdtp://bla.com/test.txt"}]
     msg3 = ["ask_info", {"url"=>42 }]
 
