@@ -11,12 +11,18 @@
 module PDTP
   # Handle a file buffer, which may be written to and read from randomly
   class FileBuffer
-    def initialize
+    def initialize(io = nil)
+      @io = io
+      @written = 0
+      
       @entries = []
     end
 
     # Write data starting at start_pos. Overwrites any existing data in that block
     def write(start_pos, data)
+      # Write contiguous blocks we receive to our internal IO cursor
+      @written += @io.write(data) if @io and start_pos == @written
+        
       return if data.size == 0
       # create and entry and attempt to combine it with old entries
       new_entry=Entry.new(start_pos,data)
@@ -38,7 +44,7 @@ module PDTP
       return nil if range.first>range.last
       current_byte=range.first
 
-      buffer=String.new
+      buffer = ''
 
       while current_byte <= range.last do
         # find an entry that contains this byte
@@ -46,7 +52,6 @@ module PDTP
         found=false
         @entries.each do |e|
           if e.range.include?(current_byte)
-
             internal_start=current_byte-e.start_pos #start position inside this entry's data
             internal_end=(range.last<e.end_pos ? range.last : e.end_pos) - e.start_pos 
             buffer << e.data[internal_start..internal_end]
@@ -57,7 +62,8 @@ module PDTP
         end
         return nil if found==false
       end   
-      return buffer
+      
+      buffer
     end
 
     # Returns true if two entries intersect

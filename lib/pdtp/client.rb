@@ -116,8 +116,8 @@ module PDTP
     # the client's protocol handling.
     def dispatch_message(command, message, connection)
       case command
-      when "tell_info" # Receive and store information for this url
-        info = FileInfo.new
+      when "tell_info" # Receive and store information for this url  
+        info = FileInfo.new message["url"].split('/').last
         info.file_size = message["size"]
         info.base_chunk_size = message["chunk_size"]
         info.streaming = message["streaming"]
