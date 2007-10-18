@@ -14,28 +14,36 @@ module PDTP
     def initialize(io = nil)
       @io = io
       @written = 0
-      
       @entries = []
     end
 
     # Write data starting at start_pos. Overwrites any existing data in that block
-    def write(start_pos, data)
-      # Write contiguous blocks we receive to our internal IO cursor
-      @written += @io.write(data) if @io and start_pos == @written
-        
+    def write(start_pos, data)        
       return if data.size == 0
+      
       # create and entry and attempt to combine it with old entries
-      new_entry=Entry.new(start_pos,data)
+      new_entry = Entry.new(start_pos,data)
       @entries.each do |e|
-        union=combine(e,new_entry)
+        union = combine(e, new_entry)
         if union
           @entries.delete(e)
-          new_entry=union
+          new_entry = union
         end 
       end
 
-      # if we get here, it hasnt been combined with anything, so just add it
+      # Add entry to the local store
       @entries << new_entry
+      
+      # Write contiguous blocks we receive to our internal IO cursor
+      if @io and start_pos == @written
+        data_begin = start_pos - new_entry.start_pos
+        bytes_written = @io.write(new_entry.data[data_begin..new_entry.data.length])
+        @written += bytes_written
+      else
+        bytes_written = data.size
+      end
+      
+      bytes_written
     end
 
     # Returns a string containing the desired data. 
@@ -69,23 +77,23 @@ module PDTP
     # Returns true if two entries intersect
     def intersects?(entry1, entry2)
       first, last = entry1.start_pos <= entry2.start_pos ? [entry1, entry2] : [entry2, entry1]
-      first.end_pos >= last.start_pos 
+      first.end_pos + 1 >= last.start_pos 
     end
 
     # Takes two Entries
     # Returns nil if there is no intersection
     # Returns the union if they intersect
-    def combine(old,new)
-      return nil unless intersects?(old,new)
+    def combine(old_entry, new_entry)
+      return nil unless intersects?(old_entry, new_entry)
 
-      start= old.start_pos<new.start_pos ? old.start_pos: new.start_pos
+      start = old_entry.start_pos < new_entry.start_pos ? old_entry.start_pos: new_entry.start_pos
 
-      stringio=StringIO.new
-      stringio.seek(old.start_pos-start)
-      stringio.write(old.data)
-      stringio.seek(new.start_pos-start)
-      stringio.write(new.data)
-      return Entry.new(start,stringio.string)    
+      stringio = StringIO.new
+      stringio.seek(old_entry.start_pos - start)
+      stringio.write(old_entry.data)
+      stringio.seek(new_entry.start_pos - start)
+      stringio.write(new_entry.data)
+      return Entry.new(start, stringio.string)    
     end
 
     # Return number of bytes currently in the buffer
@@ -106,7 +114,7 @@ module PDTP
       attr_accessor :start_pos, :data
 
       def end_pos
-        @start_pos+data.length-1
+        @start_pos + data.length - 1
       end
 
       def range

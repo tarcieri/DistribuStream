@@ -115,3 +115,40 @@ describe PDTP::FileBuffer, "with a chain of overlapping entries" do
     @b.read(3..6).should == "cb43"
   end
 end
+
+describe PDTP::FileBuffer, "with an associated IO object" do
+  before(:each) do
+    @io = mock(:io)
+    @b = PDTP::FileBuffer.new @io
+  end
+  
+  it "writes received data to the IO object" do
+    @io.should_receive(:write).once.with('foo').and_return(3)
+    @b.write(0, "foo")
+  end
+  
+  it "writes successively received data to the IO object" do
+    @io.should_receive(:write).once.with('foo').and_return(3)
+    @b.write(0, "foo")
+    
+    @io.should_receive(:write).once.with('bar').and_return(3)
+    @b.write(3, "bar")
+    
+    @io.should_receive(:write).once.with('baz').and_return(3)
+    @b.write(6, "baz")
+  end
+  
+  it "reassembles single-byte out-of-order data and writes it to the IO object" do
+    @io.should_receive(:write).once.with('bar').and_return(3)
+    @b.write(1, 'a')
+    @b.write(2, 'r')
+    @b.write(0, 'b')
+  end
+  
+  it "reassembles multibyte out-of-order data and writes it to the IO object" do
+    @io.should_receive(:write).once.with('foobar').and_return(6)
+    @b.write(2, 'ob')
+    @b.write(4, 'ar')
+    @b.write(0, 'fo')
+  end
+end
