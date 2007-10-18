@@ -19,7 +19,6 @@ module PDTP
 
     # Write data starting at start_pos. Overwrites any existing data in that block
     def write(start_pos, data)
-      puts "++  in: #{start_pos}..#{start_pos + data.size}"
       return if data.size == 0
       
       # create and entry and attempt to combine it with old entries
@@ -45,7 +44,6 @@ module PDTP
         data_begin = @written - new_entry.start_pos
         bytes_written = @io.write(new_entry.data[data_begin..new_entry.data.length])
         @written += bytes_written
-        puts "++ out: #{data_begin}..#{data_begin + new_entry.data.length}"
       else
         bytes_written = data.size
       end
