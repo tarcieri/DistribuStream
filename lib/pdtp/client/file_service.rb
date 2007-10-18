@@ -20,24 +20,25 @@ module PDTP
     class FileInfo < PDTP::FileInfo
       def initialize(filename)
         @buffer = FileBuffer.new open(filename, 'w')
+        @lock = Mutex.new
       end
       
       # Write data into buffer starting at start_pos 
       def write(start_pos,data)
-        @buffer.write start_pos, data
+        @lock.synchronize { @buffer.write start_pos, data }
       end
 
       # Read a range of data out of buffer. Takes a ruby Range object
       def read(range)
         begin
-          @buffer.read range
+          @lock.synchronize { @buffer.read range }
         rescue nil
         end
       end
 
       # Return the number of bytes currently stored
       def bytes_downloaded
-        @buffer.bytes_stored
+        @lock.synchronize { @buffer.bytes_stored }
       end
     end
 

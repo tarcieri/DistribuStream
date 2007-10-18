@@ -18,17 +18,23 @@ module PDTP
     end
 
     # Write data starting at start_pos. Overwrites any existing data in that block
-    def write(start_pos, data)        
+    def write(start_pos, data)
+      puts "++  in: #{start_pos}..#{start_pos + data.size}"
       return if data.size == 0
       
       # create and entry and attempt to combine it with old entries
       new_entry = Entry.new(start_pos,data)
-      @entries.each do |e|
-        union = combine(e, new_entry)
-        if union
-          @entries.delete(e)
-          new_entry = union
-        end 
+      
+      intersections = true
+      while intersections
+        intersections = false
+        @entries.each do |e|
+          if intersects?(new_entry, e)
+            new_entry = combine(e, new_entry)
+            @entries.delete(e)
+            intersections = true
+          end 
+        end
       end
 
       # Add entry to the local store
@@ -36,9 +42,10 @@ module PDTP
       
       # Write contiguous blocks we receive to our internal IO cursor
       if @io and start_pos == @written
-        data_begin = start_pos - new_entry.start_pos
+        data_begin = @written - new_entry.start_pos
         bytes_written = @io.write(new_entry.data[data_begin..new_entry.data.length])
         @written += bytes_written
+        puts "++ out: #{data_begin}..#{data_begin + new_entry.data.length}"
       else
         bytes_written = data.size
       end
@@ -84,8 +91,6 @@ module PDTP
     # Returns nil if there is no intersection
     # Returns the union if they intersect
     def combine(old_entry, new_entry)
-      return nil unless intersects?(old_entry, new_entry)
-
       start = old_entry.start_pos < new_entry.start_pos ? old_entry.start_pos: new_entry.start_pos
 
       stringio = StringIO.new
