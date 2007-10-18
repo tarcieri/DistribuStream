@@ -53,11 +53,6 @@ module PDTP
 
       def set_info(url, info)
         @files[url] = info
-#        cinfo = FileInfo.new
-#        cinfo.file_size = info.file_size
-#        cinfo.base_chunk_size = info.base_chunk_size
-#        cinfo.streaming = info.streaming
-#        @files[url] = cinfo
       end
     end
   end
