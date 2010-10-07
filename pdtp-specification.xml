@@ -1,0 +1,831 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE rfc SYSTEM "http://xml.resource.org/authoring/rfc2629.dtd">
+<?rfc toc='yes' ?>
+<rfc docName="draft-distribustream-pdtp-rfcs-01" ipr="full3978">
+  <front>
+    <title abbrev="PDTP Specification">Peer Distributed Transfer Protocol Specification</title>
+
+    <author fullname="Tony Arcieri" initials="T.A." surname="Arcieri">
+      <organization>ClickCaster, Inc.</organization>
+
+      <address>
+        <email>tony@clickcaster.com</email>
+      </address>
+    </author>
+
+    <author fullname="Ashvin Mysore" initials="A.M." surname="Mysore">
+      <organization>ClickCaster, Inc.</organization>
+
+      <address>
+        <email>ashvin@clickcaster.com</email>
+      </address>
+    </author>
+
+    <author fullname="Galen Pahlke" initials="G.P." surname="Pahlke">
+      <organization>ClickCaster, Inc.</organization>
+
+      <address>
+        <email>galen@clickcaster.com</email>
+      </address>
+    </author>
+
+    <author fullname="James Sanders" initials="J.S." surname="Sanders">
+      <organization>University of Colorado</organization>
+
+      <address>
+        <email>sanderjd@gmail.com</email>
+      </address>
+    </author>
+
+    <author fullname="Tom Stapleton" initials="T.S." surname="Stapleton">
+      <organization>University of Colorado</organization>
+
+      <address>
+        <email>tstapleton@gmail.com</email>
+      </address>
+    </author>
+
+    <date month="November" year="2007" />
+
+    <area>Internet</area>
+
+    <keyword>I-D</keyword>
+
+    <keyword>Internet-Draft</keyword>
+
+    <keyword>PDTP</keyword>
+
+    <keyword>DistribuStream</keyword>
+
+    <abstract>
+      <t>Peer Distributed Transfer Protocol is a high performance peer-to-peer
+      file distribution system that provides streaming downloads of files
+      originating from a central server. The files are then shared over a peer
+      network, allowing the aggregate bandwidth of the network to scale with
+      the number of clients.</t>
+    </abstract>
+  </front>
+
+  <middle>
+    <section title="Introduction">
+      <t>This document describes version 2 of PDTP, an enhancement of <xref
+      target="refs.PDTP">PDTP version 1</xref>. PDTP currently only allows for
+      operation on IPv4 networks, though support for IPv6 networks is
+      planned.</t>
+
+      <t>PDTP is based on an extensible set of asynchronous messages. These
+      messages are comprised of a type, and a sequence of key-value pairs. The
+      possible data types are described in Appendix A. Due to the structure of
+      PDTP, protocol messages can be grouped into two distinct categories:
+      <list style="symbols">
+          <t><xref target="server-to-client-messages">Server to client
+          messages</xref> manage the file transfer process and provide
+          infomation of files requested by the client.</t>
+
+          <t><xref target="client-to-server-messages">Client to server
+          messages</xref> handle requests for files by the client, inform the
+          server of files the client can provide, and report the status of
+          transfers.</t>
+
+          <t><xref target="client-to-client-communication">Client to client
+          communication</xref> makes use of the standard <xref
+          target="refs.HTTP">HTTP 1.1</xref> protocol</t>
+        </list></t>
+    </section>
+
+    <section title="Message Format">
+	  <t>All <xref target="client-to-server-messages">client to server</xref>
+	  and <xref target="server-to-client-messages">server to client</xref>
+	  communication utilizes a lightweight form of asynchronous messaging over 
+	  TCP with <xref target="refs.JSON">JavaScript Object Notation (JSON)</xref>
+	  providing underlying data serialization format.  Messages are
+	  length-prefix framed with a JSON message body.  The IANA approved TCP 
+	  port for all PDTP client/server intercommunication is 6086.</t>
+	
+	  <t>Each frame consists of a 16-bit unsigned integer in network byte order
+	  representing the length of the message body, followed by the message
+	  body itself.  Because the length prefix is 16-bit, the maximum allowed
+      length of the message body is 65,535 bytes, with a maximum frame size
+      of 65,537 bytes including the header.  Messages are sent in succession
+      over a persistent TCP connection.</t>
+
+      <t>Message bodies consist of JSON messages in the following format:</t>
+
+      <figure>
+        <artwork>["type", {"arg1": "value1", "arg2": "value2", ..., "argN": "valueN"}]</artwork>
+      </figure>
+	
+      <t>Each message is composed of an outer JSON array with two members.
+	  The first member is a string which represents the message type.  The second 
+	  member is a JSON object which contains a message-specific collection of 
+	  arguments.  Unless otherwise specified, all members are represented as JSON strings.
+	  </t>
+	
+	  <t>To improve the readability of the protocol on the wire, it is recommended that
+	  CRLF be appended to the end of the JSON message.  This is ignored as whitespace by
+	  JSON parsers, but meaningful to humans who may be reading wire dumps.  However, this
+	  is not an explicit requirement of the protocol, nor should its presence be required
+	  by any implementation.</t>
+    </section>
+
+    <section anchor="server-to-client-messages"
+             title="Server to Client Messages">
+      <section title="Overview">
+        <t>These messages are sent from the server to the client to respond to
+        information requests by the client and manage the file transfer
+        process. <list style="symbols">
+            <t><xref target="tellinfo">TELLINFO</xref> provides the client
+            with information about the object located at the specified
+            URL.</t>
+
+            <t><xref target="transfer">TRANSFER</xref> tells the client to
+            initiate a peer-to-peer data transfer.</t>
+
+            <t><xref target="tellverify">TELLVERIFY</xref> tells the client
+            whether the specified transfer is authorized.</t>
+
+            <t><xref target="hashverify">HASHVERIFY</xref> informs the client
+            whether the successful transfer had the correct file hash.</t>
+          </list></t>
+      </section>
+
+      <section anchor="tellinfo" title="TELLINFO">
+        <figure>
+          <artwork>tell_info url [size] [chunkSize] [streaming]</artwork>
+        </figure>
+
+        <t>The tell_info datagram is the expected response from the ask_info
+        datagram, and contains information that the client can use to
+        determine its chunk request policy and the manner in which a file is
+        handled. Since the server only arranges for chunks to be sent when
+        they are explicitly requested, a client must know how many chunks are
+        in a file so that it knows how many to request. In order to determine
+        the number of chunks in a file, the size of each chunk and the total
+        size of the file are sent. The number of chunks is then the 'fileSize'
+        divided by the 'chunkSize', rounded up to the first integer. The
+        'chunkSize' could also be used to determine a policy on caching or
+        memory management and the 'fileSize' could be used to alleviate
+        complications arising from the case of incomplete final chunks, and
+        perhaps other things.</t>
+
+        <t>Fields:</t>
+
+        <figure>
+          <artwork>url: String</artwork>
+
+          <postamble>A unique file identifier. The server uses this field to
+          specify which file it is sending information about.</postamble>
+        </figure>
+
+        <figure>
+          <artwork>size: Integer (Optional)</artwork>
+
+          <postamble>The exact size in bytes of the file. Since the last chunk
+          in the file might not be completely filled, it is necessary to know
+          the total file size as well as the chunk size and the chunk
+          count.</postamble>
+        </figure>
+
+        <figure>
+          <artwork>chunkSize: Integer (Optional)</artwork>
+
+          <postamble>The size in bytes of each chunk in the file.</postamble>
+        </figure>
+
+        <figure>
+          <artwork>streaming: Boolean (Optional)</artwork>
+
+          <postamble>If true, the file is assumed to be a streaming media file
+          and chunks near the beginning will be sent first. If false, chunks
+          from all over the file will have equal priority. Default is
+          false.</postamble>
+        </figure>
+      </section>
+
+      <section anchor="transfer" title="TRANSFER">
+        <figure>
+          <artwork>transfer peer port method url range peer_id</artwork>
+        </figure>
+
+        <t>The server controls all data flowing over the network. It uses the
+        transfer message to initiate a chunk transfer between two peers. The
+        transfer message is always sent to the peer that should initiate the
+        connection to the other peer.</t>
+
+        <t>When a client receives a transfer message, it should connect to the
+        specified peer and carry out the transfer as specified in <xref
+        target="client-to-client-communication">Section 4</xref> and reply to
+        the server with a <xref target="completed">completed</xref> message
+        upon success.</t>
+
+        <t>Fields:</t>
+
+        <figure>
+          <artwork>peer: String</artwork>
+
+          <postamble>This is the network address of the peer with which the
+          transfer should take place.</postamble>
+        </figure>
+
+        <figure>
+          <artwork>port: Integer</artwork>
+
+          <postamble>The port on the peer to connect to.</postamble>
+        </figure>
+
+        <figure>
+          <artwork>method: Enumeration</artwork>
+
+          <postamble>The HTTP method to be used for this transfer. Possible
+          values are GET and PUT, with the same semantics as in the HTTP
+          protocol. That is, if method is GET, this client is receiving data
+          from a peer, and if method is PUT, this client is sending data to a
+          peer.</postamble>
+        </figure>
+
+        <figure>
+          <artwork>url: String</artwork>
+
+          <postamble>This is a unique file identifier for the file to
+          transfer.</postamble>
+        </figure>
+
+        <figure>
+          <artwork>range: Range</artwork>
+
+          <postamble>This is the byte range being transferred. This, combined
+          with the url, provides a unique identifier for the data to
+          transfer.</postamble>
+        </figure>
+
+        <figure>
+          <artwork>peer_id: Integer</artwork>
+
+          <postamble>The unique id of the peer in this transfer.</postamble>
+        </figure>
+      </section>
+
+      <section anchor="tellverify" title="TELLVERIFY">
+        <figure>
+          <artwork>tell_verify peer url range peer_id authorized</artwork>
+        </figure>
+
+        <t>The tell_verify datagram is sent to the client in response to an
+        <xref target="askverify">ask_verify</xref> message to inform it of the
+        authorization status of a transfer.</t>
+
+        <t>Fields:</t>
+
+        <figure>
+          <artwork>peer: IP Address</artwork>
+
+          <postamble>The address of the connecting peer.</postamble>
+        </figure>
+
+        <figure>
+          <artwork>url: String</artwork>
+
+          <postamble>A unique file identifier.</postamble>
+        </figure>
+
+        <figure>
+          <artwork>range: Range</artwork>
+
+          <postamble>The byte range to verify.</postamble>
+        </figure>
+
+        <figure>
+          <artwork>peer_id: String</artwork>
+
+          <postamble>The unique identifier of the peer.</postamble>
+        </figure>
+
+        <figure>
+          <artwork>authorized: Boolean</artwork>
+
+          <postamble>A boolean value specifying whether or not the transfer is
+          authorized.</postamble>
+        </figure>
+      </section>
+
+      <section anchor="hashverify" title="HASHVERIFY">
+        <figure>
+          <artwork>hash_verify url range hash_ok</artwork>
+        </figure>
+
+        <t>The hash_verify message is sent to a client after a completed
+        message with a hash has been received. The value of hash_ok denotes
+        whether or not the hash sent in the completed message matches the
+        expected hash of the chunk containing the specified range.</t>
+
+        <t>Fields:</t>
+
+        <figure>
+          <artwork>url: String</artwork>
+
+          <postamble>The url of the file being transferred.</postamble>
+        </figure>
+
+        <figure>
+          <artwork>range: Range</artwork>
+
+          <postamble>The byte range of the file, which this message refers
+          to.</postamble>
+        </figure>
+
+        <figure>
+          <artwork>hash_ok: Boolean</artwork>
+
+          <postamble>If true, the has sent in the completed message matched
+          the expected hash of the byte range it referred to.</postamble>
+        </figure>
+      </section>
+
+      <section anchor="protocolerror" title="PROTOCOLERROR">
+        <figure>
+          <artwork>protocol_error message</artwork>
+        </figure>
+
+        <t>The protocol_error message is sent to a client whenever a protocol
+        error has occurred. The message field is meant to be read by a human
+        to determine what went wrong. In most cases, the error is due to a
+        programming error and is fatal. One notable exception to this is the
+        case when a client generates a Peer Id that is not unique.</t>
+
+        <t>Fields:</t>
+
+        <figure>
+          <artwork>message: String</artwork>
+
+          <postamble>An error message. This error message is not meant to be
+          parsed programmatically, but rather to be logged and read as an aid
+          to debugging.</postamble>
+        </figure>
+      </section>
+    </section>
+
+    <section anchor="client-to-server-messages"
+             title="Client to Server Messages">
+      <section title="Overview">
+        <t>These messages are sent from the client to the server to request
+        files, inform the server of completed transfers and handle files the
+        client can provide to the network. <list style="symbols">
+            <t><xref target="register">REGISTER</xref> informs the server
+            that the client exists and provides the server with information
+            about itself.</t>
+
+            <t><xref target="request">REQUEST</xref> informs the server that
+            the client wants the specified object range.</t>
+
+            <t><xref target="request">UNREQUEST</xref> informs the server that
+            the client no longer needs the specified object range.</t>
+
+            <t><xref target="provide">PROVIDE</xref> informs the server that
+            the client has the specified object range and can provide it to
+            peers.</t>
+
+            <t><xref target="provide">UNPROVIDE</xref> informs the server that
+            the client no longer has the specified object range, and therefore
+            cannot provide it.</t>
+
+            <t><xref target="askinfo">ASKINFO</xref> requests information from
+            the server about the specified URL.</t>
+
+            <t><xref target="askverify">ASKVERIFY</xref> asks the server
+            whether the specified transfer is authorized.</t>
+
+            <t><xref target="completed">COMPLETED</xref> informs the server
+            that a transfer has successfully completed.</t>
+          </list></t>
+      </section>
+
+      <section anchor="register" title="REGISTER">
+        <figure>
+          <artwork>register client_id listen_port</artwork>
+        </figure>
+
+        <t>The register message is the first message a client sends to the
+        server. The client must send this message to alert the server of its
+        presence so that it may be included in the server's actions.</t>
+
+        <t>Fields:</t>
+
+        <figure>
+          <artwork>client_id: String</artwork>
+
+          <postamble>A unique identifier, which the client generates. The
+          server will identify this client on the network based on this
+          identifier. The identifier must be a string less than 4 KB in
+          length. It is the client's responsibility to generate an identifier
+          that is unique. The server should respond with a <xref
+          target="protocolerror">protocol_error</xref> message if the
+          identifier is too long or not unique.</postamble>
+        </figure>
+
+        <figure>
+          <artwork>listen_port: Integer</artwork>
+
+          <postamble>The port on which the client will listen for incoming
+          connections from other peers. The server will pass this information
+          along to other clients wishing to connect to this client for peer to
+          peer chunk transfers.</postamble>
+        </figure>
+      </section>
+
+      <section anchor="request" title="REQUEST and UNREQUEST">
+        <figure>
+          <artwork>request url [range] unrequest url [range]</artwork>
+        </figure>
+
+        <t>The request and unrequest messages are used by the client to
+        indicate what data it needs to receive. A request datagram indicates
+        that the client needs the specified object bytes; an unrequest
+        datagram indicates that the client no longer needs the specified
+        bytes. The completed and provide messages may also be used to cancel a
+        request, though they carry additional semantics.</t>
+
+        <t>If the range of a request or unrequest message isn't specified, it
+        is assumed to include all bytes in the file.</t>
+
+        <t>The server is expected to continuously arrange for the data in the
+        client's request set to be delivered to the client through peer to
+        peer transfer channels. A request set is informally the set of chunks
+        that a client wants. Formally, we may say that a given unique chunk C
+        with the URL L and the id K is in a client's request set if and only
+        if: <list style="symbols">
+            <t>The client has sent at least one request message with a URL
+            equivalent to L and a byte range containing chunk K.</t>
+
+            <t>Since the last such message was sent, the client has not sent
+            an unrequest message with a URL equivalent to L and a byte range
+            containing chunk K,</t>
+
+            <t>...nor has it sent a completed message with a URL equivalent to
+            L and a byte range containing chunk K,</t>
+
+            <t>...nor has it sent a provide message with a URL equivalent to L
+            and a byte range containing chunk K.</t>
+          </list></t>
+
+        <t>In short, requests are standing and additive; unrequests are
+        transient and subtractive. The server is expected to handle any
+        possible combination of requests and unrequests that clients can send.
+        (For example, a client may request a URL in its entirety, and then
+        later unrequest certain parts of the URL. This is useful if, say, a
+        client needs to complete a partial download, repair a damaged file, or
+        optimize its network usage in response to user actions.)</t>
+
+        <t>Fields:</t>
+
+        <figure>
+          <artwork>url: String</artwork>
+
+          <postamble>The object being requested. The server may discard
+          requests for URLs it does not understand.</postamble>
+        </figure>
+
+        <figure>
+          <artwork>range: Range (Optional)</artwork>
+
+          <postamble>The range of bytes being requested, inclusive. If
+          unspecified, it is taken to be the complete range of bytes in the
+          file.</postamble>
+        </figure>
+      </section>
+
+      <section anchor="provide" title="PROVIDE and UNPROVIDE">
+        <figure>
+          <artwork>provide url [range] unprovide url [range]</artwork>
+        </figure>
+
+        <t>The provide and unprovide datagrams are used to tell the server
+        which chunks of a file it is able to provide to peers. Each client in
+        the system can have a cache of file chunks that it has already
+        downloaded and depending on the client's individual capabilities, this
+        cache may or may not be empty on startup. If a client has data in a
+        cache on startup, the provide message can be used to inform the
+        server. If the cache is empty on startup, the provide message is never
+        needed because the server is expected to keep track of each chunk that
+        has been transferred. On the other hand, if a client evicts one or
+        more chunks from its cache, it should immediately send an unprovide
+        message. Although there is no firm requirement on a client to send
+        appropriate unprovide datagrams, it is in the client's best interest
+        to do so, as it could lose standing in the network if it were asked to
+        send a chunk it did not have.</t>
+
+        <t>A client can send as many provide messages as necessary to inform
+        the server of its entire chunk cache. These messages should be
+        interpreted by the server additively. That is, if a client first sends
+        a message specifying that it provides byte range A to B and then
+        another specifying that it provides byte range C to D, the server
+        should conclude that it has byte range A to B and byte range C to D.
+        Furthermore, a client can send provide and unprovide messages for
+        multiple files, as specified by the url field.</t>
+
+        <t>If the range in a provide or unprovide message isn't specified, it
+        is taken to include the entire range of bytes in the file specified by
+        the url field.</t>
+
+        <t>Fields:</t>
+
+        <figure>
+          <artwork>url: String</artwork>
+
+          <postamble>A unique file identifier. The client uses this field to
+          specify a file in its cache.</postamble>
+        </figure>
+
+        <figure>
+          <artwork>range: Range (Optional)</artwork>
+
+          <postamble>The range of relevant bytes, inclusive. If unspecified,
+          it is taken to be the complete range of chunks in the
+          file.</postamble>
+        </figure>
+      </section>
+
+      <section anchor="askinfo" title="ASKINFO">
+        <figure>
+          <artwork>ask_info url</artwork>
+        </figure>
+
+        <t>The ask_info datagram is sent to the server when a client wants
+        information about a file. Specifically, the client needs information
+        about the file type, the file size, the number of chunks, and the size
+        of each chunk in order to successfully receive a file. This
+        information is used to determine when a file is finished transferring
+        and how to handle a file, among other things.</t>
+
+        <t>It is expected that the server will always respond to an ask_info
+        datagram with a <xref target="tellinfo">tell_info</xref> datagram.</t>
+
+        <t>Fields:</t>
+
+        <figure>
+          <artwork>url: String</artwork>
+
+          <postamble>A unique file identifier. The client uses this field to
+          specify which file it would like information about.</postamble>
+        </figure>
+      </section>
+
+      <section anchor="askverify" title="ASKVERIFY">
+        <figure>
+          <artwork>ask_verify peer url range peer_id</artwork>
+        </figure>
+
+        <t>The ask_verify datagram is sent to the server when a client wants
+        to know whether a transfer is authorized. This is sent upon receipt of
+        a put or get from a peer.</t>
+
+        <t>It is expected that the server will always respond to an ask_verify
+        datagram with a <xref target="tellverify">tell_verify</xref>
+        datagram.</t>
+
+        <t>Fields:</t>
+
+        <figure>
+          <artwork>peer: String</artwork>
+
+          <postamble>The network address of the connecting peer.</postamble>
+        </figure>
+
+        <figure>
+          <artwork>url: String</artwork>
+
+          <postamble>A unique file identifier. The client uses this field to
+          specify which file it would like information about.</postamble>
+        </figure>
+
+        <figure>
+          <artwork>range: Range</artwork>
+
+          <postamble>The range of bytes in the file referred to by the url for
+          which we are asking verification.</postamble>
+        </figure>
+
+        <figure>
+          <artwork>peer_id: String</artwork>
+
+          <postamble>The unique identifier of the peer.</postamble>
+        </figure>
+      </section>
+
+      <section anchor="completed" title="COMPLETED">
+        <figure>
+          <artwork>completed peer url range peer_id [hash]</artwork>
+        </figure>
+
+        <t>The completed message is used by the client to indicate that a
+        transfer has completed in either success or failure. Upon success, a
+        completed message will include a hash of the chunk that it has
+        received. The lack of a hash field denotes transfer failure. The
+        server may use this information to inform its network optimization, so
+        the appropriate use of completed messages is highly recommended.
+        (Specifically, it is likely that the server will initiate another
+        transfer after it has been informed that one has completed.)</t>
+
+        <t>Fields:</t>
+
+        <figure>
+          <artwork>peer: String</artwork>
+
+          <postamble>The network address of the peer associated with this
+          transfer.</postamble>
+        </figure>
+
+        <figure>
+          <artwork>url: String</artwork>
+
+          <postamble>The url of the transferred chunk.</postamble>
+        </figure>
+
+        <figure>
+          <artwork>range: Range</artwork>
+
+          <postamble>The byte range of the completed transfer.</postamble>
+        </figure>
+
+        <figure>
+          <artwork>peer_id: String</artwork>
+
+          <postamble>A unique identifier of the peer associated with the
+          transfer.</postamble>
+        </figure>
+
+        <figure>
+          <artwork>hash: String (Optional)</artwork>
+
+          <postamble>A hash of the transferred chunk. Denotes failure if
+          blank.</postamble>
+        </figure>
+      </section>
+    </section>
+
+    <section anchor="client-to-client-communication"
+             title="Client to Client Communication">
+      <section title="Overview">
+        <t>All client to client communication is done using the <xref
+        target="refs.HTTP">HTTP 1.1</xref> protocol. Each client is both an
+        HTTP client and server. During a transfer, the connecting peer for
+        that particular transfer acts as the client and the listening peer
+        acts as the server. While full HTTP functionality may be implemented
+        and implementation-specifically desirable, only the subset of the HTTP
+        protocol that includes the GET and PUT requests and the full range of
+        responses is strictly required for the PDTP protocol.</t>
+
+        <t>The listening client is truly an HTTP server and the connecting
+        client is truly an HTTP client. By this we mean simply that not only
+        the syntax but also the semantics of the GET and PUT requests and any
+        responses received are identical to that of the HTTP protocol.</t>
+
+        <t>A connecting peer will include the following information in the
+        request sent to a listening peer:</t>
+
+        <t><list style="symbols">
+            <t>A compliant <xref target="refs.HTTP">HTTP</xref> Request-Line
+            for either a GET or PUT request. The method to use should be taken
+            from the method parameter of the <xref
+            target="transfer">transfer</xref> message received from the
+            server. Similarly, the Request-URI portion of the Request-Line is
+            taken from the url field from the server.</t>
+
+            <t>A Host header, identifying the host in the url specified by the
+            server. This host should be recognized as a virtual host on the
+            listening peer. It is important to note that this field does not
+            necessarily represent any identifier associated with the listening
+            peer, but rather the host in the url field from the server.</t>
+
+            <t>A Range header, identifying the byte range to be transferred,
+            taken from the range field in the transfer message.</t>
+
+            <t>An X-PDTP-Peer-Id header. The value of this header is the Peer
+            Id of the connecting client. That is, it is the Peer Id of the
+            client sending this request. It is important to note that this is
+            not the peer_id field from the transfer message, which represents
+            the Peer Id of the listening peer and is necessary when notifying
+            the server of transfer completion.</t>
+
+            <t>If the method is PUT, a body containing the data is also
+            sent</t>
+          </list></t>
+
+        <t>Upon receiving a request from a connecting peer, a listening peer
+        processes the request in an appropriate manner and sends an
+        appropriate response. The listening client may choose to ask the
+        server for verification of this transfer using the <xref
+        target="askverify">ask_verify</xref> message. If verification fails, a
+        403 Forbidden response should be sent. Similarly, if the file cannot
+        be found, or the range is unsatisfiable, the 404 File Not Found or 416
+        Requested Range Unsatisfiable responses should be sent. Upon success,
+        either 206 Partial Content, 200 OK, or 201 Created should be sent,
+        depending on the situation.</t>
+      </section>
+    </section>
+  </middle>
+
+  <back>
+    <references>
+      <reference anchor="refs.PDTP"
+                 target="http://pdtp.org/specification/draft-arcieri-peer-distributed-transfer-protocol.html">
+        <front>
+          <title>Peer Distributed Transfer Protocol</title>
+
+          <author fullname="Anthony Arcieri" initials="A.A." surname="Arcieri">
+            <organization>ClickCaster.com</organization>
+          </author>
+
+          <date day="30" month="November" year="2005" />
+        </front>
+      </reference>
+
+      <reference anchor="refs.HTTP">
+        <front>
+          <title>Hypertext Transfer Protocol - HTTP/1.1</title>
+
+          <author fullname="" initials="R.F." surname="Fielding">
+            <organization>UC Irvine</organization>
+          </author>
+
+          <author fullname="" initials="J.G." surname="Gettys">
+            <organization>Compaq/W3C</organization>
+          </author>
+
+          <author fullname="" initials="J.M." surname="Mogul">
+            <organization>Compaq</organization>
+          </author>
+
+          <author fullname="" initials="H.F." surname="Frystyk">
+            <organization>W3C/MIT</organization>
+          </author>
+
+          <author fullname="" initials="L.M." surname="Masinter">
+            <organization>Xerox</organization>
+          </author>
+
+          <author fullname="" initials="P.L." surname="Fielding">
+            <organization>Microsoft</organization>
+          </author>
+
+          <author fullname="" initials="T.B." surname="Berners-Lee">
+            <organization>W3C/MIT</organization>
+          </author>
+
+          <date month="June" year="1999" />
+        </front>
+
+        <seriesInfo name="RFC" value="2616" />
+      </reference>
+
+      <reference anchor="refs.JSON">
+        <front>
+          <title>The application/json Media Type for JavaScript Object
+          Notation (JSON)</title>
+
+          <author initials="D.C." surname="Crockford">
+            <organization>JSON.org</organization>
+          </author>
+
+          <date month="July" year="2006" />
+        </front>
+
+        <seriesInfo name="RFC" value="4627" />
+      </reference>
+    </references>
+
+    <section title="Glossary">
+      <t><list style="symbols">
+          <t>Client: a system that accesses a service on a remote computer via
+          a network, equivalent to a 'peer'.</t>
+
+          <t>Connecting peer: The peer that initiates the connection over
+          which a transfer takes place.</t>
+
+          <t>Enumeration: a set of acceptable values.</t>
+
+          <t>Integer: a unsigned integer field.</t>
+
+          <t>Listening peer: The peer that accepts the connection over which a
+          transfer takes place.</t>
+
+          <t>Peer: a system that accesses a service on a remote computer via a
+          network, equivalent to a 'client'.</t>
+
+          <t>Peer Id: a unique identifier generated by a client and sent to
+          the server, uniquely identifying the client on the network.</t>
+
+          <t>Range: a representation of a sequence of indices implemented as a
+          tuple containing Integer values for minimum and maximum values. All
+          ranges referred to in this document are inclusive.</t>
+
+          <t>Request Set: the set of all chunks that a client has requested
+          and not subsequently unrequested.</t>
+
+          <t>Server: the system that manages the network and distribution of
+          information among clients.</t>
+
+          <t>String: a string of ASCII characters.</t>
+        </list></t>
+    </section>
+  </back>
+</rfc>

@@ -1,43 +1,129 @@
 #!/usr/bin/env ruby
+
+# == Synopsis
+#
+# dsclient: DistribuStream client application
+#
+# == Usage
+#
+# dsclient [OPTION] ... URI
+#
+# -h, --help:
+#    Show help
+#
+# --output file, -o file:
+#    File to save to.  Use '-' for stdout  
+#
+# --listen_port port, -p port:
+#    Port for the local HTTP server to listen on
+#
+# URI: An address in the pdtp:// scheme to retrieve from the server
+
 #--
-# Copyright (C) 2006-07 ClickCaster, Inc. (info@clickcaster.com)
-# All rights reserved.  See COPYING for permissions.
+# Copyright (C) 2006-08 Medioh, Inc. (info@medioh.com)
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # 
 # This source file is distributed as part of the 
 # DistribuStream file transfer system.
 #
-# See http://distribustream.rubyforge.org/
+# See http://distribustream.org/
 #++
 
-require 'rubygems'
-require 'eventmachine'
-require 'mongrel'
-require 'optparse'
 require 'uri'
+require 'getoptlong'
+require 'rdoc/ri/ri_paths'
+require 'rdoc/usage'
+require 'logger'
 
 require File.dirname(__FILE__) + '/../lib/pdtp/client'
 
-uri = nil
-listen_port = 8000
+opts = GetoptLong.new(
+  [ '--help',   '-h', GetoptLong::NO_ARGUMENT ],
+  [ '--version', '-v', GetoptLong::NO_ARGUMENT],
+  [ '--output', '-o', GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--listen', '-l', GetoptLong::OPTIONAL_ARGUMENT ]
+)
 
-OptionParser.new do |opts|
-  opts.banner = "Usage: #{$0} [options]"
-  opts.on("--url URL", "Fetch from the specified URL") do |u|
-    uri = URI.parse u
-  end
-  opts.on("--help", "Prints this usage info.") do
-    puts opts
-    exit
-  end
-  opts.on("--listen PORT", "Port to listen on") do |l|
-    listen_port = l.to_i
-  end
-end.parse!
+filename = nil
+listen_port = 60860
 
-raise "Please specify a URL in the form --url URL" unless uri
+# Display usage information extraced from this file via RDoc
+def display_usage
+  File.open(__FILE__)  { |file| STDERR.write RDoc.find_comment(file).gsub(/^# ?/, '') }
+  exit
+end
+
+# Display version information
+def display_version
+  STDERR.puts "#{File.basename $0} #{PDTP::VERSION} - DistribuStream client application"
+  STDERR.puts "Copyright (C) 2006-08 Medioh, Inc. (info@medioh.com)"
+  exit
+end
+
+opts.each do |opt, arg|
+  case opt
+  when '--help'    then display_usage
+  when '--version' then display_version
+  when '--output'  then filename = arg
+  when '--listen'  then listen_port = arg.to_i
+  end
+end
+
+if ARGV.length != 1
+  puts "Missing URI argument (try --help)"
+  exit 0
+end
+
+uri = URI.parse ARGV.shift
+
+# Validate URI scheme
 raise "Only pdtp:// URLs are supported" unless uri.scheme == 'pdtp'
 
-options = { :listen_port => listen_port }
-options[:port] = uri.port unless uri.port.nil?
+STDERR.write "--#{Time.now.strftime("%H:%M:%S")}--  #{uri}\n"
 
-PDTP::Client.get uri.host, uri.path, options
+filename ||= File.basename(uri.path) 
+
+STDERR.write "           => '#{filename}'\n"
+
+# Open the output file
+output = case filename
+when '-' then STDOUT
+else open(filename, 'w')
+end
+
+class Callbacks < PDTP::Client::Callbacks
+  attr_accessor :uri
+  attr_accessor :output
+  
+  def initialize(uri, output)
+    @uri, @output = uri, output
+  end
+  
+  def connected(client)
+    STDERR.write "Connected to #{uri.host}\n"
+    STDERR.write "Beginning transfer...\n"
+    
+    # Begin fetching the file once we've connected
+    client.get @uri.path, @output
+  end
+  
+  def disconnected(client)
+    STDERR.write "Disconnected from #{uri.host}\n"
+    client.stop
+  end
+end
+  
+client = PDTP::Client.new uri.host, uri.port || 6086, :listen_port => listen_port
+client.connect Callbacks.new(uri, output)

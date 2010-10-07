@@ -1,0 +1,111 @@
+#!/usr/bin/env ruby1.9
+#--
+# Copyright (C) 2006-08 Medioh, Inc. (info@medioh.com)
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# 
+# This source file is distributed as part of the 
+# DistribuStream file transfer system.
+#
+# See http://distribustream.org/
+#++
+
+require 'rubygems'
+require 'optparse'
+require File.dirname(__FILE__) + '/../lib/pdtp/server'
+
+program_name = File.basename($0)
+config_filename = nil
+listen_addr = nil
+listen_port = nil
+daemonize = true
+
+OptionParser.new do |opts|
+  opts.banner = "Usage: #{program_name} [options]"
+  opts.on("--config CONFIGFILE", "Load specified config file.") do |c|
+    config_filename = c
+  end
+  opts.on("--listen ADDR", "Listen at the specified host address.") do |h|
+    listen_addr = h
+  end
+  opts.on("--port PORT", "Listen on the specified port number.") do |p|
+    listen_port = p
+  end
+  opts.on("--foreground", "Run in the foreground instead of daemonizing.") do
+    daemonize = false
+  end
+  opts.on("--help", "Prints this usage info.") do
+    puts opts
+    exit
+  end
+ opts.on("--version", "Print version information.") do
+    puts "#{program_name} #{PDTP::VERSION} - DistribuStream server application"
+    puts "Copyright (C) 2006-08 Medioh, Inc. (info@medioh.com)"
+    exit
+  end
+end.parse!      
+
+config = {
+  :host             => '127.0.0.1',
+  :port             => 6086, #server port
+  :listen_port      => 8000, #client listen port
+  :file_root        => '.',
+  :chunk_size       => 5000,
+  :quiet            => true,
+  :logfile          => nil,
+  :daemonize        => true
+}
+
+if config_filename.nil?
+  STDERR.puts "No config file specified. Using defaults."
+else
+  begin
+    confstr = File.read(config_filename)
+  rescue
+    STDERR.puts "Unable to open config file: #{config_filename}"
+    exit
+  end
+  
+  begin
+    new_config = YAML.load confstr
+    config.merge!(new_config)
+    config[:vhost] ||= config[:host] # Use host as vhost unless specified
+  rescue => ex
+    STDERR.puts "Error parsing config file: #{config_filename}"
+    STDERR.puts ex
+    exit
+  end
+end
+
+config[:host] = listen_addr unless listen_addr.nil?
+config[:port] = listen_port unless listen_port.nil?
+
+STDERR.puts "#{program_name} #{PDTP::VERSION} starting. Run '#{program_name} --help' for more info."
+
+server = PDTP::Server.new config[:host], config[:port]
+
+logger = Logger.new STDERR
+logger.datetime_format = "%H:%M:%S "
+logger.level = Logger::INFO if config[:quiet]  
+
+server.enable_logging logger
+server.enable_status_page
+server.enable_file_service config[:file_root], :chunk_size => config[:chunk_size]
+
+#if daemonize and config[:daemonize]
+#  require 'daemons/daemonize'
+#  Daemonize.daemonize config[:logfile], program_name
+#end
+
+server.run

@@ -15,4 +15,10 @@
 :file_root: /Users/tony/dstest/files
 
 # Size of segments to be distributed (in bytes)
-:chunk_size: 250000
+:chunk_size: 512000
+
+# Path to logfile
+:logfile: dstream.log
+
+# Daemonize or run in foreground
+:daemonize: true

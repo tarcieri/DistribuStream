@@ -1,2 +1,87 @@
+Version 0.5.2
+
+* Upgrade to new EventMachine API to facilitate cleaner initialization of
+  connection objects
+
+Version 0.5.1
+
+* Add #score method to peers to compare ideal transfer candidates
+
+* Convert PDTP::Server::ChunkInfo to store chunk data in RangeMaps
+
+* Add daemonization support
+
+Version 0.5.0
+
+* Factor traffic routing code into PDTP::Server::TransferManager
+
+* Cleanup transfer reporting and factor into PDTP::Server::Transfer
+
+* Add bandwidth estimator class and integrate into transfer reporting
+
+* Add bandwidth estimates to the status page with associated helpers
+
+* Eliminate the ClientInfo class and factor all ClientInfo-related code
+  into the PDTP::Server::Connection class
+
+Version 0.4.1
+* Add -v / --version flags to dsclient and dstream
+
+* Add additional flags to dstream for specifying listen addr / port
+
+* Status page now factored into its own ERb template in status/
+
+* Added Mongrel handlers to serve images/stylesheets for status page
+
+* Added StatusHelper module to provide helpers for status page
+
+* New status page
+
+Version 0.4.0
+* Change PDTP::Client#run to take an instance of PDTP::Client::Callbacks rather
+  than the name of the class to instantiate
+
+* Register PDTP::Server's Mongrel StatusHandler before the file service handler
+  in order to prevent a potential conflict when displaying the status page.
+
+* Client / File Service HttpHandlers now check for knowledge of requested
+  URIs and return 404 if an unknown resource is requested
+
+* Client / File Service now properly handle interal exceptions
+
+Version 0.3.0
+* dsseed now factored into server.rb.  Remote seeds will not be supported until
+  protocol changes can be made to support authenticating remote seeds, remote
+  file lookup, and remote hash checking.
+
+* Switch to Kirk Haines' Evented Mongrel and remove all usage of threads from
+  the entire application
+
+* Stats page relocated to /stats.  This allows a single mongrel to operate for
+  both the file service and for the stats page.
+
+* Remove common_init.rb and any dependency on the @@log and @@config variables
+
+* Add logging facility to the server application to replace @@log.  Similar
+  facilities should be added for clients.
+
+* Refactor PDTP::Client and PDTP::Server APIs to support the above changes.
+
+Version 0.2.1
+* Switch HTTP client to use an EventMachine-based version, rather than net/http
+
+* Added PDTP.version for retrieving version of the library
+
+Version 0.2.0
+* PDTP::Server and PDTP::Client now expose APIs intended for public consumption
+  They may change slightly down the road, but will remain largely the same
+
+* PDTP::Client now uses a Tempfile for its internal buffer, drastically 
+  improving its memory usage
+
+* The protocol now uses length prefix framing, rather than using CRLF encoding.
+  This breaks protocol compatibility with the 0.1.0 release but should represent
+  the last major change to the protocol format.
+
 Version 0.1.0
 * Initial release

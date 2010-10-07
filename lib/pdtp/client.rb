@@ -1,195 +1,111 @@
 #--
-# Copyright (C) 2006-07 ClickCaster, Inc. (info@clickcaster.com)
-# All rights reserved.  See COPYING for permissions.
+# Copyright (C) 2006-08 Medioh, Inc. (info@medioh.com)
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # 
 # This source file is distributed as part of the 
 # DistribuStream file transfer system.
 #
-# See http://distribustream.rubyforge.org/
+# See http://distribustream.org/
 #++
 
-require 'rubygems'
-require 'eventmachine'
-require 'mongrel'
-require 'net/http'
-require 'thread'
+require 'revactor'
 require 'digest/md5'
 
-require File.dirname(__FILE__) + '/common/common_init'
-require File.dirname(__FILE__) + '/common/protocol'
-require File.dirname(__FILE__) + '/client/protocol'
+=begin
+require File.dirname(__FILE__) + '/common'
+require File.dirname(__FILE__) + '/common/http_server'
+require File.dirname(__FILE__) + '/client/connection'
+require File.dirname(__FILE__) + '/client/callbacks'
+require File.dirname(__FILE__) + '/client/file_info'
 require File.dirname(__FILE__) + '/client/file_service'
-require File.dirname(__FILE__) + '/client/transfer'
-require File.dirname(__FILE__) + '/server/file_service'
+require File.dirname(__FILE__) + '/client/http_handler'
+=end
 
 module PDTP
-  # This is the main driver for the client-side implementation
-  # of PDTP. It maintains a single connection to a server and 
-  # all the necessary connections to peers. It is responsible
-  # for handling all messages corresponding to these connections.
+  # PDTP::Client provides an interface for accessing resources on PDTP servers
+  class Client
+    # None of these should be publically accessible, and will be factored away in time
+    # attr_reader :connection, :client_id, :listen_port, :file_service, :transfers
 
-  # Client inherits from Mongrel::HttpHandler in order to handle
-  # incoming HTTP connections
-  class Client < Mongrel::HttpHandler
-    # Accessor for a client file service instance
-    attr_accessor :file_service
-    attr_accessor :server_connection
-    attr_accessor :my_id
-    
-    def self.get(host, path, options = {})
-      path = '/' + path unless path[0] == ?/
+    # Create a PDTP::Client object for accessing the PDTP server at the given host and port
+    def initialize(host, port = PDTP::DEFAULT_PORT, options = {})
+      @host, @port = host, port
+            
+      @listen_addr = options[:listen_addr] || '0.0.0.0'
+      @listen_port = options[:listen_port] || 60860
       
-      opts = {
-        :host => host,
-        :port => 6086,
-        :file_root => '.',
-        :quiet => true,
-        :listen_port => 8000,
-        :request_url => "http://#{host}#{path}"
-      }.merge(options)
-      
-      common_init $0, opts
-      
-      # Run the EventMachine reactor loop
-      EventMachine::run do
-        connection = EventMachine::connect host, opts[:port], Client::Protocol
-        @@log.info "connecting with ev=#{EventMachine::VERSION}"
-        @@log.info "host= #{host} port=#{opts[:port]}"
-      end
-    end
-
-    def initialize
+      @file_service = PDTP::Client::FileService.new
       @transfers = []
-      @mutex = Mutex.new
+
+      # Start a Mongrel server on the specified port
+      # FIXME: Better handling is needed if the desired port is in use
+      @http_server = Mongrel::HttpServer.new @listen_addr, @listen_port
+
+      @client_id = Digest::MD5.hexdigest "#{Time.now.to_f}#{$$}"
+
+      #@@log.info "listening on port #{@listen_port}"
+      @http_handler = HttpHandler.new(self)
+      @http_server.register '/', @http_handler
     end
 
-    # This method is called after a connection to the server
-    # has been successfully established.
-    def connection_created(connection)
-      @@log.debug("[mongrel] Opened connection...");
-    end
-
-    # This method is called when the server connection is destroyed
-    def connection_destroyed(connection)
-      @@log.debug("[mongrel] Closed connection...")
-    end
-
-    # Returns a transfer object if the given connection is a peer associated with 
-    # that transfer. Otherwise returns nil.
-    def get_transfer(connection)
-      @transfers.each { |t| return t if t.peer == connection }
-      nil
-    end
-
-    # This method is called when an HTTP request is received. It is called in 
-    # a separate thread, one for each request.
-    def process(request,response)
-      begin
-        @@log.debug "Creating Transfer::Listener"
-        transfer = Transfer::Listener.new(
-          request, 
-          response, 
-          @server_connection, 
-          @file_service, 
-          self
-        )
-
-        #Needs to be locked because multiple threads could attempt to append a transfer at once
-        @mutex.synchronize { @transfers << transfer }
-        transfer.handle_header 
-      rescue Exception=>e
-        transfer.write_http_exception(e)
+    # Connect to the PDTP server. This is a blocking call which runs the client event loop
+    def connect(callbacks = nil)
+      callbacks = Callbacks.new if callbacks.nil?
+      
+      unless callbacks.is_a?(Callbacks)
+        raise ArgumentError, "callbacks must be an instance of PDTP::Client::Callbacks"
       end
+                
+      # Run the EventMachine reactor loop
+      EventMachine.run do
+        @http_server.run_evented
+        @connection = EventMachine.connect(@host, @port, Connection, self, callbacks)
 
-      transfer.send_completed_message transfer.hash
-    end
-
-    # Returns true if the given message refers to the given transfer  
-    def transfer_matches?(transfer, message)
-      transfer.peer       == message["peer"] and 
-      transfer.url        == message["url"] and
-      transfer.byte_range == message["range"] and
-      transfer.peer_id    == message["peer_id"]
-    end
-
-    # Called when any server message is received. This is the brains of
-    # the client's protocol handling.
-    def dispatch_message(command, message, connection)
-      case command
-      when "tell_info" # Receive and store information for this url  
-        info = FileInfo.new message["url"].split('/').last
-        info.file_size = message["size"]
-        info.base_chunk_size = message["chunk_size"]
-        info.streaming = message["streaming"]
-        @file_service.set_info(message["url"], info)   
-      when "transfer" # Begin a transfer as a connector
-        transfer = Transfer::Connector.new(message,@server_connection,@file_service,self)
-
-        @@log.debug "TRANSFER STARTING"
-
-        # Run each transfer in its own thread and notify the server upon completion
-        Thread.new(transfer) do |t|
-          begin
-            t.run
-          rescue Exception=>e
-            @@log.info("Exception in dispatch_message: " + e.exception + "\n" + e.backtrace.join("\n")) 
-          end
-          t.send_completed_message(t.hash)
-        end
-      when "tell_verify"
-        # We are a listener, and asked for verification of a transfer from a server.
-        # After asking for verification, we stopped running, and must be restarted
-        # if verification is successful
-        
-        found=false
-        @transfers.each do |t|
-          if t.matches_message?(message)
-            finished(t)
-            t.tell_verify(message["is_authorized"])
-            found=true
-            break
-          end
-        end
-
-        unless found
-          puts "BUG: Tell verify sent for an unknown transfer"
-          exit!
-        end
-      when "hash_verify"
-        @@log.debug "Hash verified for url=#{message["url"]} range=#{message["range"]} hash_ok=#{message["hash_ok"]}"
-      when "protocol_error", "protocol_warn" #ignore
-      else raise "Server sent an unknown message type: #{command} "
+        #@@log.info "connecting with ev=#{EventMachine::VERSION}"
+        #@@log.info "host= #{host} port=#{opts[:port]}"
       end
     end
 
-    #Prints the number of transfers associated with this client
-    def print_stats
-      @@log.debug "client:  num_transfers=#{@transfers.size}"
+    # Are we currently connected to a server?
+    def connected?
+      not @connection.nil?
     end
 
-    #Provides a threadsafe mechanism for transfers to report themselves finished
-    def finished(transfer)
-      @mutex.synchronize do
-        @transfers.delete(transfer)
-      end
+    # Retrieve the resource at the given path and write it to the given IO object
+    def get(path, io, options = {})
+      raise RuntimeError, "not connected to server yet" unless connected?
+      
+      path = '/' + path unless path[0] == ?/
+      url = "http://#{@host}#{path}"
+      filename = path.split('/').last
+      
+      # Register the file and its IO object with the local file service
+      file_service.set_info url, FileInfo.new(filename, io)
+      
+      # Ask the server for some information on the file we want
+      @connection.send_message :ask_info, :url => url
+
+      # Request the file (should probably be done after receiving :tell_info)
+      @connection.send_message :request, :url => url
+
+      #@@log.info "This client is requesting"
     end
-
-    # Generate and set the client ID for an instance
-    def generate_client_id(port = 0)
-      @my_id = Client.generate_client_id port
-    end
-
-    # Client ID generator routine
-    def self.generate_client_id(port = 0)
-      md5 = Digest::MD5::new
-      now = Time::now
-      md5.update now.to_s
-      md5.update String(now.usec)
-      md5.update String(rand(0))
-      md5.update String($$)
-
-      #return md5.hexdigest+":#{port}" # long id
-      return md5.hexdigest[0..5] # short id
+    
+    # Stop the client event loop.  This only works within callbacks given to the #connect method
+    def stop
+      EventMachine.stop_event_loop
     end
   end
 end

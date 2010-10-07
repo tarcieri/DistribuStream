@@ -10,10 +10,10 @@ task :default => :rdoc
 Rake::RDocTask.new(:rdoc) do |task|
   task.rdoc_dir = 'doc'
   task.title    = 'DistribuStream'
+  task.options = %w(--title PDTP --main README --line-numbers)
   task.rdoc_files.include('bin/**/*.rb')
   task.rdoc_files.include('lib/**/*.rb')
-  task.rdoc_files.include('simulation/**/*.rb')
-  task.rdoc_files.include('test/**/*.rb')
+  task.rdoc_files.include('README')
 end
 
 # Gem
@@ -25,20 +25,24 @@ end
 begin
 require 'spec/rake/spectask'
 
+SPECS = FileList['spec/**/*_spec.rb']
+
 Spec::Rake::SpecTask.new(:spec) do |task|
-  task.spec_files = FileList['**/*_spec.rb']
+  task.spec_files = SPECS
 end
 
-Spec::Rake::SpecTask.new(:specfs) do |task|
-  task.spec_files= FileList['**/*_spec.rb']
-  task.spec_opts="-f s".split
+namespace :spec do
+  Spec::Rake::SpecTask.new(:print) do |task|
+    task.spec_files = SPECS
+    task.spec_opts="-f s".split
+  end
+
+  Spec::Rake::SpecTask.new(:rcov) do |task|
+    task.spec_files = SPECS
+    task.rcov = true
+    task.rcov_opts = ['--exclude', 'spec']
+  end
 end
 
-Spec::Rake::SpecTask.new(:spec_coverage) do |task|
-  task.spec_files = FileList['**/*_spec.rb']
-  task.rcov = true
-end
 rescue LoadError
 end
-
-

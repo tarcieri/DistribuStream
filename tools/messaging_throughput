@@ -1,0 +1,53 @@
+#!/usr/bin/env ruby
+
+require 'rubygems'
+require 'eventmachine'
+
+require File.dirname(__FILE__) + '/../lib/pdtp/common/length_prefix_protocol'
+require File.dirname(__FILE__) + '/../lib/pdtp/common/protocol'
+
+class BenchmarkServer < PDTP::Protocol
+  def receive_message(command, message)
+    @ntimes -= 1
+    EventMachine.stop if @ntimes == 0
+  end
+end
+
+class BenchmarkClient < PDTP::LengthPrefixProtocol
+  def connection_completed
+    send_benchmarking_packet
+  end
+  
+  def send_benchmarking_packet
+    @ntimes -= 1
+    send_packet '["register", {"client_id":"foo","listen_port":420}]'
+
+    EventMachine.next_tick { send_benchmarking_packet } unless @ntimes == 0
+  end
+end
+
+addr = '127.0.0.1'
+port = 1234
+ntimes = 50000
+
+begin_time = Time.now
+
+puts "#{begin_time.strftime('%H:%M:%S')} -- Sending #{ntimes} JSON asynchronous messages"
+
+EventMachine.run do
+  EventMachine.start_server(addr, port, BenchmarkServer) do |c|
+    c.instance_eval { @ntimes = ntimes }
+  end
+
+  EventMachine.connect(addr, port, BenchmarkClient) do |c|
+    c.instance_eval { @ntimes = ntimes }
+  end
+end
+
+end_time = Time.now
+duration = end_time - begin_time
+throughput = ntimes / duration
+
+puts "#{end_time.strftime('%H:%M:%S')} -- Finished"
+puts "Duration:   #{sprintf("%0.2f", duration)} seconds"
+puts "Throughput: #{sprintf("%0.2f", throughput)} messages per second"
