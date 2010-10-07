@@ -1,4 +1,5 @@
-Welcome to DistribuStream!
+DistribuStream
+==============
 
 DistribuStream is a fully open peercasting system which allows on-demand
 or live streaming media to be delivered at a fraction of the normal cost. 
@@ -6,9 +7,8 @@ or live streaming media to be delivered at a fraction of the normal cost.
 This README covers the initial public release, known issues, and a general
 development roadmap.
 
---
-
-Usage:
+Usage
+-----
 
 The DistribuStream gem includes three config files that can be located in
 the conf directory of the gem:
@@ -60,9 +60,8 @@ mkfifo file.ext
 dsclient --url pdtp://myserver.url/file.ext &
 mediaplayer file.ext
 
---
-
-Known Issues:
+Known Issues
+------------
 
 The client presently stores incoming data in a memory buffer.  This causes
 the client to consume massive amounts of memory as the file downloads.
@@ -83,9 +82,8 @@ This will be resolved by either incorporating the seed directly into the
 DistribuStream server, or adding both authentication and commands for
 checksumming to the server <-> seed protocol.
 
---
-
-Development Roadmap:
+Development Roadmap
+-------------------
 
 The immediate goal is to improve the performance of the client, which presently
 consumes far too much RAM for practical use with large media files.  Another
